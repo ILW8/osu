@@ -26,6 +26,8 @@ namespace osu.Game.Tournament.Models
         /// </summary>
         public Bindable<string> FlagName = new Bindable<string>(string.Empty);
 
+        public Bindable<string> SomeValue = new Bindable<string>(string.Empty);
+
         /// <summary>
         /// Short acronym which appears in the group boxes post-selection.
         /// </summary>

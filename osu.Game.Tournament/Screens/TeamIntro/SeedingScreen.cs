@@ -4,8 +4,10 @@
 #nullable disable
 
 using System.Diagnostics;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -13,9 +15,11 @@ using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Ladder.Components;
+using osu.Game.Users.Drawables;
 using osuTK;
 
 namespace osu.Game.Tournament.Screens.TeamIntro
@@ -262,7 +266,12 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
                 Width = 200;
 
-                if (team == null) return;
+                var firstPlayer = team?.Players.FirstOrDefault();
+
+                if (firstPlayer == null)
+                {
+                    return;
+                }
 
                 InternalChildren = new Drawable[]
                 {
@@ -273,17 +282,26 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                         Direction = FillDirection.Vertical,
                         Children = new Drawable[]
                         {
-                            new TeamDisplay(team) { Margin = new MarginPadding { Bottom = 30 } },
-                            new RowDisplay("Average Rank:", $"#{team.AverageRank:#,0}"),
+                            new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Horizontal,
+                                Children = new Drawable[]
+                                {
+                                    new UserTile { User = firstPlayer.ToAPIUser(), Margin = new MarginPadding { Right = 20 } },
+                                    new TeamDisplay(team)
+                                },
+                                Margin = new MarginPadding { Bottom = 30 }
+                            },
                             new RowDisplay("Seed:", team.Seed.Value),
-                            new RowDisplay("Last year's placing:", team.LastYearPlacing.Value > 0 ? $"#{team.LastYearPlacing:#,0}" : "0"),
+                            new RowDisplay("Global rank:", $"#{team.AverageRank:#,0}"),
+                            new RowDisplay("Country rank:", $"#{team.AverageRank:#,0}"),
+                            new RowDisplay("some value:", team.SomeValue.Value),
                             new Container { Margin = new MarginPadding { Bottom = 30 } },
                         }
                     },
                 };
-
-                foreach (var p in team.Players)
-                    fill.Add(new RowDisplay(p.Username, p.Rank?.ToString("\\##,0") ?? "-"));
             }
 
             internal partial class RowDisplay : CompositeDrawable
@@ -321,7 +339,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                     AutoSizeAxes = Axes.Both;
 
                     Flag.RelativeSizeAxes = Axes.None;
-                    Flag.Scale = new Vector2(1.2f);
+                    Flag.Scale = new Vector2(1.0f);
 
                     InternalChild = new FillFlowContainer
                     {
@@ -338,6 +356,33 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                                 Colour = TournamentGame.TEXT_COLOUR,
                             },
                         }
+                    };
+                }
+            }
+
+            private partial class UserTile : CompositeDrawable
+            {
+                public APIUser User
+                {
+                    set => avatar.User = value;
+                }
+
+                private readonly UpdateableAvatar avatar;
+
+                public UserTile()
+                {
+                    Size = new Vector2(128);
+                    CornerRadius = 5f;
+                    Masking = true;
+
+                    InternalChildren = new Drawable[]
+                    {
+                        new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = Color4Extensions.FromHex(@"27252d"),
+                        },
+                        avatar = new UpdateableAvatar(showUsernameTooltip:true) { RelativeSizeAxes = Axes.Both },
                     };
                 }
             }
