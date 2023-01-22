@@ -26,7 +26,8 @@ namespace osu.Game.Tournament.Models
         /// </summary>
         public Bindable<string> FlagName = new Bindable<string>(string.Empty);
 
-        public Bindable<string> SomeValue = new Bindable<string>(string.Empty);
+        public Bindable<int> GlobalRank = new Bindable<int>(-1);
+        public Bindable<int> CountryRank = new Bindable<int>(-1);
 
         /// <summary>
         /// Short acronym which appears in the group boxes post-selection.
