@@ -295,8 +295,8 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                                 Margin = new MarginPadding { Bottom = 30 }
                             },
                             new RowDisplay("Seed:", team.Seed.Value),
-                            new RowDisplay("Global rank:", $"#{team.GlobalRank:#,0}"),
-                            new RowDisplay("Country rank:", $"#{team.CountryRank:#,0}"),
+                            new RowDisplay("Global rank:", $"#{firstPlayer.Rank:#,0}"),
+                            new RowDisplay("Country rank:", $"#{firstPlayer.CountryRank:#,0}"),
                             new Container { Margin = new MarginPadding { Bottom = 30 } },
                         }
                     },

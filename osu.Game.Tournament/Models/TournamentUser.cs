@@ -30,6 +30,8 @@ namespace osu.Game.Tournament.Models
         /// </summary>
         public int? Rank { get; set; }
 
+        public int? CountryRank { get; set; }
+
         /// <summary>
         /// A URL to the player's profile cover.
         /// </summary>
