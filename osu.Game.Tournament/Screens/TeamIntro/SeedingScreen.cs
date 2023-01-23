@@ -29,9 +29,13 @@ namespace osu.Game.Tournament.Screens.TeamIntro
         private Container mainContainer;
 
         private readonly Bindable<TournamentTeam> currentTeam = new Bindable<TournamentTeam>();
+        private readonly Bindable<TournamentUser> currentTeamFirstUser = new Bindable<TournamentUser>();
 
         private TourneyButton showFirstTeamButton;
         private TourneyButton showSecondTeamButton;
+
+        [Resolved]
+        private TournamentGameBase game { get; set; }
 
         [BackgroundDependencyLoader]
         private void load()
@@ -75,9 +79,11 @@ namespace osu.Game.Tournament.Screens.TeamIntro
             };
 
             currentTeam.BindValueChanged(teamChanged, true);
+            currentTeamFirstUser.BindValueChanged(firstUserChanged, true);
         }
 
         private void teamChanged(ValueChangedEvent<TournamentTeam> team) => updateTeamDisplay();
+        private void firstUserChanged(ValueChangedEvent<TournamentUser> firstUser) => updateUser();
 
         public override void Show()
         {
@@ -105,6 +111,27 @@ namespace osu.Game.Tournament.Screens.TeamIntro
             currentTeam.Value = match.NewValue.Team1.Value;
         }
 
+        private void updateUser() => Scheduler.AddOnce(() =>
+        {
+            if (currentTeamFirstUser.Value != null)
+            {
+                game.PopulatePlayer(currentTeamFirstUser.Value, success:updateLeftInfoDisplay);
+            }
+        });
+
+        private void updateLeftInfoDisplay()
+        {
+            if (mainContainer.Children.Count <= 0) return;
+            // var leftTourneyUser = ((LeftInfo)mainContainer.Children[0]).TourneyUser;
+            //
+            // if (leftTourneyUser.Rank != currentTeamFirstUser.Value.Rank || leftTourneyUser.CountryRank != currentTeamFirstUser.Value.CountryRank)
+            // {
+            //     updateTeamDisplay();
+            // }
+            ((LeftInfo)mainContainer.Children[0]).UpdateRanks(currentTeamFirstUser.Value.Rank ?? -727, currentTeamFirstUser.Value.CountryRank ?? -727);
+
+        }
+
         private void updateTeamDisplay() => Scheduler.AddOnce(() =>
         {
             if (currentTeam.Value == null)
@@ -112,6 +139,8 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 mainContainer.Clear();
                 return;
             }
+
+            currentTeamFirstUser.Value = currentTeam.Value?.Players.FirstOrDefault();
 
             mainContainer.Children = new Drawable[]
             {
@@ -185,7 +214,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                             Spacing = new Vector2(40),
                             Children = new Drawable[]
                             {
-                                new TournamentSpriteText { Text = beatmap.Score.ToString("#,0"), Colour = TournamentGame.TEXT_COLOUR, Width = 80 },
+                                new TournamentSpriteText { Text = beatmap.Score.ToString("       #,0"), Colour = TournamentGame.TEXT_COLOUR, Width = 80 },
                                 new TournamentSpriteText
                                     { Text = "#" + beatmap.Seed.Value.ToString("#,0"), Colour = TournamentGame.TEXT_COLOUR, Font = OsuFont.Torus.With(weight: FontWeight.Regular) },
                             }
@@ -260,6 +289,8 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
         private partial class LeftInfo : CompositeDrawable
         {
+            public TournamentUser TourneyUser { get; }
+            public TournamentTeam TourneyTeam { get; }
             public LeftInfo(TournamentTeam team)
             {
                 FillFlowContainer fill;
@@ -272,6 +303,8 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 {
                     return;
                 }
+                TourneyUser = firstPlayer;
+                TourneyTeam = team;
 
                 InternalChildren = new Drawable[]
                 {
@@ -289,18 +322,39 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                                 Direction = FillDirection.Horizontal,
                                 Children = new Drawable[]
                                 {
-                                    new UserTile { User = firstPlayer.ToAPIUser(), Margin = new MarginPadding { Right = 20 } },
-                                    new TeamDisplay(team)
+                                    new UserTile { User = TourneyUser.ToAPIUser(), Margin = new MarginPadding { Right = 20 } },
+                                    new TeamDisplay(TourneyTeam)
                                 },
                                 Margin = new MarginPadding { Bottom = 30 }
                             },
-                            new RowDisplay("Seed:", team.Seed.Value),
-                            new RowDisplay("Global rank:", $"#{firstPlayer.Rank:#,0}"),
-                            new RowDisplay("Country rank:", $"#{firstPlayer.CountryRank:#,0}"),
-                            new Container { Margin = new MarginPadding { Bottom = 30 } },
+                            new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                Children = new Drawable[]
+                                {
+                                    new RowDisplay("Seed:", TourneyTeam.Seed.Value),
+                                    new RowDisplay("Global rank:", $"#{TourneyUser.Rank:#,0}"),
+                                    new RowDisplay("Country rank:", $"#{TourneyUser.CountryRank:#,0}"),
+                                    new Container { Margin = new MarginPadding { Bottom = 30 } },
+                                }
+                            }
+
                         }
                     },
                 };
+            }
+
+            public void UpdateRanks(int global, int country)
+            {
+                var innerContainer = ((FillFlowContainer)((FillFlowContainer)InternalChildren[0]).Children[1]);
+                var yep = new Drawable[innerContainer.Children.Count];
+                innerContainer.CopyTo(yep, 0);
+                yep[1] = new RowDisplay("Global rank:", $"#{global:#,0}");
+                yep[2] = new RowDisplay("Country rank:", $"#{country:#,0}");
+                innerContainer.Clear(false);
+                innerContainer.AddRange(yep);
             }
 
             internal partial class RowDisplay : CompositeDrawable
