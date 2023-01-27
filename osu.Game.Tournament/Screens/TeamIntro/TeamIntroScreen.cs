@@ -62,7 +62,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                     Position = new Vector2(165 - (75 * flag_size_scale - 75) / 2f, y_flag_offset - (54 * flag_size_scale - 54) / 2f),
                     Scale = new Vector2(flag_size_scale),
                 },
-                new DrawableTeamWithPlayers(match.NewValue.Team1.Value, TeamColour.Red)
+                new DrawableTeamTitleWithHeader(match.NewValue.Team1.Value, TeamColour.Red)
                 {
                     Position = new Vector2(165, y_offset),
                 },
@@ -71,7 +71,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                     Position = new Vector2(740 - (75 * flag_size_scale - 75) / 2f, y_flag_offset - (54 * flag_size_scale - 54) / 2f),
                     Scale = new Vector2(flag_size_scale),
                 },
-                new DrawableTeamWithPlayers(match.NewValue.Team2.Value, TeamColour.Blue)
+                new DrawableTeamTitleWithHeader(match.NewValue.Team2.Value, TeamColour.Blue)
                 {
                     Position = new Vector2(740, y_offset),
                 },
