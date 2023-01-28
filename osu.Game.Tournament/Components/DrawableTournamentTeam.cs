@@ -9,6 +9,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics.Containers;
 using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
+using osuTK;
 
 namespace osu.Game.Tournament.Components
 {
@@ -26,7 +27,11 @@ namespace osu.Game.Tournament.Components
         {
             Team = team;
 
-            Flag = new DrawableTeamFlag(team);
+            Flag = new DrawableTeamFlag(team)
+            {
+                Size = new Vector2(64, 64),
+                CornerRadius = 0
+            };
             AcronymText = new TournamentSpriteText
             {
                 Font = OsuFont.Torus.With(weight: FontWeight.Regular),

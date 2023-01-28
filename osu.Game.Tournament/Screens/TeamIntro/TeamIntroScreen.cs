@@ -45,11 +45,11 @@ namespace osu.Game.Tournament.Screens.TeamIntro
             if (match.NewValue == null)
                 return;
 
-            const float y_flag_offset = 292;
+            const float y_flag_offset = 235f;
 
             const float y_offset = 460;
 
-            const float flag_size_scale = 1.35f;
+            const float flag_size_scale = 1.0f;
 
             mainContainer.Children = new Drawable[]
             {
@@ -59,8 +59,9 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 },
                 new DrawableTeamFlag(match.NewValue.Team1.Value)
                 {
-                    Position = new Vector2(165 - (75 * flag_size_scale - 75) / 2f, y_flag_offset - (54 * flag_size_scale - 54) / 2f),
+                    Position = new Vector2(121, y_flag_offset),
                     Scale = new Vector2(flag_size_scale),
+                    CornerRadius = -0.727f,
                 },
                 new DrawableTeamTitleWithHeader(match.NewValue.Team1.Value, TeamColour.Red)
                 {
@@ -68,8 +69,9 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 },
                 new DrawableTeamFlag(match.NewValue.Team2.Value)
                 {
-                    Position = new Vector2(740 - (75 * flag_size_scale - 75) / 2f, y_flag_offset - (54 * flag_size_scale - 54) / 2f),
+                    Position = new Vector2(696, y_flag_offset),
                     Scale = new Vector2(flag_size_scale),
+                    CornerRadius = -0.727f,
                 },
                 new DrawableTeamTitleWithHeader(match.NewValue.Team2.Value, TeamColour.Blue)
                 {

@@ -94,8 +94,10 @@ namespace osu.Game.Tournament.Screens.TeamWin
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    Position = new Vector2(-300, 10),
-                    Scale = new Vector2(3.26f)
+                    Position = new Vector2(-300, 8.5f),
+                    Scale = new Vector2(2f),
+                    Size = new Vector2(160, 160),
+                    CornerRadius = -0.727f,
                 },
                 new FillFlowContainer
                 {

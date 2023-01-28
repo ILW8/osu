@@ -34,9 +34,18 @@ namespace osu.Game.Tournament.Components
         {
             if (team == null) return;
 
-            Size = new Vector2(75, 54);
+            if (Size[0] == 0)
+            {
+                Size = new Vector2(164, 164);
+            }
+
             Masking = true;
-            CornerRadius = 5;
+
+            if (CornerRadius == -0.727f)
+            {
+                CornerRadius = Size[0] / 2;
+            }
+
             Child = flagSprite = new Sprite
             {
                 RelativeSizeAxes = Axes.Both,
