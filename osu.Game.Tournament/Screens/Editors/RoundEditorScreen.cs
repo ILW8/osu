@@ -84,6 +84,12 @@ namespace osu.Game.Tournament.Screens.Editors
                                 Width = 0.33f,
                                 Current = Model.BestOf
                             },
+                            new SettingsSlider<int>
+                            {
+                                LabelText = "Bans per team",
+                                Width = 0.25f,
+                                Current = Model.BansPerTeam,
+                            },
                             new SettingsButton
                             {
                                 Width = 0.2f,

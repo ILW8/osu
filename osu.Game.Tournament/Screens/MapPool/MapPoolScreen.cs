@@ -138,10 +138,10 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             var nextColour = (CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? roll_winner) == TeamColour.Red ? TeamColour.Blue : TeamColour.Red;
 
-            if (pickType == ChoiceType.Ban && CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= 2)
+            if (pickType == ChoiceType.Ban && CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= 2 * CurrentMatch.Value.Round.Value.BansPerTeam.Value)
                 setMode(pickColour, ChoiceType.Pick);
             else
-                setMode(nextColour, CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= 2 ? ChoiceType.Pick : ChoiceType.Ban);
+                setMode(nextColour, CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= 2 * CurrentMatch.Value.Round.Value.BansPerTeam.Value ? ChoiceType.Pick : ChoiceType.Ban);
         }
 
         protected override bool OnMouseDown(MouseDownEvent e)
