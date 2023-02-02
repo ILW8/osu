@@ -30,6 +30,7 @@ namespace osu.Game.Tournament.Models
         public readonly BindableInt BestOf = new BindableInt(9) { Default = 9, MinValue = 3, MaxValue = 23 };
 
         public readonly BindableInt BansPerTeam = new BindableInt(1) { Default = 1, MinValue = 0, MaxValue = 2 };
+        public readonly BindableBool HasWarmups = new BindableBool(true);
         public readonly Bindable<BanOrder> BanOrder = new Bindable<BanOrder> { Default = Models.BanOrder.NotApplicable };
 
         [JsonProperty]

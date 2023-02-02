@@ -13,6 +13,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays.Settings;
+using osu.Game.Screens.Play.PlayerSettings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
@@ -91,10 +92,16 @@ namespace osu.Game.Tournament.Screens.Editors
                                 Current = Model.BansPerTeam,
                             },
                             new SettingsBanOrderDropdown(Model.BansPerTeam) { LabelText = "Ban order", Current = Model.BanOrder, Width = 0.33f },
+                            new PlayerCheckbox
+                            {
+                                LabelText = "Has warmups",
+                                Width = 0.33f,
+                                Current = Model.HasWarmups,
+                                Margin = new MarginPadding { Vertical = 12 }
+                            },
                             new SettingsButton
                             {
-                                Width = 0.2f,
-                                Margin = new MarginPadding(10),
+                                Width = 0.33f,
                                 Text = "Add beatmap",
                                 Action = () => beatmapEditor.CreateNew()
                             },
