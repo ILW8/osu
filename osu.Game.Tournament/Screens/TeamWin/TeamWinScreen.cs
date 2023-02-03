@@ -118,7 +118,7 @@ namespace osu.Game.Tournament.Screens.TeamWin
                             Font = OsuFont.Torus.With(size: 100, weight: FontWeight.Bold),
                             Margin = new MarginPadding { Bottom = 50 },
                         },
-                        new DrawableTeamWithPlayers(match.Winner, match.WinnerColour)
+                        new DrawableTeamTitle(match.Winner)
                     }
                 },
             };
