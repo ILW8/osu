@@ -63,7 +63,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 {
                     RelativeSizeAxes = Axes.Both,
                     Direction = FillDirection.Vertical,
-                    Padding = new MarginPadding(20),
+                    Padding = new MarginPadding{ Left = 20, Right = 20, Bottom = 20, Top = 5 },
                     Spacing = new Vector2(5),
                     Children = new Drawable[]
                     {
