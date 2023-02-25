@@ -35,6 +35,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             }
         }
 
+        public MarginPadding TextMarginPadding { get; set; } = new MarginPadding(20);
+
         private bool showLogo = true;
 
         public bool ShowLogo
@@ -63,7 +65,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 {
                     RelativeSizeAxes = Axes.Both,
                     Direction = FillDirection.Vertical,
-                    Padding = new MarginPadding{ Left = 20, Right = 20, Bottom = 20, Top = 5 },
+                    Padding = TextMarginPadding,
                     Spacing = new Vector2(5),
                     Children = new Drawable[]
                     {

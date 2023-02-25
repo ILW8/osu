@@ -49,6 +49,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                 new MatchHeader
                 {
                     ShowScores = true,
+                    TextMarginPadding = new MarginPadding { Left = 20, Right = 20, Bottom = 20, Top = 5 }
                 },
                 mapFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
                 {
