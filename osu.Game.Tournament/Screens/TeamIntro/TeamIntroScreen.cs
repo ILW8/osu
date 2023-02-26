@@ -58,7 +58,6 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 new DrawableTeamFlag(match.NewValue.Team1.Value)
                 {
                     Position = new Vector2(165, y_flag_offset),
-                    CornerRadius = -0.727f,
                     Size = new Vector2(164, 164),
                 },
                 new DrawableTeamWithPlayers(match.NewValue.Team1.Value, TeamColour.Red)
@@ -68,7 +67,6 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                 new DrawableTeamFlag(match.NewValue.Team2.Value)
                 {
                     Position = new Vector2(740, y_flag_offset),
-                    CornerRadius = -0.727f,
                     Size = new Vector2(164, 164),
                 },
                 new DrawableTeamWithPlayers(match.NewValue.Team2.Value, TeamColour.Blue)
