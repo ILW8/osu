@@ -10,6 +10,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
+using osu.Game.Tournament.IO;
 using osu.Game.Tournament.Models;
 using osuTK;
 
@@ -22,7 +23,6 @@ namespace osu.Game.Tournament.Components
         [UsedImplicitly]
         private Bindable<string> flag;
 
-        private Sprite flagSprite;
         // private PoCFlagContainer flagContainer;
 
         public DrawableTeamFlag(TournamentTeam team)
@@ -31,7 +31,7 @@ namespace osu.Game.Tournament.Components
         }
 
         [BackgroundDependencyLoader]
-        private void load(TextureStore textures)
+        private void load(TextureStore textures, TournamentVideoResourceStore storage)
         {
             if (team == null) return;
 
@@ -42,26 +42,31 @@ namespace osu.Game.Tournament.Components
 
             Masking = true;
             CornerRadius = 5;
-            flagSprite = new Sprite
-            {
-                RelativeSizeAxes = Axes.Both,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                FillMode = FillMode.Fill
-            };
 
             (flag = team.FlagName.GetBoundCopy()).BindValueChanged(_ =>
             {
-                Texture newTexture = textures.Get($@"Flags/{flag}");
-
-                if (newTexture != null)
+                if (storage.GetStream(team.FlagName.Value) != null)
                 {
-                    Child = flagSprite;
-                    flagSprite.Texture = newTexture;
+                    Child = new TourneyVideo(team.FlagName.Value) { Loop = true, RelativeSizeAxes = Axes.Both };
                 }
                 else
                 {
-                    Child = new TourneyVideo(team.FlagName.Value, true) { Loop = true, RelativeSizeAxes = Axes.Both };
+                    var newTexture = textures.Get($@"Flags/{flag}");
+
+                    if (newTexture == null)
+                    {
+                        return;
+                    }
+
+                    var sprite = new Sprite
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        FillMode = FillMode.Fill
+                    };
+                    sprite.Texture = newTexture;
+                    Child = sprite;
                 }
             }, true);
         }
