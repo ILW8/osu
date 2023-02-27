@@ -16,6 +16,7 @@ namespace osu.Game.Tournament.IO
             AddExtension("m4v");
             AddExtension("avi");
             AddExtension("mp4");
+            AddExtension("gif");
         }
     }
 }
