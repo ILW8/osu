@@ -27,6 +27,14 @@ namespace osu.Game.Tournament.Components
             Team = team;
 
             Flag = new DrawableTeamFlag(team);
+            // Flag = new Container
+            // {
+            //     Child = new TourneyVideo("bu")
+            //     {
+            //         Loop = true,
+            //         RelativeSizeAxes = Axes.Both,
+            //     }
+            // };
             AcronymText = new TournamentSpriteText
             {
                 Font = OsuFont.Torus.With(weight: FontWeight.Regular),
