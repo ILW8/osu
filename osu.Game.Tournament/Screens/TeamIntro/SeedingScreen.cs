@@ -321,7 +321,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                     AutoSizeAxes = Axes.Both;
 
                     Flag.RelativeSizeAxes = Axes.None;
-                    Flag.Size = new Vector2(127, 127);
+                    Flag.Size = new Vector2(255, 255);
 
                     InternalChild = new FillFlowContainer
                     {
