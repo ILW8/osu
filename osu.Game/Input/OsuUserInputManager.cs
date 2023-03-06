@@ -3,15 +3,45 @@
 
 #nullable disable
 
+using System.Diagnostics;
 using osu.Framework.Input;
+using osu.Framework.Input.StateChanges.Events;
+using osu.Framework.Logging;
 using osuTK.Input;
 
 namespace osu.Game.Input
 {
     public partial class OsuUserInputManager : UserInputManager
     {
+        private readonly Stopwatch stopWatch = new Stopwatch();
+        private int moveEvents;
+
         internal OsuUserInputManager()
         {
+            stopWatch.Start();
+        }
+
+        ~OsuUserInputManager()
+        {
+            stopWatch.Stop();
+        }
+
+        protected override void HandleMousePositionChange(MousePositionChangeEvent e)
+        {
+            moveEvents++;
+            long elapsed;
+
+            if ((elapsed = stopWatch.ElapsedMilliseconds) <= 1000)
+            {
+                base.HandleMousePositionChange(e);
+                return;
+            }
+
+            Logger.Log($"{moveEvents} MouseMove events in {elapsed}ms: {moveEvents * 1000 / elapsed}", LoggingTarget.Information, LogLevel.Important);
+            stopWatch.Restart();
+            moveEvents = 0;
+
+            base.HandleMousePositionChange(e);
         }
 
         protected override MouseButtonEventManager CreateButtonEventManagerFor(MouseButton button)
