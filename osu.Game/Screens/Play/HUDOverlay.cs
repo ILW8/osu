@@ -359,7 +359,7 @@ namespace osu.Game.Screens.Play
             switch (e.Action)
             {
                 case GlobalAction.HoldForHUD:
-                    holdingForHUD.Value = true;
+                    holdingForHUD.Value ^= true;
                     return true;
 
                 case GlobalAction.ToggleInGameInterface:
@@ -386,12 +386,12 @@ namespace osu.Game.Screens.Play
 
         public void OnReleased(KeyBindingReleaseEvent<GlobalAction> e)
         {
-            switch (e.Action)
-            {
-                case GlobalAction.HoldForHUD:
-                    holdingForHUD.Value = false;
-                    break;
-            }
+            // switch (e.Action)
+            // {
+            //     case GlobalAction.HoldForHUD:
+            //         holdingForHUD.Value = false;
+            //         break;
+            // }
         }
 
         private partial class HUDComponentsContainer : SkinComponentsContainer
