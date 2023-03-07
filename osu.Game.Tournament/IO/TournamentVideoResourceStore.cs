@@ -19,4 +19,16 @@ namespace osu.Game.Tournament.IO
             AddExtension("gif");
         }
     }
+
+    public class TournamentFlagVideoResourceStore : NamespacedResourceStore<byte[]>
+    {
+        public TournamentFlagVideoResourceStore(Storage storage)
+            : base(new StorageBackedResourceStore(storage), "Flags")
+        {
+            AddExtension("m4v");
+            AddExtension("avi");
+            AddExtension("mp4");
+            AddExtension("gif");
+        }
+    }
 }

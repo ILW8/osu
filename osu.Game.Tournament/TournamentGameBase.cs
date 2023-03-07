@@ -71,6 +71,7 @@ namespace osu.Game.Tournament
             dependencies.CacheAs(storage);
 
             dependencies.Cache(new TournamentVideoResourceStore(storage));
+            dependencies.Cache(new TournamentFlagVideoResourceStore(storage));
 
             Textures.AddTextureSource(new TextureLoaderStore(new StorageBackedResourceStore(storage)));
 
