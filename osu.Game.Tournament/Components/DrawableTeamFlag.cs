@@ -71,23 +71,20 @@ namespace osu.Game.Tournament.Components
                     return;
                 }
 
-                InternalChild = new Video(stream, false)
+                InternalChild = new Video(stream, false) // this _does not_ support transparency. Convert gif into sequence of PNGs and use fallback GetFlag method for videos with alpha
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    FillMode = FillMode.Fit,
+                    FillMode = FillMode.Fill,
                     Loop = true,
                     Size = Size,
                 };
-                // InternalChild = GetFlag(Size);
             }, true);
         }
 
         // most of the code below is stolen from osu.Game.Skinning.LegacySkinExtensions
         public Drawable GetFlag(Vector2 size)
         {
-            Logger.Log(@"Called DrawableTeamFlag.GetFlag", LoggingTarget.Information);
-
             var textures = GetTextures();
 
             switch (textures.Length)
@@ -108,12 +105,12 @@ namespace osu.Game.Tournament.Components
                 default:
                     var animation = new LegacySkinExtensions.SkinnableTextureAnimation
                     {
-                        DefaultFrameLength = 1000f / 60f, // hardcoded 60fps for now
+                        DefaultFrameLength = 1000f / 60f, // hardcoded 60fps for now, no framerate metadata with only sequence of images
                         Loop = true,
-                        // Size = size,
-                        // Anchor = Anchor.Centre,
-                        // Origin = Anchor.Centre,
-                        // FillMode = FillMode.Fill
+                        Size = size,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        FillMode = FillMode.Fill
                     };
 
                     foreach (var t in textures)
@@ -125,16 +122,11 @@ namespace osu.Game.Tournament.Components
 
         public Texture[] GetTextures()
         {
-            if (textureStore == null || flagVideoStore == null)
+            if (textureStore == null)
                 return Array.Empty<Texture>();
 
-            var textures = tryGetVideoFramesTextures().ToArray();
-
-            if (textures.Length > 0) // successfully loaded and decoded video
-                return textures;
-
-            // try loading images instead (fallback animated sequence of pngs, inspired by animated skin elements)
-            textures = getTextures().ToArray();
+            // try loading images (fallback animated sequence of pngs, inspired by animated skin elements)
+            var textures = getTextures().ToArray();
 
             if (textures.Length > 0)
                 return textures;
@@ -145,35 +137,6 @@ namespace osu.Game.Tournament.Components
             return singleTexture != null
                 ? new[] { singleTexture }
                 : Array.Empty<Texture>();
-
-            IEnumerable<Texture> tryGetVideoFramesTextures()
-            {
-                // load video file stream
-                var stream = flagVideoStore.GetStream(flag.Value);
-
-                if (stream == null)
-                    yield break;
-
-                // instantiate decoder
-                var decoder = gameHost.CreateVideoDecoder(stream);
-                decoder.StartDecoding();
-
-                // load decoded frames until EOF
-                do
-                {
-                    bool gotFrame = false;
-
-                    foreach (DecodedFrame decodedFrame in decoder.GetDecodedFrames())
-                    {
-                        // Logger.Log($"{decodedFrame.Texture.UploadComplete}", LoggingTarget.Information, LogLevel.Verbose);
-                        gotFrame = true;
-                        yield return decodedFrame.Texture;
-                    }
-
-                    if (decoder.State == VideoDecoder.DecoderState.EndOfStream && !gotFrame)
-                        break;
-                } while (true);
-            }
 
 #nullable enable
             IEnumerable<Texture> getTextures()
