@@ -4,6 +4,7 @@
 #nullable disable
 
 using osu.Framework.Allocation;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
@@ -49,7 +50,7 @@ namespace osu.Game.Tournament.Components
             {
                 InternalChild = new Box
                 {
-                    Colour = ColourInfo.GradientVertical(OsuColour.Gray(0.3f), OsuColour.Gray(0.6f)),
+                    Colour = ColourInfo.GradientVertical(Color4Extensions.FromHex("f6a1fa"),Color4Extensions.FromHex("7ac6f5")),
                     RelativeSizeAxes = Axes.Both,
                 };
             }
