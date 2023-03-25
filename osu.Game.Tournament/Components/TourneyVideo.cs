@@ -11,7 +11,6 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Video;
 using osu.Framework.Timing;
-using osu.Game.Graphics;
 using osu.Game.Tournament.IO;
 
 namespace osu.Game.Tournament.Components
@@ -50,7 +49,7 @@ namespace osu.Game.Tournament.Components
             {
                 InternalChild = new Box
                 {
-                    Colour = ColourInfo.GradientVertical(Color4Extensions.FromHex("f6a1fa"),Color4Extensions.FromHex("7ac6f5")),
+                    Colour = ColourInfo.GradientVertical(Color4Extensions.FromHex("f6a1fa"), Color4Extensions.FromHex("7ac6f5")),
                     RelativeSizeAxes = Axes.Both,
                 };
             }
