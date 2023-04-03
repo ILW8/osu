@@ -283,7 +283,10 @@ namespace osu.Game.Tournament
 
         public void PopulatePlayer(TournamentUser user, Action success = null, Action failure = null, bool immediate = false)
         {
-            var req = new GetUserRequest(user.OnlineID, ladder.Ruleset.Value);
+            var req = new GetUserRequest(user.OnlineID, ladder.Ruleset.Value)
+            {
+                RequireAPIToken = true // user endpoint requires authentication
+            };
 
             if (immediate)
             {

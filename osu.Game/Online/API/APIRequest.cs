@@ -72,6 +72,7 @@ namespace osu.Game.Online.API
         protected virtual string Uri => $@"{API.APIEndpointUrl}/api/v2/{Target}";
 
         protected APIAccess API;
+        public bool RequireAPIToken = false;
         protected WebRequest WebRequest;
 
         /// <summary>
@@ -120,6 +121,10 @@ namespace osu.Game.Online.API
 
             if (!string.IsNullOrEmpty(API.AccessToken))
                 WebRequest.AddHeader("Authorization", $"Bearer {API.AccessToken}");
+            else if (RequireAPIToken)
+            {
+                Fail(new OperationCanceledException("Missing API access token and RequireAPIToken is true"));
+            }
 
             if (isFailing) return;
 
