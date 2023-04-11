@@ -136,12 +136,33 @@ namespace osu.Game.Tournament.Screens.MapPool
         {
             const TeamColour roll_winner = TeamColour.Red; //todo: draw from match
 
-            var nextColour = (CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? roll_winner) == TeamColour.Red ? TeamColour.Blue : TeamColour.Red;
+            var lastColour = CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? roll_winner;
+            int picksBansCount = CurrentMatch.Value.PicksBans.Count;
 
-            if (pickType == ChoiceType.Ban && CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= 2)
-                setMode(pickColour, ChoiceType.Pick);
+            TeamColour nextColour;
+
+            switch (picksBansCount < 2 * CurrentMatch.Value.Round.Value.BansPerTeam.Value ? CurrentMatch.Value.Round.Value.BanOrder.Value : BanOrder.NotApplicable)
+            {
+                case BanOrder.AABB:
+                    nextColour = picksBansCount % 2 == 1 ? lastColour : lastColour == TeamColour.Red ? TeamColour.Blue : TeamColour.Red;
+                    break;
+
+                case BanOrder.ABBA:
+                    var firstColour = CurrentMatch.Value.PicksBans.FirstOrDefault()?.Team ?? roll_winner;
+                    nextColour = picksBansCount % 3 == 0 ? firstColour : firstColour == TeamColour.Red ? TeamColour.Blue : TeamColour.Red;
+                    break;
+
+                case BanOrder.NotApplicable:
+                case BanOrder.ABAB:
+                default:
+                    nextColour = lastColour == TeamColour.Red ? TeamColour.Blue : TeamColour.Red;
+                    break;
+            }
+
+            if (pickType == ChoiceType.Ban && CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= 2 * CurrentMatch.Value.Round.Value.BansPerTeam.Value)
+                setMode(nextColour, ChoiceType.Pick);
             else
-                setMode(nextColour, CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= 2 ? ChoiceType.Pick : ChoiceType.Ban);
+                setMode(nextColour, CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= 2 * CurrentMatch.Value.Round.Value.BansPerTeam.Value ? ChoiceType.Pick : ChoiceType.Ban);
         }
 
         protected override bool OnMouseDown(MouseDownEvent e)

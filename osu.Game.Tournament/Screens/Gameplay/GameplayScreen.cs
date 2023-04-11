@@ -149,7 +149,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             if (match.NewValue == null)
                 return;
 
-            warmup.Value = match.NewValue.Team1Score.Value + match.NewValue.Team2Score.Value == 0;
+            warmup.Value = match.NewValue.Round.Value.HasWarmups.Value && match.NewValue.Team1Score.Value + match.NewValue.Team2Score.Value == 0;
             scheduledOperation?.Cancel();
         }
 

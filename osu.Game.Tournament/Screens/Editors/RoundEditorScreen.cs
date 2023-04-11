@@ -8,15 +8,16 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays.Settings;
+using osu.Game.Screens.Play.PlayerSettings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
+using Box = osu.Framework.Graphics.Shapes.Box;
 
 namespace osu.Game.Tournament.Screens.Editors
 {
@@ -84,10 +85,23 @@ namespace osu.Game.Tournament.Screens.Editors
                                 Width = 0.33f,
                                 Current = Model.BestOf
                             },
+                            new SettingsSlider<int>
+                            {
+                                LabelText = "Bans per team",
+                                Width = 0.33f,
+                                Current = Model.BansPerTeam,
+                            },
+                            new SettingsBanOrderDropdown(Model.BansPerTeam) { LabelText = "Ban order", Current = Model.BanOrder, Width = 0.33f },
+                            new PlayerCheckbox
+                            {
+                                LabelText = "Has warmups",
+                                Width = 0.33f,
+                                Current = Model.HasWarmups,
+                                Margin = new MarginPadding { Vertical = 12 }
+                            },
                             new SettingsButton
                             {
-                                Width = 0.2f,
-                                Margin = new MarginPadding(10),
+                                Width = 0.33f,
                                 Text = "Add beatmap",
                                 Action = () => beatmapEditor.CreateNew()
                             },
@@ -111,6 +125,46 @@ namespace osu.Game.Tournament.Screens.Editors
 
                 RelativeSizeAxes = Axes.X;
                 AutoSizeAxes = Axes.Y;
+            }
+
+            private partial class SettingsBanOrderDropdown : SettingsDropdown<BanOrder>
+            {
+                public SettingsBanOrderDropdown(BindableInt bansPerTeam)
+                {
+                    // Current = new Bindable<BanOrder>();
+                    Control.AddDropdownItem(BanOrder.AABB);
+                    Control.AddDropdownItem(BanOrder.ABAB);
+                    Control.AddDropdownItem(BanOrder.ABBA);
+
+                    if (bansPerTeam.Value != 2)
+                    {
+                        Control.Current.Value = BanOrder.NotApplicable;
+                        Control.Colour = new OsuColour().Gray7;
+                    }
+
+                    bansPerTeam.BindValueChanged(e =>
+                    {
+                        if (e.NewValue == 2)
+                        {
+                            if (Control.Current.Value == BanOrder.NotApplicable)
+                            {
+                                Control.Current.Value = BanOrder.AABB;
+                            }
+
+                            Control.Colour = new OsuColour().GrayF;
+                        }
+                        else
+                        {
+                            Control.Current.Value = BanOrder.NotApplicable;
+                            Control.Colour = new OsuColour().Gray7;
+                        }
+                    });
+                }
+
+                protected override bool ShouldBeConsideredForInput(Drawable child)
+                {
+                    return Control.Current.Value != BanOrder.NotApplicable;
+                }
             }
 
             public partial class RoundBeatmapEditor : CompositeDrawable
