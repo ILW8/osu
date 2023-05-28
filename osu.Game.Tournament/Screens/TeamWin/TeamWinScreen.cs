@@ -90,20 +90,22 @@ namespace osu.Game.Tournament.Screens.TeamWin
 
             mainContainer.Children = new Drawable[]
             {
-                new DrawableTeamFlag(match.Winner)
+                new DrawableTeamFlag(match.Winner) // todo: this should probably be asynchronously preloaded as it fetches from the network now
                 {
                     Anchor = Anchor.Centre,
                     Origin = Anchor.Centre,
-                    Position = new Vector2(-300, 10),
-                    Scale = new Vector2(2f)
+                    Position = new Vector2(-340, 42),
+                    Scale = new Vector2(2f),
+                    PlayerOffsetX = 72f,
+                    PlayerOffsetY = 0f,
                 },
                 new FillFlowContainer
                 {
                     AutoSizeAxes = Axes.Both,
                     Direction = FillDirection.Vertical,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    X = 260,
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                    X = 780,
                     Children = new Drawable[]
                     {
                         new RoundDisplay(match)
@@ -121,7 +123,7 @@ namespace osu.Game.Tournament.Screens.TeamWin
                 },
             };
             mainContainer.FadeOut();
-            mainContainer.Delay(2000).FadeIn(1600, Easing.OutQuint);
+            mainContainer.Delay(1200).FadeIn(2400, Easing.OutQuint);
         });
     }
 }

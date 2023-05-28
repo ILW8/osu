@@ -4,8 +4,10 @@
 #nullable disable
 
 using System.Diagnostics;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -13,13 +15,39 @@ using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Ladder.Components;
+using osu.Game.Users.Drawables;
 using osuTK;
 
 namespace osu.Game.Tournament.Screens.TeamIntro
 {
+    // [LongRunningLoad]
+    public partial class UserTile : CompositeDrawable
+    {
+        public APIUser User
+        {
+            get => avatar.User;
+            set => avatar.User = value;
+        }
+
+        private readonly UpdateableAvatar avatar;
+
+        public UserTile()
+        {
+            Size = new Vector2(128);
+            CornerRadius = 5f;
+            Masking = true;
+
+            InternalChildren = new Drawable[]
+            {
+                avatar = new UpdateableAvatar(showUsernameTooltip: true) { RelativeSizeAxes = Axes.Both },
+            };
+        }
+    }
+
     public partial class SeedingScreen : TournamentMatchScreen
     {
         private Container mainContainer;
@@ -256,9 +284,25 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
         private partial class LeftInfo : CompositeDrawable
         {
+            public TournamentUser TourneyUser { get; }
+            public TournamentUser TourneyUser2 { get; }
+            public TournamentTeam TourneyTeam { get; }
+
             public LeftInfo(TournamentTeam team)
             {
                 FillFlowContainer fill;
+
+                var firstPlayer = team?.Players.FirstOrDefault();
+                var secondPlayer = team?.Players.LastOrDefault();
+
+                if (firstPlayer == null || secondPlayer == null)
+                {
+                    return;
+                }
+
+                TourneyUser = firstPlayer;
+                TourneyUser2 = secondPlayer;
+                TourneyTeam = team;
 
                 Width = 200;
 
@@ -273,11 +317,31 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                         Direction = FillDirection.Vertical,
                         Children = new Drawable[]
                         {
-                            new TeamDisplay(team) { Margin = new MarginPadding { Bottom = 30 } },
-                            new RowDisplay("Average Rank:", $"#{team.AverageRank:#,0}"),
-                            new RowDisplay("Seed:", team.Seed.Value),
-                            new RowDisplay("Last year's placing:", team.LastYearPlacing.Value > 0 ? $"#{team.LastYearPlacing:#,0}" : "0"),
-                            new Container { Margin = new MarginPadding { Bottom = 30 } },
+                            new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Horizontal,
+                                Children = new Drawable[]
+                                {
+                                    new UserTile { User = TourneyUser.ToAPIUser(), Margin = new MarginPadding { Right = 20 } },
+                                    new UserTile { User = TourneyUser2.ToAPIUser(), Margin = new MarginPadding { Right = 20 } },
+                                    // new TeamDisplay(TourneyTeam)
+                                },
+                                Margin = new MarginPadding { Bottom = 30 }
+                            },
+                            new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                Children = new Drawable[]
+                                {
+                                    new RowDisplay("Seed:", TourneyTeam.Seed.Value),
+                                    new RowDisplay("Global rank:", $"#{TourneyUser.Rank:#,0}"),
+                                    new Container { Margin = new MarginPadding { Bottom = 30 } },
+                                }
+                            }
                         }
                     },
                 };

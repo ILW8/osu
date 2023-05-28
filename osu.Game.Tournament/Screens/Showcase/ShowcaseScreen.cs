@@ -16,12 +16,17 @@ namespace osu.Game.Tournament.Screens.Showcase
 {
     public partial class ShowcaseScreen : BeatmapInfoScreen
     {
+        public ShowcaseScreen()
+        {
+            ShowReplayer = true;
+            SongBar.Animate = false;
+        }
+
         [BackgroundDependencyLoader]
         private void load()
         {
             AddRangeInternal(new Drawable[]
             {
-                new TournamentLogo(),
                 new TourneyVideo("showcase")
                 {
                     Loop = true,
@@ -40,7 +45,8 @@ namespace osu.Game.Tournament.Screens.Showcase
                         RelativeSizeAxes = Axes.Both,
                         Colour = new Color4(0, 255, 0, 255),
                     }
-                }
+                },
+                new TournamentLogo()
             });
         }
 
