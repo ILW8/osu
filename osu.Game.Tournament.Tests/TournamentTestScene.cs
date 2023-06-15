@@ -10,6 +10,7 @@ using osu.Framework.Platform;
 using osu.Framework.Testing;
 using osu.Framework.Utils;
 using osu.Game.Beatmaps;
+using osu.Game.Models;
 using osu.Game.Rulesets;
 using osu.Game.Tests.Visual;
 using osu.Game.Tournament.IO;
@@ -157,9 +158,14 @@ namespace osu.Game.Tournament.Tests
             {
                 Metadata = new BeatmapMetadata
                 {
-                    Title = "Test Title",
+                    Title = "Test Title That Happens to be Very Long",
                     Artist = "Test Artist",
+                    Author = new RealmUser()
+                    {
+                        Username = "A Long Mapper Name"
+                    },
                 },
+                DifficultyName = "I'm a seiso idol, I'm a seiso idol...",
                 OnlineID = RNG.Next(0, 1000000),
             };
 
