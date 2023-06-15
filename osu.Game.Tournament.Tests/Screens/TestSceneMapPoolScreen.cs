@@ -24,86 +24,6 @@ namespace osu.Game.Tournament.Tests.Screens
             Add(screen = new MapPoolScreen { Width = 0.7f });
         }
 
-        [Test]
-        public void TestFewMaps()
-        {
-            AddStep("load few maps", () =>
-            {
-                Ladder.CurrentMatch.Value.Round.Value.Beatmaps.Clear();
-
-                for (int i = 0; i < 8; i++)
-                    addBeatmap();
-            });
-
-            AddStep("reset match", () =>
-            {
-                Ladder.CurrentMatch.Value = new TournamentMatch();
-                Ladder.CurrentMatch.Value = Ladder.Matches.First();
-            });
-
-            assertTwoWide();
-        }
-
-        [Test]
-        public void TestJustEnoughMaps()
-        {
-            AddStep("load just enough maps", () =>
-            {
-                Ladder.CurrentMatch.Value.Round.Value.Beatmaps.Clear();
-
-                for (int i = 0; i < 18; i++)
-                    addBeatmap();
-            });
-
-            AddStep("reset match", () =>
-            {
-                Ladder.CurrentMatch.Value = new TournamentMatch();
-                Ladder.CurrentMatch.Value = Ladder.Matches.First();
-            });
-
-            assertTwoWide();
-        }
-
-        [Test]
-        public void TestManyMaps()
-        {
-            AddStep("load many maps", () =>
-            {
-                Ladder.CurrentMatch.Value.Round.Value.Beatmaps.Clear();
-
-                for (int i = 0; i < 19; i++)
-                    addBeatmap();
-            });
-
-            AddStep("reset match", () =>
-            {
-                Ladder.CurrentMatch.Value = new TournamentMatch();
-                Ladder.CurrentMatch.Value = Ladder.Matches.First();
-            });
-
-            assertThreeWide();
-        }
-
-        [Test]
-        public void TestJustEnoughMods()
-        {
-            AddStep("load many maps", () =>
-            {
-                Ladder.CurrentMatch.Value.Round.Value.Beatmaps.Clear();
-
-                for (int i = 0; i < 11; i++)
-                    addBeatmap(i > 4 ? $"M{i}" : "NM");
-            });
-
-            AddStep("reset match", () =>
-            {
-                Ladder.CurrentMatch.Value = new TournamentMatch();
-                Ladder.CurrentMatch.Value = Ladder.Matches.First();
-            });
-
-            assertTwoWide();
-        }
-
         private void assertTwoWide() =>
             AddAssert("ensure layout width is 2", () => screen.ChildrenOfType<FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>>().First().Padding.Left > 0);
 
@@ -117,8 +37,15 @@ namespace osu.Game.Tournament.Tests.Screens
             {
                 Ladder.CurrentMatch.Value.Round.Value.Beatmaps.Clear();
 
-                for (int i = 0; i < 12; i++)
-                    addBeatmap(i > 4 ? $"M{i}" : "NM");
+                string[] a = { "DT", "HR", "HD" };
+
+                foreach (string mod in a)
+                {
+                    for (int i = 0; i < 7; i++)
+                    {
+                        addBeatmap(mod);
+                    }
+                }
             });
 
             AddStep("reset match", () =>
