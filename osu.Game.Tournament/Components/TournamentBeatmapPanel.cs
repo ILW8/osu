@@ -8,6 +8,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -26,11 +27,12 @@ namespace osu.Game.Tournament.Components
         private readonly string mod;
 
         public const float HEIGHT = 50;
+        public bool Tall;
 
         private readonly Bindable<TournamentMatch> currentMatch = new Bindable<TournamentMatch>();
         private Box flash;
 
-        public TournamentBeatmapPanel(TournamentBeatmap beatmap, string mod = null)
+        public TournamentBeatmapPanel(TournamentBeatmap beatmap, string mod = null, bool tall = false)
         {
             ArgumentNullException.ThrowIfNull(beatmap);
 
@@ -39,6 +41,7 @@ namespace osu.Game.Tournament.Components
 
             Width = 400;
             Height = HEIGHT;
+            Tall = tall;
         }
 
         [BackgroundDependencyLoader]
@@ -69,72 +72,114 @@ namespace osu.Game.Tournament.Components
                     Origin = Anchor.CentreLeft,
                     Padding = new MarginPadding(8),
                     Direction = FillDirection.Vertical,
-                    Children = new Drawable[]
-                    {
-                        new TournamentSpriteText
+                    Children = Tall
+                        ? new Drawable[]
                         {
-                            Text = string.IsNullOrEmpty(Beatmap.Metadata.Title) ? "unknown artist" : Beatmap.Metadata.Title,
-                            Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14),
-                        },
-                        new FillFlowContainer
-                        {
-                            AutoSizeAxes = Axes.Both,
-                            Direction = FillDirection.Horizontal,
-                            Children = new Drawable[]
+                            new TournamentSpriteText
                             {
-                                new TournamentSpriteText
-                                {
-                                    Text = "by",
-                                    Padding = new MarginPadding { Right = 4 },
-                                    Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
-                                },
-                                new TournamentSpriteText
-                                {
-                                    Text = string.IsNullOrEmpty(Beatmap.Metadata.Artist) ? "unknown artist" : Beatmap.Metadata.Artist,
-                                    Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14),
-                                },
-                            }
-                        },
-                        new FillFlowContainer
-                        {
-                            AutoSizeAxes = Axes.Both,
-                            Direction = FillDirection.Horizontal,
-                            Children = new Drawable[]
+                                Text = string.IsNullOrEmpty(Beatmap.Metadata.Title) ? "unknown artist" : Beatmap.Metadata.Title,
+                                Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14),
+                            },
+                            new FillFlowContainer
                             {
-                                new TournamentSpriteText
+                                AutoSizeAxes = Axes.Both,
+                                Direction = FillDirection.Horizontal,
+                                Margin = new MarginPadding { Top = -2.0f },
+                                Children = new Drawable[]
                                 {
-                                    Text = "mapper",
-                                    Padding = new MarginPadding { Right = 4 },
-                                    Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 12)
-                                },
-                                new TournamentSpriteText
-                                {
-                                    Text = Beatmap.Metadata.Author.Username,
-                                    Padding = new MarginPadding { Right = 12 },
-                                    Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 12)
-                                },
-                            }
-                        },
-                        new FillFlowContainer
-                        {
-                            AutoSizeAxes = Axes.Both,
-                            Direction = FillDirection.Horizontal,
-                            Children = new Drawable[]
+                                    new TournamentSpriteText
+                                    {
+                                        Text = "by",
+                                        Padding = new MarginPadding { Right = 4 },
+                                        Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 12)
+                                    },
+                                    new TournamentSpriteText
+                                    {
+                                        Text = string.IsNullOrEmpty(Beatmap.Metadata.Artist) ? "unknown artist" : Beatmap.Metadata.Artist,
+                                        Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 12),
+                                    },
+                                }
+                            },
+                            new FillFlowContainer
                             {
-                                new TournamentSpriteText
+                                AutoSizeAxes = Axes.Both,
+                                Direction = FillDirection.Horizontal,
+                                Children = new Drawable[]
                                 {
-                                    Text = "difficulty",
-                                    Padding = new MarginPadding { Right = 4 },
-                                    Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 12)
-                                },
-                                new TournamentSpriteText
+                                    new TournamentSpriteText
+                                    {
+                                        Text = "mapper",
+                                        Padding = new MarginPadding { Right = 4 },
+                                        Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 11)
+                                    },
+                                    new TournamentSpriteText
+                                    {
+                                        Text = Beatmap.Metadata.Author.Username,
+                                        Padding = new MarginPadding { Right = 12 },
+                                        Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 11)
+                                    },
+                                }
+                            },
+                            new FillFlowContainer
+                            {
+                                AutoSizeAxes = Axes.Both,
+                                Direction = FillDirection.Horizontal,
+                                Margin = new MarginPadding { Top = -2.0f },
+                                Children = new Drawable[]
                                 {
-                                    Text = Beatmap.DifficultyName,
-                                    Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 12)
-                                },
+                                    new TournamentSpriteText
+                                    {
+                                        Text = "difficulty",
+                                        Padding = new MarginPadding { Right = 4 },
+                                        Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 12)
+                                    },
+                                    new TournamentSpriteText
+                                    {
+                                        Text = Beatmap.DifficultyName,
+                                        Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 12)
+                                    },
+                                }
                             }
                         }
-                    },
+                        : new Drawable[]
+                        {
+                            new TournamentSpriteText
+                            {
+                                Text = Beatmap.GetDisplayTitleRomanisable(false, false),
+                                Font = OsuFont.Torus.With(weight: FontWeight.Bold),
+                            },
+                            new FillFlowContainer
+                            {
+                                AutoSizeAxes = Axes.Both,
+                                Direction = FillDirection.Horizontal,
+                                Children = new Drawable[]
+                                {
+                                    new TournamentSpriteText
+                                    {
+                                        Text = "mapper",
+                                        Padding = new MarginPadding { Right = 5 },
+                                        Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
+                                    },
+                                    new TournamentSpriteText
+                                    {
+                                        Text = Beatmap.Metadata.Author.Username,
+                                        Padding = new MarginPadding { Right = 20 },
+                                        Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
+                                    },
+                                    new TournamentSpriteText
+                                    {
+                                        Text = "difficulty",
+                                        Padding = new MarginPadding { Right = 5 },
+                                        Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
+                                    },
+                                    new TournamentSpriteText
+                                    {
+                                        Text = Beatmap.DifficultyName,
+                                        Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
+                                    },
+                                }
+                            }
+                        },
                 },
                 flash = new Box
                 {
@@ -185,7 +230,7 @@ namespace osu.Game.Tournament.Components
 
                 BorderThickness = 6;
 
-                BorderColour = TournamentGame.GetTeamColour(found.Team);
+                BorderColour = found.Team == TeamColour.Red ? Color4Extensions.FromHex("#f2bd57") : TournamentGame.COLOUR_BLUE;
 
                 switch (found.Type)
                 {

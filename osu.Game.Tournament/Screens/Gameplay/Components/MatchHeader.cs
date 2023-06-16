@@ -18,6 +18,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private TeamScoreDisplay teamDisplay2;
         private DrawableTournamentHeaderLogo logo;
 
+        public MatchRoundDisplay MatchRoundDisplay;
+
         private bool showScores = true;
 
         public bool ShowScores
@@ -78,12 +80,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                         },
-                        new MatchRoundDisplay
+                        MatchRoundDisplay = new MatchRoundDisplay
                         {
-                            Margin = new MarginPadding(0)
-                            {
-                                Top = -115
-                            },
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                             Scale = new Vector2(0.4f)
