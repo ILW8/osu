@@ -39,6 +39,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         private readonly OsuButton buttonRedPick;
         private readonly OsuButton buttonBluePick;
 
+        private readonly MatchHeader matchHeader;
+
         public MapPoolScreen()
         {
             InternalChildren = new Drawable[]
@@ -48,24 +50,23 @@ namespace osu.Game.Tournament.Screens.MapPool
                     Loop = true,
                     RelativeSizeAxes = Axes.Both,
                 },
-                new MatchHeader
+                matchHeader = new MatchHeader
                 {
                     ShowScores = true,
                 },
                 new FillFlowContainer<FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>>
                 {
                     Y = 136,
-                    X = -4,
+                    X = 0,
                     Direction = FillDirection.Horizontal,
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
-                    Spacing = new Vector2(8, 0),
                     Children = new[]
                     {
                         mapFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
                         {
                             Width = 0.5f,
-                            Spacing = new Vector2(4, 4),
+                            Spacing = new Vector2(0, 4),
                             Direction = FillDirection.Vertical,
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y,
@@ -73,7 +74,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                         mapFlowsCol2 = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
                         {
                             Width = 0.5f,
-                            Spacing = new Vector2(4, 4),
+                            Spacing = new Vector2(0, 4),
                             Direction = FillDirection.Vertical,
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y,
@@ -251,6 +252,24 @@ namespace osu.Game.Tournament.Screens.MapPool
                 string currentMod = null;
 
                 int flowCount = 0;
+                int panelWidth = 400;
+                int panelHeight = 42;
+                bool tall = false;
+
+                if (match.NewValue.Round.Value.Beatmaps2.Count == 0) // no 2nd pool
+                {
+                    mapFlows.Width = 1.0f;
+                    mapFlows.Margin = new MarginPadding { Top = 24 };
+                }
+                else
+                {
+                    mapFlows.Width = 0.5f;
+                    panelWidth = 224;
+                    panelHeight = 56;
+                    tall = true;
+                    mapFlows.Margin = new MarginPadding(0);
+                    matchHeader.MatchRoundDisplay.Margin = new MarginPadding { Top = -115 };
+                }
 
                 foreach (var b in match.NewValue.Round.Value.Beatmaps)
                 {
@@ -258,7 +277,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     {
                         mapFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
                         {
-                            Spacing = new Vector2(4, 4),
+                            Spacing = new Vector2(2, 2),
                             Direction = FillDirection.Full,
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y
@@ -276,12 +295,12 @@ namespace osu.Game.Tournament.Screens.MapPool
                         flowCount = 1;
                     }
 
-                    currentFlow.Add(new TournamentBeatmapPanel(b.Beatmap, b.Mods)
+                    currentFlow.Add(new TournamentBeatmapPanel(b.Beatmap, b.Mods, tall: tall)
                     {
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre,
-                        Height = 56,
-                        Width = 224
+                        Height = panelHeight,
+                        Width = panelWidth
                     });
                 }
 
@@ -294,7 +313,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     {
                         mapFlowsCol2.Add(currentFlow2 = new FillFlowContainer<TournamentBeatmapPanel>
                         {
-                            Spacing = new Vector2(4, 4),
+                            Spacing = new Vector2(2, 2),
                             Direction = FillDirection.Full,
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y
@@ -312,12 +331,12 @@ namespace osu.Game.Tournament.Screens.MapPool
                         flowCount = 1;
                     }
 
-                    currentFlow2.Add(new TournamentBeatmapPanel(b.Beatmap, b.Mods)
+                    currentFlow2.Add(new TournamentBeatmapPanel(b.Beatmap, b.Mods, tall: tall)
                     {
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre,
-                        Height = 56,
-                        Width = 224
+                        Height = panelHeight,
+                        Width = panelWidth
                     });
                 }
             }
