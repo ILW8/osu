@@ -22,6 +22,7 @@ using osuTK.Input;
 
 namespace osu.Game.Tournament.Screens.MapPool
 {
+    // ReSharper disable once PartialTypeWithSinglePart
     public partial class MapPoolScreen : TournamentMatchScreen
     {
         private readonly FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>> mapFlows;
@@ -51,12 +52,14 @@ namespace osu.Game.Tournament.Screens.MapPool
                 {
                     ShowScores = true,
                 },
-                new FillFlowContainer<FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>>()
+                new FillFlowContainer<FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>>
                 {
                     Y = 136,
+                    X = -4,
                     Direction = FillDirection.Horizontal,
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
+                    Spacing = new Vector2(8, 0),
                     Children = new[]
                     {
                         mapFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
@@ -168,25 +171,27 @@ namespace osu.Game.Tournament.Screens.MapPool
             var maps = mapFlows.Select(f => f.FirstOrDefault(m => m.ReceivePositionalInputAt(e.ScreenSpaceMousePosition)));
             var map = maps.FirstOrDefault(m => m != null);
 
-            if (map != null)
+            if (map == null)
             {
-                if (e.Button == MouseButton.Left && map.Beatmap.OnlineID > 0)
-                    addForBeatmap(map.Beatmap.OnlineID);
-                else
-                {
-                    var existing = CurrentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == map.Beatmap.OnlineID);
-
-                    if (existing != null)
-                    {
-                        CurrentMatch.Value.PicksBans.Remove(existing);
-                        setNextMode();
-                    }
-                }
-
-                return true;
+                maps = mapFlowsCol2.Select(f => f.FirstOrDefault(m => m.ReceivePositionalInputAt(e.ScreenSpaceMousePosition)));
+                map = maps.FirstOrDefault(m => m != null);
             }
 
-            return base.OnMouseDown(e);
+            if (map == null) return base.OnMouseDown(e);
+
+            if (e.Button == MouseButton.Left && map.Beatmap.OnlineID > 0)
+                addForBeatmap(map.Beatmap.OnlineID);
+            else
+            {
+                var existing = CurrentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == map.Beatmap.OnlineID);
+
+                if (existing == null) return true;
+
+                CurrentMatch.Value.PicksBans.Remove(existing);
+                setNextMode();
+            }
+
+            return true;
         }
 
         private void reset()
@@ -202,7 +207,8 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (CurrentMatch.Value == null)
                 return;
 
-            if (CurrentMatch.Value.Round.Value.Beatmaps.All(b => b.Beatmap.OnlineID != beatmapId))
+            if (CurrentMatch.Value.Round.Value.Beatmaps.All(b => b.Beatmap.OnlineID != beatmapId) &&
+                CurrentMatch.Value.Round.Value.Beatmaps2.All(b => b.Beatmap.OnlineID != beatmapId))
                 // don't attempt to add if the beatmap isn't in our pool
                 return;
 
@@ -219,14 +225,12 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             setNextMode();
 
-            if (LadderInfo.AutoProgressScreens.Value)
-            {
-                if (pickType == ChoiceType.Pick && CurrentMatch.Value.PicksBans.Any(i => i.Type == ChoiceType.Pick))
-                {
-                    scheduledChange?.Cancel();
-                    scheduledChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(GameplayScreen)); }, 10000);
-                }
-            }
+            if (!LadderInfo.AutoProgressScreens.Value) return;
+
+            if (pickType != ChoiceType.Pick || CurrentMatch.Value.PicksBans.All(i => i.Type != ChoiceType.Pick)) return;
+
+            scheduledChange?.Cancel();
+            scheduledChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(GameplayScreen)); }, 10000);
         }
 
         protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch> match)
@@ -244,7 +248,6 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (match.NewValue.Round.Value != null)
             {
                 FillFlowContainer<TournamentBeatmapPanel> currentFlow = null;
-                FillFlowContainer<TournamentBeatmapPanel> currentFlow2 = null;
                 string currentMod = null;
 
                 int flowCount = 0;
@@ -254,13 +257,6 @@ namespace osu.Game.Tournament.Screens.MapPool
                     if (currentFlow == null || currentMod != b.Mods)
                     {
                         mapFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
-                        {
-                            Spacing = new Vector2(4, 4),
-                            Direction = FillDirection.Full,
-                            RelativeSizeAxes = Axes.X,
-                            AutoSizeAxes = Axes.Y
-                        });
-                        mapFlowsCol2.Add(currentFlow2 = new FillFlowContainer<TournamentBeatmapPanel>
                         {
                             Spacing = new Vector2(4, 4),
                             Direction = FillDirection.Full,
@@ -287,6 +283,35 @@ namespace osu.Game.Tournament.Screens.MapPool
                         Height = 56,
                         Width = 224
                     });
+                }
+
+                FillFlowContainer<TournamentBeatmapPanel> currentFlow2 = null;
+                currentMod = null;
+
+                foreach (var b in match.NewValue.Round.Value.Beatmaps2)
+                {
+                    if (currentFlow2 == null || currentMod != b.Mods)
+                    {
+                        mapFlowsCol2.Add(currentFlow2 = new FillFlowContainer<TournamentBeatmapPanel>
+                        {
+                            Spacing = new Vector2(4, 4),
+                            Direction = FillDirection.Full,
+                            RelativeSizeAxes = Axes.X,
+                            AutoSizeAxes = Axes.Y
+                        });
+
+                        currentMod = b.Mods;
+
+                        totalRows++;
+                        flowCount = 0;
+                    }
+
+                    if (++flowCount > 2)
+                    {
+                        totalRows++;
+                        flowCount = 1;
+                    }
+
                     currentFlow2.Add(new TournamentBeatmapPanel(b.Beatmap, b.Mods)
                     {
                         Anchor = Anchor.TopCentre,

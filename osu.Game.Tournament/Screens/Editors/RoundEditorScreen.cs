@@ -88,8 +88,15 @@ namespace osu.Game.Tournament.Screens.Editors
                             {
                                 Width = 0.2f,
                                 Margin = new MarginPadding(10),
-                                Text = "Add beatmap",
+                                Text = "Add beatmap (developer 1)",
                                 Action = () => beatmapEditor.CreateNew()
+                            },
+                            new SettingsButton
+                            {
+                                Width = 0.2f,
+                                Margin = new MarginPadding(10),
+                                Text = "Add beatmap (developer 2)",
+                                Action = () => beatmapEditor.CreateNew(1)
                             },
                             beatmapEditor
                         }
@@ -117,6 +124,7 @@ namespace osu.Game.Tournament.Screens.Editors
             {
                 private readonly TournamentRound round;
                 private readonly FillFlowContainer flow;
+                private readonly FillFlowContainer flow2;
 
                 public RoundBeatmapEditor(TournamentRound round)
                 {
@@ -125,20 +133,60 @@ namespace osu.Game.Tournament.Screens.Editors
                     RelativeSizeAxes = Axes.X;
                     AutoSizeAxes = Axes.Y;
 
-                    InternalChild = flow = new FillFlowContainer
+                    InternalChild = new FillFlowContainer
                     {
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
                         Direction = FillDirection.Vertical,
-                        ChildrenEnumerable = round.Beatmaps.Select(p => new RoundBeatmapRow(round, p))
+                        Margin = new MarginPadding(8),
+                        Children = new Drawable[]
+                        {
+                            new TournamentSpriteText
+                            {
+                                Text = "Developer 1 pool",
+                                Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 24),
+                                Padding = new MarginPadding { Left = 8 }
+                            },
+                            flow = new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                ChildrenEnumerable = round.Beatmaps.Select(p => new RoundBeatmapRow(round, p))
+                            },
+                            new TournamentSpriteText
+                            {
+                                Text = "Developer 2 pool",
+                                Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 24),
+                                Padding = new MarginPadding { Left = 8 }
+                            },
+                            flow2 = new FillFlowContainer
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Direction = FillDirection.Vertical,
+                                ChildrenEnumerable = round.Beatmaps2.Select(p => new RoundBeatmapRow(round, p))
+                            },
+                        }
                     };
                 }
 
-                public void CreateNew()
+                public void CreateNew(int listIndex = 0)
                 {
-                    var user = new RoundBeatmap();
-                    round.Beatmaps.Add(user);
-                    flow.Add(new RoundBeatmapRow(round, user));
+                    var roundBeatmap = new RoundBeatmap();
+
+                    switch (listIndex)
+                    {
+                        case 1:
+                            flow2.Add(new RoundBeatmapRow(round, roundBeatmap));
+                            round.Beatmaps2.Add(roundBeatmap);
+                            break;
+
+                        default:
+                            flow.Add(new RoundBeatmapRow(round, roundBeatmap));
+                            round.Beatmaps.Add(roundBeatmap);
+                            break;
+                    }
                 }
 
                 public partial class RoundBeatmapRow : CompositeDrawable
