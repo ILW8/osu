@@ -255,6 +255,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                 int panelWidth = 400;
                 int panelHeight = 42;
                 bool tall = false;
+                Vector2 cardSpacing = new Vector2(10, 5); // default spacing
 
                 if (match.NewValue.Round.Value.Beatmaps2.Count == 0) // no 2nd pool
                 {
@@ -269,6 +270,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     tall = true;
                     mapFlows.Margin = new MarginPadding(0);
                     matchHeader.MatchRoundDisplay.Margin = new MarginPadding { Top = -115 };
+                    cardSpacing = new Vector2(2, 2);
                 }
 
                 foreach (var b in match.NewValue.Round.Value.Beatmaps)
@@ -277,7 +279,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     {
                         mapFlows.Add(currentFlow = new FillFlowContainer<TournamentBeatmapPanel>
                         {
-                            Spacing = new Vector2(2, 2),
+                            Spacing = cardSpacing,
                             Direction = FillDirection.Full,
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y
@@ -313,7 +315,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     {
                         mapFlowsCol2.Add(currentFlow2 = new FillFlowContainer<TournamentBeatmapPanel>
                         {
-                            Spacing = new Vector2(2, 2),
+                            Spacing = cardSpacing,
                             Direction = FillDirection.Full,
                             RelativeSizeAxes = Axes.X,
                             AutoSizeAxes = Axes.Y
