@@ -101,14 +101,14 @@ namespace osu.Game.Tournament.Screens.TeamWin
                 {
                     AutoSizeAxes = Axes.Both,
                     Direction = FillDirection.Vertical,
-                    Anchor = Anchor.Centre,
-                    Origin = Anchor.Centre,
-                    X = 260,
+                    Anchor = Anchor.CentreLeft,
+                    Origin = Anchor.CentreLeft,
+                    X = 727,
                     Children = new Drawable[]
                     {
                         new RoundDisplay(match)
                         {
-                            Margin = new MarginPadding { Bottom = 30 },
+                            Margin = new MarginPadding { Top = 64, Bottom = 0 },
                         },
                         new TournamentSpriteText
                         {
