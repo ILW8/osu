@@ -69,13 +69,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             Height = 512,
                             Children = new Drawable[]
                             {
-                                new ChromaArea
+                                new ChromaArea(0)
                                 {
                                     Name = "Left chroma",
                                     RelativeSizeAxes = Axes.Both,
                                     Width = 0.5f,
                                 },
-                                new ChromaArea
+                                new ChromaArea(1)
                                 {
                                     Name = "Right chroma",
                                     RelativeSizeAxes = Axes.Both,
@@ -117,8 +117,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         },
                         new SettingsSlider<int>
                         {
-                            LabelText = "Players per team",
+                            LabelText = "Players per team (left)",
                             Current = LadderInfo.PlayersPerTeam,
+                            KeyboardStep = 1,
+                        },
+                        new SettingsSlider<int>
+                        {
+                            LabelText = "Players per team (right)",
+                            Current = LadderInfo.PlayersPerTeam2,
                             KeyboardStep = 1,
                         }
                     }
@@ -234,6 +240,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private partial class ChromaArea : CompositeDrawable
         {
+            private readonly int side;
+
+            public ChromaArea(int side)
+            {
+                this.side = side;
+            }
+
             [Resolved]
             private LadderInfo ladder { get; set; }
 
@@ -243,7 +256,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 // chroma key area for stable gameplay
                 Colour = new Color4(0, 255, 0, 255);
 
-                ladder.PlayersPerTeam.BindValueChanged(performLayout, true);
+                (side == 0 ? ladder.PlayersPerTeam : ladder.PlayersPerTeam2).BindValueChanged(performLayout, true);
             }
 
             private void performLayout(ValueChangedEvent<int> playerCount)
@@ -266,6 +279,19 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 RelativeSizeAxes = Axes.Both,
                                 Anchor = Anchor.BottomLeft,
                                 Origin = Anchor.BottomLeft,
+                                Height = 0.5f,
+                            },
+                        };
+                        break;
+
+                    case 2:
+                        InternalChildren = new Drawable[]
+                        {
+                            new Box
+                            {
+                                RelativeSizeAxes = Axes.Both,
+                                Anchor = Anchor.CentreRight,
+                                Origin = Anchor.CentreRight,
                                 Height = 0.5f,
                             },
                         };
