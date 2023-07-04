@@ -184,13 +184,13 @@ namespace osu.Game.Tournament.Screens.Editors
                                 Spacing = new Vector2(5),
                                 AutoSizeAxes = Axes.Y,
                                 RelativeSizeAxes = Axes.X,
-                                Direction = FillDirection.Vertical,
+                                Direction = FillDirection.Horizontal,
                                 Children = new Drawable[]
                                 {
                                     new FillFlowContainer
                                     {
                                         Margin = new MarginPadding(5),
-                                        Padding = new MarginPadding { Right = 160 },
+                                        // Padding = new MarginPadding { Right = 160 },
                                         Spacing = new Vector2(5),
                                         Direction = FillDirection.Horizontal,
                                         AutoSizeAxes = Axes.Both,
@@ -209,14 +209,14 @@ namespace osu.Game.Tournament.Screens.Editors
                                                 RelativeSizeAxes = Axes.None,
                                                 Width = 200,
                                                 Current = mods,
-                                            },
-                                            drawableContainer = new Container
-                                            {
-                                                Size = new Vector2(100, 70),
-                                            },
+                                            }
                                         }
                                     },
                                     roundDropdown = new SettingsWinConditionDropdown { LabelText = "Win condition", Current = Model.WinCondition, Width = 0.5f },
+                                    drawableContainer = new Container
+                                    {
+                                        Size = new Vector2(100, 70),
+                                    },
                                 }
                             },
 
@@ -240,7 +240,6 @@ namespace osu.Game.Tournament.Screens.Editors
                     {
                         public SettingsWinConditionDropdown()
                         {
-                            Logger.Log($"Created a new win condition dropdown, current value: {Control.Current.Value}", LoggingTarget.Runtime, LogLevel.Important);
                             Control.AddDropdownItem(WinCondition.Accuracy);
                             Control.AddDropdownItem(WinCondition.MissCount);
                             Control.Current.TriggerChange();
