@@ -200,6 +200,21 @@ namespace osu.Game.Tournament
                 video.Show();
             }
 
+            if (lastScreen.ChildrenOfType<GameplayScreen.ChromaArea>().FirstOrDefault() != null)
+            {
+
+            }
+
+            if (lastScreen is GameplayScreen outgoingGameplayScreen)
+            {
+                outgoingGameplayScreen.chroma.MoveTo(Direction.Horizontal, 960, 250, Easing.InOutQuint);
+            }
+
+            else if (currentScreen is GameplayScreen incomingGameplayScreen)
+            {
+                incomingGameplayScreen.chroma.MoveTo(Direction.Horizontal, 0, 250, Easing.InOutQuint);
+            }
+
             screens.ChangeChildDepth(currentScreen, depth--);
             currentScreen.Show();
 

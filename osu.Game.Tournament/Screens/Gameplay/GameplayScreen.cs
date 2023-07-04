@@ -35,7 +35,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; }
 
-        private Drawable chroma;
+        public Drawable chroma;
 
         [BackgroundDependencyLoader]
         private void load(LadderInfo ladder, MatchIPCInfo ipc)
@@ -232,7 +232,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
         }
 
-        private partial class ChromaArea : CompositeDrawable
+        public partial class ChromaArea : CompositeDrawable
         {
             [Resolved]
             private LadderInfo ladder { get; set; }
