@@ -14,7 +14,6 @@ using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.UserInterface;
 using osu.Framework.Input.Events;
 using osu.Framework.Input.States;
-using osu.Framework.Logging;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
 using osu.Game.Tournament.Models;
@@ -81,7 +80,7 @@ namespace osu.Game.Tournament.Screens.Editors
                     }),
                     new OsuMenuItem("Reset teams", MenuItemType.Destructive, () =>
                     {
-                        dialogOverlay?.Push(new BracketResetTeamsDialog(MatchesContainer));
+                        dialogOverlay?.Push(new LadderResetTeamsDialog(MatchesContainer));
                     })
                 };
             }
