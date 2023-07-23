@@ -42,6 +42,7 @@ namespace osu.Game.Tournament.Models
         };
 
         public Bindable<bool> AutoProgressScreens = new BindableBool(true);
+        public Bindable<int> RankingChatDelay = new BindableInt(10000);
 
         public Bindable<bool> SplitMapPoolByMods = new BindableBool(true);
     }

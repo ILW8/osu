@@ -10,6 +10,7 @@ using osu.Framework.Configuration;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Logging;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Online.API;
@@ -27,6 +28,7 @@ namespace osu.Game.Tournament.Screens.Setup
 
         private LoginOverlay loginOverlay;
         private ResolutionSelector resolution;
+        private RankingChatDelaySelector rankingChatDelay;
 
         [Resolved]
         private MatchIPCInfo ipc { get; set; }
@@ -131,6 +133,16 @@ namespace osu.Game.Tournament.Screens.Setup
                         windowSize.Value = new Size((int)(height * aspect_ratio / TournamentSceneManager.STREAM_AREA_WIDTH * TournamentSceneManager.REQUIRED_WIDTH), height);
                     }
                 },
+                rankingChatDelay = new RankingChatDelaySelector
+                {
+                    Label = "Ranking chat delay (in milliseconds)",
+                    ButtonText = "Set delay",
+                    Action = delayMs =>
+                    {
+                        Logger.Log($"Hey, set the ranking delay to {delayMs}ms", LoggingTarget.Runtime, LogLevel.Important);
+                        LadderInfo.RankingChatDelay.Value = delayMs;
+                    }
+                },
                 new LabelledSwitchButton
                 {
                     Label = "Auto advance screens",
@@ -147,6 +159,7 @@ namespace osu.Game.Tournament.Screens.Setup
             base.Update();
 
             resolution.Value = $"{ScreenSpaceDrawQuad.Width:N0}x{ScreenSpaceDrawQuad.Height:N0}";
+            rankingChatDelay.Value = $"{LadderInfo.RankingChatDelay.Value}ms";
         }
     }
 }
