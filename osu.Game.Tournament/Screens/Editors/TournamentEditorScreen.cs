@@ -135,15 +135,7 @@ namespace osu.Game.Tournament.Screens.Editors
             }
 
             List<TModel>? rounds = JsonConvert.DeserializeObject<List<TModel>>(inputJson,
-                new JsonSerializerSettings
-                {
-                    Error = delegate(object? _, ErrorEventArgs args)
-                    {
-                        args.ErrorContext.Handled = true;
-                    }
-                });
-
-            if (rounds == null) return false;
+                new JsonSerializerSettings { Error = delegate(object? _, ErrorEventArgs args) { args.ErrorContext.Handled = true; } });
 
             Storage.AddRange(rounds);
             return true;

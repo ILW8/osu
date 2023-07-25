@@ -12,7 +12,7 @@ namespace osu.Game.Tournament.Components
         {
             RelativeSizeAxes = Axes.X,
             CommitOnFocusLost = true,
-            LengthLimit = 262144
+            LengthLimit = null
         };
     }
 }
