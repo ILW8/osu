@@ -230,7 +230,7 @@ namespace osu.Game.Tournament.Components
 
                 BorderThickness = 6;
 
-                BorderColour = found.Team == TeamColour.Red ? Color4Extensions.FromHex("#f2bd57") : TournamentGame.COLOUR_BLUE;
+                BorderColour = TournamentGame.GetTeamColour(found.Team);
 
                 switch (found.Type)
                 {
