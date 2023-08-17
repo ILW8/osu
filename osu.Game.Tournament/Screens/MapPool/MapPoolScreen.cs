@@ -9,8 +9,10 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
+using osu.Framework.Logging;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -27,6 +29,7 @@ namespace osu.Game.Tournament.Screens.MapPool
     {
         private readonly FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>> mapFlows;
         private readonly FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>> mapFlowsCol2;
+        private readonly SettingsSlider<int> poolSelectionSlider;
 
         [Resolved(canBeNull: true)]
         private TournamentSceneManager sceneManager { get; set; }
@@ -121,9 +124,22 @@ namespace osu.Game.Tournament.Screens.MapPool
                             Action = reset
                         },
                         new ControlPanel.Spacer(),
+                        poolSelectionSlider = new SettingsSlider<int>
+                        {
+                            LabelText = "Mappool selection",
+                            Current = new BindableInt { MinValue = 0, MaxValue = 2 }, // placeholder while CurrentMatch gets populated
+                            KeyboardStep = 1
+                        }
                     },
                 }
             };
+
+            poolSelectionSlider.Current.Disabled = true;
+            poolSelectionSlider.Current.BindValueChanged(vce =>
+            {
+                Logger.Log($"in MappoolScreen, value changed pool select {vce.NewValue}");
+                CurrentMatchChanged(new ValueChangedEvent<TournamentMatch>(CurrentMatch.Value, CurrentMatch.Value));
+            });
         }
 
         [BackgroundDependencyLoader]
@@ -241,6 +257,10 @@ namespace osu.Game.Tournament.Screens.MapPool
             mapFlows.Clear();
             mapFlowsCol2.Clear();
 
+            poolSelectionSlider.Current.Disabled = false;
+            poolSelectionSlider.Current = match.NewValue.PoolSelection;
+            Logger.Log($"CurrentMatchChanged {match.NewValue}", LoggingTarget.Runtime, LogLevel.Debug);
+
             if (match.NewValue == null)
                 return;
 
@@ -257,7 +277,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                 bool tall = false;
                 Vector2 cardSpacing = new Vector2(10, 5); // default spacing
 
-                if (match.NewValue.Round.Value.Beatmaps2.Count == 0) // no 2nd pool
+                if (match.NewValue.Round.Value.Beatmaps2.Count == 0 || poolSelectionSlider.Current.Value != (int)PoolSelection.Unselected) // no 2nd pool _or_ a single pool has been selected
                 {
                     mapFlows.Width = 1.0f;
                     mapFlows.Margin = new MarginPadding { Top = 24 };
@@ -273,7 +293,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     cardSpacing = new Vector2(2, 2);
                 }
 
-                foreach (var b in match.NewValue.Round.Value.Beatmaps)
+                foreach (var b in poolSelectionSlider.Current.Value == (int)PoolSelection.Accuracy ? match.NewValue.Round.Value.Beatmaps2 : match.NewValue.Round.Value.Beatmaps)
                 {
                     if (currentFlow == null || currentMod != b.Mods)
                     {

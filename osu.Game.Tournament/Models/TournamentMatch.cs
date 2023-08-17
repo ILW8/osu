@@ -7,12 +7,20 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing;
+using System.Linq;
 using Newtonsoft.Json;
 using osu.Framework.Bindables;
 using osu.Game.Tournament.Screens.Ladder.Components;
 
 namespace osu.Game.Tournament.Models
 {
+    public enum PoolSelection
+    {
+        Unselected,
+        ScoreV2,
+        Accuracy
+    }
+
     /// <summary>
     /// A collection of two teams competing in a head-to-head match.
     /// </summary>
@@ -49,6 +57,12 @@ namespace osu.Game.Tournament.Models
         public readonly Bindable<bool> Completed = new Bindable<bool>();
 
         public readonly Bindable<bool> Losers = new Bindable<bool>();
+
+        public readonly Bindable<int> PoolSelection = new BindableNumber<int>
+        {
+            MaxValue = Enum.GetValues(typeof(PoolSelection)).Cast<int>().Max(),
+            MinValue = Enum.GetValues(typeof(PoolSelection)).Cast<int>().Min()
+        };
 
         public readonly ObservableCollection<BeatmapChoice> PicksBans = new ObservableCollection<BeatmapChoice>();
 

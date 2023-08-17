@@ -9,7 +9,6 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
-using osu.Framework.Logging;
 using osu.Game.Graphics;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
@@ -89,14 +88,14 @@ namespace osu.Game.Tournament.Screens.Editors
                             {
                                 Width = 0.2f,
                                 Margin = new MarginPadding(10),
-                                Text = "Add beatmap (developer 1)",
+                                Text = "Add beatmap (SV2)",
                                 Action = () => beatmapEditor.CreateNew()
                             },
                             new SettingsButton
                             {
                                 Width = 0.2f,
                                 Margin = new MarginPadding(10),
-                                Text = "Add beatmap (developer 2)",
+                                Text = "Add beatmap (ACC)",
                                 Action = () => beatmapEditor.CreateNew(1)
                             },
                             beatmapEditor
@@ -144,7 +143,7 @@ namespace osu.Game.Tournament.Screens.Editors
                         {
                             new TournamentSpriteText
                             {
-                                Text = "Developer 1 pool",
+                                Text = "SV2 pool",
                                 Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 24),
                                 Padding = new MarginPadding { Left = 8 }
                             },
@@ -157,7 +156,7 @@ namespace osu.Game.Tournament.Screens.Editors
                             },
                             new TournamentSpriteText
                             {
-                                Text = "Developer 2 pool",
+                                Text = "Accuracy pool",
                                 Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 24),
                                 Padding = new MarginPadding { Left = 8 }
                             },
@@ -166,7 +165,7 @@ namespace osu.Game.Tournament.Screens.Editors
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
                                 Direction = FillDirection.Vertical,
-                                ChildrenEnumerable = round.Beatmaps2.Select(p => new RoundBeatmapRow(round, p))
+                                ChildrenEnumerable = round.Beatmaps2.Select(p => new RoundBeatmapRow(round, p, true))
                             },
                         }
                     };
@@ -204,7 +203,7 @@ namespace osu.Game.Tournament.Screens.Editors
                     private readonly Container drawableContainer;
                     private SettingsDropdown<WinCondition> roundDropdown;
 
-                    public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap)
+                    public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap, bool isAlternatePool = false)
                     {
                         Model = beatmap;
 
@@ -260,7 +259,7 @@ namespace osu.Game.Tournament.Screens.Editors
                                             }
                                         }
                                     },
-                                    roundDropdown = new SettingsWinConditionDropdown { LabelText = "Win condition", Current = Model.WinCondition, Width = 0.5f },
+                                    roundDropdown = new SettingsWinConditionDropdown { LabelText = "Win condition", Current = Model.WinCondition, Width = 0.25f },
                                     drawableContainer = new Container
                                     {
                                         Size = new Vector2(100, 70),
@@ -278,7 +277,7 @@ namespace osu.Game.Tournament.Screens.Editors
                                 Action = () =>
                                 {
                                     Expire();
-                                    team.Beatmaps.Remove(beatmap);
+                                    (isAlternatePool ? team.Beatmaps2 : team.Beatmaps).Remove(beatmap);
                                 },
                             }
                         };
@@ -288,8 +287,8 @@ namespace osu.Game.Tournament.Screens.Editors
                     {
                         public SettingsWinConditionDropdown()
                         {
+                            Control.AddDropdownItem(WinCondition.ScoreV2);
                             Control.AddDropdownItem(WinCondition.Accuracy);
-                            Control.AddDropdownItem(WinCondition.MissCount);
                             Control.Current.TriggerChange();
                         }
                     }

@@ -10,9 +10,11 @@ namespace osu.Game.Tournament.Models
 {
     public enum WinCondition
     {
+        ScoreV2,
         Accuracy,
-        MissCount
+        MissCount,
     }
+
     public class RoundBeatmap
     {
         public int ID;
