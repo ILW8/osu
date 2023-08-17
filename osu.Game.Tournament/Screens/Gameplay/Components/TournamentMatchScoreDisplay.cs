@@ -18,7 +18,6 @@ using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osuTK;
-using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
@@ -41,13 +40,12 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly Bindable<TournamentBeatmap> currentBeatmap = new Bindable<TournamentBeatmap>();
 
         private readonly MatchScoreCounter score1Text;
-        private readonly MatchScoreCounter score1HiddenText;
         private readonly MatchScoreCounter score2Text;
-        private readonly MatchScoreCounter score2HiddenText;
         private readonly AccScoreCounter acc1Text;
         private readonly AccScoreCounter acc2Text;
 
         private readonly MatchScoreDiffCounter scoreDiffText;
+        private readonly MatchAccDiffCounter accDiffText;
 
         private readonly Drawable score1Bar;
         private readonly Drawable score2Bar;
@@ -95,29 +93,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Origin = Anchor.TopCentre,
                     Alpha = 0
                 },
-                score1HiddenText = new MatchScoreCounter
-                {
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    Scale = new Vector2(0.8f),
-                    Colour = new Color4(0, 255, 12, 255),
-                    Y = -48,
-                    Alpha = 0
-                },
                 acc1Text = new AccScoreCounter
                 {
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
                     // Y = -128
-                },
-                score2HiddenText = new MatchScoreCounter
-                {
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    Scale = new Vector2(0.8f),
-                    Colour = new Color4(0, 255, 12, 255),
-                    Y = -48,
-                    Alpha = 0
                 },
                 acc2Text = new AccScoreCounter
                 {
@@ -142,6 +122,16 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     Alpha = 0
                 },
                 scoreDiffText = new MatchScoreDiffCounter
+                {
+                    Anchor = Anchor.TopCentre,
+                    Margin = new MarginPadding
+                    {
+                        Top = bar_height / 4,
+                        Horizontal = 8
+                    },
+                    Alpha = 0
+                },
+                accDiffText = new MatchAccDiffCounter
                 {
                     Anchor = Anchor.TopCentre,
                     Margin = new MarginPadding
@@ -176,50 +166,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             currentBeatmap.BindTo(ipc.Beatmap);
             currentBeatmap.BindValueChanged(_ => Scheduler.AddOnce(updateWinCondition));
-            //
-            // winCondition.BindValueChanged(vce =>
-            // {
-            //     Logger.Log($"win condition updated: {vce.NewValue}", LoggingTarget.Runtime, LogLevel.Important);
-            // });
-
-            // new thing
-            //             if (CurrentMatch.Value.Round.Value.Beatmaps.All(b => b.Beatmap.OnlineID != beatmapId))
-
-            /*
-             *         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
-        {
-            ipc.Beatmap.BindValueChanged(beatmapChanged);
         }
-
-        private void beatmapChanged(ValueChangedEvent<TournamentBeatmap> beatmap)
-        {
-            if (CurrentMatch.Value == null || CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) < 2)
-                return;
-
-            // if bans have already been placed, beatmap changes result in a selection being made autoamtically
-            if (beatmap.NewValue.OnlineID > 0)
-                addForBeatmap(beatmap.NewValue.OnlineID);
-        }
-             */
-
-        }
-
-        // protected override void LoadComplete()
-        // {
-        //     base.LoadComplete();
-        //
-        //     LadderInfo.CurrentMatch.BindValueChanged(vce =>
-        //     {
-        //         TournamentMatch match = vce.NewValue;
-        //         if (match.Round.Value.Beatmaps.All(b => b.Beatmap.OnlineID != beatmapId))
-        //
-        //     }, true);
-        // }
 
         private void updateWinCondition()
         {
-            var activeBeatmap = LadderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps?.FirstOrDefault(b => b.Beatmap.OnlineID == currentBeatmap.Value?.OnlineID);
+            var activeBeatmap = LadderInfo.CurrentMatch.Value?.Round.Value?.Beatmaps.FirstOrDefault(b => b.Beatmap?.OnlineID == currentBeatmap.Value?.OnlineID);
 
             if (activeBeatmap is null) return;
 
@@ -227,30 +178,33 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             Logger.Log($"Found matching beatmap in mappool, win condition updated: {activeBeatmap.WinCondition}", LoggingTarget.Runtime, LogLevel.Important);
             winCondition.Value = activeBeatmap.WinCondition.Value;
+
             (winCondition.Value == WinCondition.Accuracy ? score1Text : acc1Text).FadeOut(250);
             (winCondition.Value == WinCondition.Accuracy ? score2Text : acc2Text).FadeOut(250);
+            (winCondition.Value == WinCondition.Accuracy ? scoreDiffText : accDiffText).FadeOut(250);
+
             (winCondition.Value == WinCondition.Accuracy ? acc1Text : score1Text).Delay(350).FadeIn(250);
             (winCondition.Value == WinCondition.Accuracy ? acc2Text : score2Text).Delay(350).FadeIn(250);
+            (winCondition.Value == WinCondition.Accuracy ? accDiffText : scoreDiffText).Delay(350).FadeIn(250);
+
             Scheduler.AddOnce(updateScores);
         }
 
         private void updateScores()
         {
-            score1Text.Current.Value = missCount1.Value;
-            score2Text.Current.Value = missCount2.Value;
+            score1Text.Current.Value = score1.Value;
+            score2Text.Current.Value = score2.Value;
             acc1Text.Current.Value = accuracy1.Value;
             acc2Text.Current.Value = accuracy2.Value;
-            score1HiddenText.Current.Value = score1.Value;
-            score2HiddenText.Current.Value = score2.Value;
+
             float accDiff = Math.Max(accuracy1.Value, accuracy2.Value) - Math.Min(accuracy1.Value, accuracy2.Value);
 
+            // todo: set winner width for acc based on 100s/50s count instead of numeric accuracy
             float fullWinnerWidth = winCondition.Value == WinCondition.Accuracy
                 ? Math.Min(0.4f, MathF.Pow(accDiff / 8f, 0.7f) / 2)
-                : Math.Min(0.4f, MathF.Pow(Math.Abs(missCount1.Value - missCount2.Value) / 32f, 0.75f) / 2);
+                : Math.Min(0.4f, MathF.Pow(Math.Abs(score1.Value - score2.Value) / 32f, 0.75f) / 2);
 
-            Logger.Log($"miss1: {missCount1.Value} | miss2: {missCount2.Value}", LoggingTarget.Runtime, LogLevel.Important);
-
-            bool winnerSide = winCondition.Value == WinCondition.Accuracy ? accuracy1.Value > accuracy2.Value : missCount1.Value <= missCount2.Value;
+            bool winnerSide = winCondition.Value == WinCondition.Accuracy ? accuracy1.Value > accuracy2.Value : score1.Value <= score2.Value;
 
             var winningAccText = winnerSide ? acc1Text : acc2Text;
             var winningMissText = winnerSide ? score1Text : score2Text;
@@ -261,29 +215,31 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             winningAccText.Winning = true;
             winningMissText.Winning = true;
+
             // mark both as winning if same accuracy/miss count
             losingAccText.Winning = Math.Abs(accuracy1.Value - accuracy2.Value) < 0.005;
-            losingMissText.Winning = missCount1.Value == missCount2.Value;
+            losingMissText.Winning = score1.Value == score2.Value;
 
             losingBarBase.ResizeWidthTo(0, 400, Easing.OutQuint);
             winningBarBase.ResizeWidthTo(fullWinnerWidth, 400, Easing.OutQuint);
 
+            int diff = Math.Abs(score1.Value - score2.Value);
             scoreDiffText.Alpha = diff != 0 ? 1 : 0;
             scoreDiffText.Current.Value = -diff;
             scoreDiffText.Origin = score1.Value > score2.Value ? Anchor.TopLeft : Anchor.TopRight;
+
+            accDiffText.Alpha = Math.Abs(accuracy1.Value - accuracy2.Value) < 0.01 ? 0 : 1; // 0.01 tolerance as osu! reports acc down to 2 decimal places
+            accDiffText.Current.Value = -Math.Abs(accuracy1.Value - accuracy2.Value);
+            accDiffText.Origin = accuracy1.Value > accuracy2.Value ? Anchor.TopLeft : Anchor.TopRight;
         }
 
         protected override void UpdateAfterChildren()
         {
             base.UpdateAfterChildren();
-            // score1MultipliedText.Y = 28;
             score1Text.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1Bar.DrawWidth);
-            score1HiddenText.X = -Math.Max(5 + score1Text.DrawWidth / 2, score1Bar.DrawWidth);
             acc1Text.X = -Math.Max(5 + acc1Text.DrawWidth / 2, score1Bar.DrawWidth);
 
-            // score2MultipliedText.Y = 28;
             score2Text.X = Math.Max(5 + score2Text.DrawWidth / 2, score2Bar.DrawWidth);
-            score2HiddenText.X = Math.Max(5 + score2Text.DrawWidth / 2, score2Bar.DrawWidth);
             acc2Text.X = Math.Max(5 + acc2Text.DrawWidth / 2, score2Bar.DrawWidth);
         }
 
@@ -329,6 +285,13 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 s.Spacing = new Vector2(-2);
                 s.Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: bar_height, fixedWidth: true);
             });
+        }
+
+        private partial class MatchAccDiffCounter : MatchScoreDiffCounter
+        {
+            protected override double RollingDuration => 500;
+
+            protected override LocalisableString FormatCount(double count) => $"{count:F2} %";
         }
     }
 }
