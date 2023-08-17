@@ -12,6 +12,7 @@ using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
@@ -22,20 +23,19 @@ namespace osu.Game.Tournament.Components
 {
     public partial class TournamentBeatmapPanel : CompositeDrawable
     {
-        public readonly TournamentBeatmap Beatmap;
+        public readonly TournamentBeatmap? Beatmap;
 
         private readonly string mod;
 
         public const float HEIGHT = 50;
         public bool Tall;
 
-        private readonly Bindable<TournamentMatch> currentMatch = new Bindable<TournamentMatch>();
-        private Box flash;
+        private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
+
+        private Box flash = null!;
 
         public TournamentBeatmapPanel(TournamentBeatmap beatmap, string mod = null, bool tall = false)
         {
-            ArgumentNullException.ThrowIfNull(beatmap);
-
             Beatmap = beatmap;
             this.mod = mod;
 
@@ -59,7 +59,7 @@ namespace osu.Game.Tournament.Components
                     RelativeSizeAxes = Axes.Both,
                     Colour = Color4.Black,
                 },
-                new UpdateableOnlineBeatmapSetCover
+                new NoUnloadBeatmapSetCover
                 {
                     RelativeSizeAxes = Axes.Both,
                     Colour = OsuColour.Gray(0.5f),
@@ -145,7 +145,7 @@ namespace osu.Game.Tournament.Components
                         {
                             new TournamentSpriteText
                             {
-                                Text = Beatmap.GetDisplayTitleRomanisable(false, false),
+                                Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"unknown",
                                 Font = OsuFont.Torus.With(weight: FontWeight.Bold),
                             },
                             new FillFlowContainer
@@ -162,7 +162,7 @@ namespace osu.Game.Tournament.Components
                                     },
                                     new TournamentSpriteText
                                     {
-                                        Text = Beatmap.Metadata.Author.Username,
+                                        Text = Beatmap?.Metadata.Author.Username ?? "unknown",
                                         Padding = new MarginPadding { Right = 20 },
                                         Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
                                     },
@@ -174,7 +174,7 @@ namespace osu.Game.Tournament.Components
                                     },
                                     new TournamentSpriteText
                                     {
-                                        Text = Beatmap.DifficultyName,
+                                        Text = Beatmap?.DifficultyName ?? "unknown",
                                         Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
                                     },
                                 }
@@ -203,36 +203,37 @@ namespace osu.Game.Tournament.Components
             }
         }
 
-        private void matchChanged(ValueChangedEvent<TournamentMatch> match)
+        private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             if (match.OldValue != null)
                 match.OldValue.PicksBans.CollectionChanged -= picksBansOnCollectionChanged;
-            match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
-            updateState();
+            if (match.NewValue != null)
+                match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
+
+            Scheduler.AddOnce(updateState);
         }
 
-        private void picksBansOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
-            => updateState();
+        private void picksBansOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+            => Scheduler.AddOnce(updateState);
 
-        private BeatmapChoice choice;
+        private BeatmapChoice? choice;
 
         private void updateState()
         {
-            var found = currentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == Beatmap.OnlineID);
+            var newChoice = currentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == Beatmap?.OnlineID);
 
-            bool doFlash = found != choice;
-            choice = found;
+            bool shouldFlash = newChoice != choice;
 
-            if (found != null)
+            if (newChoice != null)
             {
-                if (doFlash)
-                    flash?.FadeOutFromOne(500).Loop(0, 10);
+                if (shouldFlash)
+                    flash.FadeOutFromOne(500).Loop(0, 10);
 
                 BorderThickness = 6;
 
-                BorderColour = TournamentGame.GetTeamColour(found.Team);
+                BorderColour = TournamentGame.GetTeamColour(newChoice.Team);
 
-                switch (found.Type)
+                switch (newChoice.Type)
                 {
                     case ChoiceType.Pick:
                         Colour = Color4.White;
@@ -251,6 +252,18 @@ namespace osu.Game.Tournament.Components
                 BorderThickness = 0;
                 Alpha = 1;
             }
+
+            choice = newChoice;
+        }
+
+        private partial class NoUnloadBeatmapSetCover : UpdateableOnlineBeatmapSetCover
+        {
+            // As covers are displayed on stream, we want them to load as soon as possible.
+            protected override double LoadDelay => 0;
+
+            // Use DelayedLoadWrapper to avoid content unloading when switching away to another screen.
+            protected override DelayedLoadWrapper CreateDelayedLoadWrapper(Func<Drawable> createContentFunc, double timeBeforeLoad)
+                => new DelayedLoadWrapper(createContentFunc, timeBeforeLoad);
         }
     }
 }
