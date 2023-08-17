@@ -1,14 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-#nullable disable
-
 using System;
 using System.Collections.Specialized;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
@@ -23,7 +20,7 @@ namespace osu.Game.Tournament.Components
 {
     public partial class TournamentBeatmapPanel : CompositeDrawable
     {
-        public readonly TournamentBeatmap? Beatmap;
+        public readonly TournamentBeatmap Beatmap;
 
         private readonly string mod;
 
@@ -34,7 +31,7 @@ namespace osu.Game.Tournament.Components
 
         private Box flash = null!;
 
-        public TournamentBeatmapPanel(TournamentBeatmap beatmap, string mod = null, bool tall = false)
+        public TournamentBeatmapPanel(TournamentBeatmap beatmap, string mod = "", bool tall = false)
         {
             Beatmap = beatmap;
             this.mod = mod;
