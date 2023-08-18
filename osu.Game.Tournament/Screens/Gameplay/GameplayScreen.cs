@@ -33,7 +33,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
 
-        private Drawable chroma = null!;
+        public Drawable Chroma = null!;
 
         [BackgroundDependencyLoader]
         private void load(LadderInfo ladder, MatchIPCInfo ipc)
@@ -60,7 +60,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Origin = Anchor.TopCentre,
                     Children = new[]
                     {
-                        chroma = new Container
+                        Chroma = new Container
                         {
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
@@ -123,7 +123,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 }
             });
 
-            ladder.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
+            ladder.ChromaKeyWidth.BindValueChanged(width => Chroma.Width = width.NewValue, true);
 
             warmup.BindValueChanged(w =>
             {
