@@ -1,7 +1,5 @@
-// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
-
-#nullable disable
 
 using System.Linq;
 using osu.Framework.Allocation;
@@ -13,9 +11,11 @@ using osu.Game.Graphics;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
 using osu.Game.Online.API.Requests.Responses;
+using osu.Game.Overlays;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
+using osu.Game.Tournament.Screens.Editors.Components;
 using osuTK;
 
 namespace osu.Game.Tournament.Screens.Editors
@@ -29,7 +29,10 @@ namespace osu.Game.Tournament.Screens.Editors
             public TournamentRound Model { get; }
 
             [Resolved]
-            private LadderInfo ladderInfo { get; set; }
+            private LadderInfo ladderInfo { get; set; } = null!;
+
+            [Resolved]
+            private IDialogOverlay? dialogOverlay { get; set; }
 
             public RoundRow(TournamentRound round)
             {
@@ -108,11 +111,11 @@ namespace osu.Game.Tournament.Screens.Editors
                         RelativeSizeAxes = Axes.None,
                         Width = 150,
                         Text = "Delete Round",
-                        Action = () =>
+                        Action = () => dialogOverlay?.Push(new DeleteRoundDialog(Model, () =>
                         {
                             Expire();
                             ladderInfo.Rounds.Remove(Model);
-                        },
+                        }))
                     }
                 };
 
@@ -173,18 +176,18 @@ namespace osu.Game.Tournament.Screens.Editors
 
                 public void CreateNew(int listIndex = 0)
                 {
-                    var roundBeatmap = new RoundBeatmap();
+                    var b = new RoundBeatmap();
 
                     switch (listIndex)
                     {
                         case 1:
-                            flow2.Add(new RoundBeatmapRow(round, roundBeatmap));
-                            round.Beatmaps2.Add(roundBeatmap);
+                            flow2.Add(new RoundBeatmapRow(round, b));
+                            round.Beatmaps2.Add(b);
                             break;
 
                         default:
-                            flow.Add(new RoundBeatmapRow(round, roundBeatmap));
-                            round.Beatmaps.Add(roundBeatmap);
+                            flow.Add(new RoundBeatmapRow(round, b));
+                            round.Beatmaps.Add(b);
                             break;
                     }
                 }
@@ -194,7 +197,7 @@ namespace osu.Game.Tournament.Screens.Editors
                     public RoundBeatmap Model { get; }
 
                     [Resolved]
-                    protected IAPIProvider API { get; private set; }
+                    protected IAPIProvider API { get; private set; } = null!;
 
                     private readonly Bindable<int?> beatmapId = new Bindable<int?>();
 
