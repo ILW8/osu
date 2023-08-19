@@ -256,14 +256,17 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }
         }
 
+        private bool shouldBeShown = true; // avoid delayed call to Hide case gameplay screen to stay hidden if rapidly switching scenes
+
         public override void Hide()
         {
+            shouldBeShown = false;
             scheduledScreenChange?.Cancel();
             DisplayedContent.MoveToX(-DrawWidth, FADE_DELAY, Easing.OutQuint);
             DisplayedContentMask.MoveToX(DrawWidth, FADE_DELAY, Easing.OutQuint);
             Scheduler.AddDelayed(() =>
             {
-                if (!(Math.Abs(Alpha - 1) < 0.01f)) return;
+                if (!(Math.Abs(Alpha - 1) < 0.01f) || shouldBeShown) return;
 
                 base.Hide();
             }, FADE_DELAY);
@@ -271,6 +274,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         public override void Show()
         {
+            shouldBeShown = true;
             updateState();
             Alpha = 0.05f; // allow scheduler to run while being practically invisible
             DisplayedContent.MoveToX(-DrawWidth);
