@@ -14,6 +14,7 @@ using osu.Game.Extensions;
 using osu.Game.Graphics;
 using osu.Game.Rulesets;
 using osu.Game.Screens.Menu;
+using osu.Game.Tournament.Models;
 using osuTK;
 using osuTK.Graphics;
 
@@ -21,14 +22,14 @@ namespace osu.Game.Tournament.Components
 {
     public partial class SongBar : CompositeDrawable
     {
-        private IBeatmapInfo? beatmap;
+        private TournamentBeatmap? beatmap;
 
         public const float HEIGHT = 145 / 2f;
 
         [Resolved]
         private IBindable<RulesetInfo> ruleset { get; set; } = null!;
 
-        public IBeatmapInfo? Beatmap
+        public TournamentBeatmap? Beatmap
         {
             set
             {
@@ -36,7 +37,7 @@ namespace osu.Game.Tournament.Components
                     return;
 
                 beatmap = value;
-                refreshContent();
+                update();
             }
         }
 
@@ -48,7 +49,7 @@ namespace osu.Game.Tournament.Components
             set
             {
                 mods = value;
-                refreshContent();
+                update();
             }
         }
 
@@ -70,25 +71,19 @@ namespace osu.Game.Tournament.Components
         protected override bool ComputeIsMaskedAway(RectangleF maskingBounds) => false;
 
         [BackgroundDependencyLoader]
-        private void load(OsuColour colours)
+        private void load()
         {
             RelativeSizeAxes = Axes.X;
             AutoSizeAxes = Axes.Y;
 
-            Masking = true;
-            CornerRadius = 5;
-
             InternalChildren = new Drawable[]
             {
-                new Box
-                {
-                    Colour = colours.Gray3,
-                    RelativeSizeAxes = Axes.Both,
-                },
                 flow = new FillFlowContainer
                 {
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
+                    LayoutDuration = 500,
+                    LayoutEasing = Easing.OutQuint,
                     Direction = FillDirection.Full,
                     Anchor = Anchor.BottomRight,
                     Origin = Anchor.BottomRight,
@@ -98,7 +93,7 @@ namespace osu.Game.Tournament.Components
             Expanded = true;
         }
 
-        private void refreshContent()
+        private void update()
         {
             if (beatmap == null)
             {
@@ -234,7 +229,7 @@ namespace osu.Game.Tournament.Components
                         }
                     }
                 },
-                new UnmaskedTournamentBeatmapPanel(beatmap)
+                new TournamentBeatmapPanel(beatmap)
                 {
                     RelativeSizeAxes = Axes.X,
                     Width = 0.5f,
@@ -275,20 +270,6 @@ namespace osu.Game.Tournament.Components
                     AddText(new TournamentSpriteText { Text = content }, s => cp(s, true));
                 }
             }
-        }
-    }
-
-    internal partial class UnmaskedTournamentBeatmapPanel : TournamentBeatmapPanel
-    {
-        public UnmaskedTournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "")
-            : base(beatmap, mod)
-        {
-        }
-
-        [BackgroundDependencyLoader]
-        private void load()
-        {
-            Masking = false;
         }
     }
 }
