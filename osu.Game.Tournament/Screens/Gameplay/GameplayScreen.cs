@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -33,7 +34,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
 
-        public Drawable Chroma = null!;
+        private Drawable chroma = null!;
+        public Container DisplayedContent = null!;
+        public Container DisplayedContentMask = null!;
 
         [BackgroundDependencyLoader]
         private void load(LadderInfo ladder, MatchIPCInfo ipc)
@@ -51,45 +54,57 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     ShowLogo = false
                 },
-                new Container
+                DisplayedContentMask = new Container
                 {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Y = 110,
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    Children = new[]
+                    RelativeSizeAxes = Axes.Both,
+                    Masking = true,
+                    Child = DisplayedContent = new Container
                     {
-                        Chroma = new Container
+                        RelativeSizeAxes = Axes.Both,
+                        Children = new Drawable[]
                         {
-                            Anchor = Anchor.TopCentre,
-                            Origin = Anchor.TopCentre,
-                            Height = 512,
-                            Children = new Drawable[]
+                            new Container
                             {
-                                new ChromaArea
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Y = 110,
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Children = new[]
                                 {
-                                    Name = "Left chroma",
-                                    RelativeSizeAxes = Axes.Both,
-                                    Width = 0.5f,
-                                },
-                                new ChromaArea
-                                {
-                                    Name = "Right chroma",
-                                    RelativeSizeAxes = Axes.Both,
-                                    Anchor = Anchor.TopRight,
-                                    Origin = Anchor.TopRight,
-                                    Width = 0.5f,
+                                    chroma = new Container
+                                    {
+                                        Anchor = Anchor.TopCentre,
+                                        Origin = Anchor.TopCentre,
+                                        Height = 512,
+                                        Children = new Drawable[]
+                                        {
+                                            new ChromaArea
+                                            {
+                                                Name = "Left chroma",
+                                                RelativeSizeAxes = Axes.Both,
+                                                Width = 0.5f,
+                                            },
+                                            new ChromaArea
+                                            {
+                                                Name = "Right chroma",
+                                                RelativeSizeAxes = Axes.Both,
+                                                Anchor = Anchor.TopRight,
+                                                Origin = Anchor.TopRight,
+                                                Width = 0.5f,
+                                            },
+                                        }
+                                    },
                                 }
-                            }
-                        },
+                            },
+                            scoreDisplay = new TournamentMatchScoreDisplay
+                            {
+                                Y = -147,
+                                Anchor = Anchor.BottomCentre,
+                                Origin = Anchor.TopCentre,
+                            },
+                        }
                     }
-                },
-                scoreDisplay = new TournamentMatchScoreDisplay
-                {
-                    Y = -147,
-                    Anchor = Anchor.BottomCentre,
-                    Origin = Anchor.TopCentre,
                 },
                 new ControlPanel
                 {
@@ -123,7 +138,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 }
             });
 
-            ladder.ChromaKeyWidth.BindValueChanged(width => Chroma.Width = width.NewValue, true);
+            ladder.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
 
             warmup.BindValueChanged(w =>
             {
@@ -244,12 +259,24 @@ namespace osu.Game.Tournament.Screens.Gameplay
         public override void Hide()
         {
             scheduledScreenChange?.Cancel();
-            base.Hide();
+            DisplayedContent.MoveToX(-DrawWidth, FADE_DELAY, Easing.OutQuint);
+            DisplayedContentMask.MoveToX(DrawWidth, FADE_DELAY, Easing.OutQuint);
+            Scheduler.AddDelayed(() =>
+            {
+                if (!(Math.Abs(Alpha - 1) < 0.01f)) return;
+
+                base.Hide();
+            }, FADE_DELAY);
         }
 
         public override void Show()
         {
             updateState();
+            Alpha = 0.05f; // allow scheduler to run while being practically invisible
+            DisplayedContent.MoveToX(-DrawWidth);
+            DisplayedContentMask.MoveToX(DrawWidth);
+            DisplayedContent.Delay(FADE_DELAY).MoveToX(0, FADE_DELAY, Easing.OutCubic);
+            DisplayedContentMask.Delay(FADE_DELAY).MoveToX(0, FADE_DELAY, Easing.OutCubic);
             base.Show();
         }
 
