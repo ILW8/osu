@@ -218,7 +218,7 @@ namespace osu.Game.Tournament
 
             if (currentScreen.ChildrenOfType<TourneyVideo>().FirstOrDefault()?.VideoAvailable == true)
             {
-                video.FadeOut(200);
+                video.Delay(150).FadeOut(200);
 
                 // delay the hide to avoid a double-fade transition.
                 scheduledHide = Scheduler.AddDelayed(() => lastScreen?.Hide(), TournamentScreen.FADE_DELAY);
