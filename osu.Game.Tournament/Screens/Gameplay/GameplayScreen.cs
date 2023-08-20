@@ -278,8 +278,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
             updateState();
             DisplayedContent.MoveToX(-DrawWidth);
             DisplayedContentMask.MoveToX(DrawWidth);
-            DisplayedContent.Delay(FADE_DELAY).MoveToX(0, FADE_DELAY, Easing.OutCubic);
-            DisplayedContentMask.Delay(FADE_DELAY).MoveToX(0, FADE_DELAY, Easing.OutCubic);
+            DisplayedContent.Delay(FADE_DELAY * 2).MoveToX(0, FADE_DELAY, Easing.OutCubic);
+            DisplayedContentMask.Delay(FADE_DELAY * 2).MoveToX(0, FADE_DELAY, Easing.OutCubic);
             base.Show();
         }
 
