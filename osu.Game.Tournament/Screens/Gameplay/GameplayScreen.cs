@@ -276,7 +276,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
         {
             shouldBeShown = true;
             updateState();
-            Alpha = 0.05f; // allow scheduler to run while being practically invisible
             DisplayedContent.MoveToX(-DrawWidth);
             DisplayedContentMask.MoveToX(DrawWidth);
             DisplayedContent.Delay(FADE_DELAY).MoveToX(0, FADE_DELAY, Easing.OutCubic);

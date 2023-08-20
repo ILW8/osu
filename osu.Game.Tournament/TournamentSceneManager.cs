@@ -215,7 +215,7 @@ namespace osu.Game.Tournament
                 video.Show();
             }
 
-            screens.ChangeChildDepth(currentScreen, depth++);
+            screens.ChangeChildDepth(currentScreen, depth--);
             currentScreen.Show();
 
             switch (currentScreen)

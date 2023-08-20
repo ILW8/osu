@@ -25,6 +25,6 @@ namespace osu.Game.Tournament.Screens
 
         public override void Hide() => this.FadeOut(FADE_DELAY);
 
-        public override void Show() => this.FadeIn(FADE_DELAY);
+        public override void Show() => this.Delay(FADE_DELAY).FadeIn(FADE_DELAY);
     }
 }
