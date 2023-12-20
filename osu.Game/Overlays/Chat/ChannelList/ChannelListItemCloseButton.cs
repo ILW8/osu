@@ -7,11 +7,62 @@ using osu.Framework.Graphics.Sprites;
 using osu.Framework.Input.Events;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
+using osu.Game.Graphics.Sprites;
 using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Overlays.Chat.ChannelList
 {
+    public partial class LeaveAllChannelsInGroupButton : OsuClickableContainer
+    {
+        private OsuSpriteText text = null!;
+
+        private Color4 normalColour;
+        private Color4 hoveredColour;
+
+        [BackgroundDependencyLoader]
+        private void load(OsuColour osuColour)
+        {
+            normalColour = osuColour.Red2;
+            hoveredColour = Color4.White;
+            Alpha = 0f;
+
+            RelativeSizeAxes = Axes.Both;
+            Add(text = new OsuSpriteText
+            {
+                Anchor = Anchor.TopLeft,
+                Origin = Anchor.TopLeft,
+                Font = OsuFont.GetFont(size: 12),
+                Text = "Leave all",
+                Colour = normalColour,
+            });
+        }
+
+        protected override bool OnMouseDown(MouseDownEvent e)
+        {
+            text.ScaleTo(0.75f, 2000, Easing.OutQuint);
+            return base.OnMouseDown(e);
+        }
+
+        protected override void OnMouseUp(MouseUpEvent e)
+        {
+            text.ScaleTo(1, 1000, Easing.OutElastic);
+            base.OnMouseUp(e);
+        }
+
+        protected override bool OnHover(HoverEvent e)
+        {
+            text.FadeColour(hoveredColour, 300, Easing.OutQuint);
+            return base.OnHover(e);
+        }
+
+        protected override void OnHoverLost(HoverLostEvent e)
+        {
+            text.FadeColour(normalColour, 300, Easing.OutQuint);
+            base.OnHoverLost(e);
+        }
+    }
+
     public partial class ChannelListItemCloseButton : OsuClickableContainer
     {
         private SpriteIcon icon = null!;

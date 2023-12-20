@@ -174,6 +174,11 @@ namespace osu.Game.Overlays.Chat.ChannelList
             };
         }
 
+        public void Leave()
+        {
+            OnRequestLeave?.Invoke(Channel);
+        }
+
         private void updateState()
         {
             bool selected = selectedChannel.Value == Channel;

@@ -9,7 +9,9 @@ using osu.Framework.Extensions.LocalisationExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Input.Events;
 using osu.Framework.Localisation;
+using osu.Framework.Threading;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.Sprites;
@@ -143,6 +145,12 @@ namespace osu.Game.Overlays.Chat.ChannelList
         private partial class ChannelGroup : FillFlowContainer
         {
             public readonly FillFlowContainer<ChannelListItem> ItemFlow;
+            private readonly LeaveAllChannelsInGroupButton? close;
+
+            private void removeAllChannelsInGroup()
+            {
+                ItemFlow.Select(item => new ScheduledDelegate(item.Leave)).ToList().ForEach(del => Scheduler.Add(del));
+            }
 
             public ChannelGroup(LocalisableString label)
             {
@@ -153,11 +161,33 @@ namespace osu.Game.Overlays.Chat.ChannelList
 
                 Children = new Drawable[]
                 {
-                    new OsuSpriteText
+                    new Container
                     {
-                        Text = label,
-                        Margin = new MarginPadding { Left = 18, Bottom = 5 },
-                        Font = OsuFont.Torus.With(size: 12, weight: FontWeight.SemiBold),
+                        AutoSizeAxes = Axes.Y,
+                        RelativeSizeAxes = Axes.X,
+                        Width = 1.0f,
+                        Children = new Drawable[]
+                        {
+                            new OsuSpriteText
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Text = label,
+                                Margin = new MarginPadding { Left = 18, Bottom = 5 },
+                                Font = OsuFont.Torus.With(size: 12, weight: FontWeight.SemiBold),
+                                Width = 0.8f
+                            },
+                            close = new LeaveAllChannelsInGroupButton
+                            {
+                                RelativePositionAxes = Axes.X,
+
+                                X = 0.7f,
+                                Action = () =>
+                                {
+                                    removeAllChannelsInGroup();
+                                    this.FadeOut(200, Easing.OutQuint);
+                                },
+                            },
+                        }
                     },
                     ItemFlow = new FillFlowContainer<ChannelListItem>
                     {
@@ -166,6 +196,23 @@ namespace osu.Game.Overlays.Chat.ChannelList
                         AutoSizeAxes = Axes.Y,
                     },
                 };
+            }
+
+            protected override bool OnHover(HoverEvent e)
+            {
+                if (ItemFlow.Count > 0)
+                {
+                    close?.FadeIn(300, Easing.OutQuint);
+                }
+
+                return base.OnHover(e);
+            }
+
+            protected override void OnHoverLost(HoverLostEvent e)
+            {
+                close?.FadeOut(200, Easing.OutQuint);
+
+                base.OnHoverLost(e);
             }
         }
     }
