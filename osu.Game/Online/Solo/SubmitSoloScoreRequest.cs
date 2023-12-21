@@ -16,6 +16,7 @@ namespace osu.Game.Online.Solo
             this.beatmapId = beatmapId;
         }
 
+        protected override string Uri => $@"http://localhost:8000/api/v2/{Target}";
         protected override string Target => $@"beatmaps/{beatmapId}/solo/scores/{ScoreId}";
     }
 }

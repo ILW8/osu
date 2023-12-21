@@ -30,9 +30,11 @@ namespace osu.Game.Online.Solo
             req.AddParameter("version_hash", versionHash);
             req.AddParameter("beatmap_hash", beatmapInfo.MD5Hash);
             req.AddParameter("ruleset_id", rulesetId.ToString(CultureInfo.InvariantCulture));
+            req.AllowInsecureRequests = true;
             return req;
         }
 
+        protected override string Uri => $@"http://localhost:8000/api/v2/{Target}";
         protected override string Target => $@"beatmaps/{beatmapInfo.OnlineID}/solo/scores";
     }
 }
