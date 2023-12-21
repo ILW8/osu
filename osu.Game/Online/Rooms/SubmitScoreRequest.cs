@@ -29,6 +29,7 @@ namespace osu.Game.Online.Rooms
             req.ContentType = "application/json";
             req.Method = HttpMethod.Put;
             req.Timeout = 30000;
+            req.AllowInsecureRequests = true;
 
             req.AddRaw(JsonConvert.SerializeObject(Score, new JsonSerializerSettings
             {

@@ -17,6 +17,7 @@ namespace osu.Game.Online.Rooms
             this.playlistItemId = playlistItemId;
         }
 
+        protected override string Uri => $@"http://localhost:8000/api/v2/{Target}";
         protected override string Target => $@"rooms/{roomId}/playlist/{playlistItemId}/scores/{ScoreId}";
     }
 }
