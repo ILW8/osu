@@ -17,7 +17,6 @@ namespace osu.Game.Online.Rooms
             this.playlistItemId = playlistItemId;
         }
 
-        protected override string Uri => $@"http://btmc.live:19727/api/v2/{Target}";
         protected override string Target => $@"rooms/{roomId}/playlist/{playlistItemId}/scores/{ScoreId}";
     }
 }

@@ -34,7 +34,6 @@ namespace osu.Game.Online.Solo
             return req;
         }
 
-        protected override string Uri => $@"http://btmc.live:19727/api/v2/{Target}";
         protected override string Target => $@"beatmaps/{beatmapInfo.OnlineID}/solo/scores";
     }
 }

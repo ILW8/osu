@@ -10,9 +10,10 @@ namespace osu.Game.Online
             WebsiteRootUrl = APIEndpointUrl = @"http://wph.btmc.live:8080";
             APIClientSecret = @"hxr4AmDp7p9O6enQvSFeeKjctO1tHHodtRZnX25i";
             APIClientID = "1";
-            SpectatorEndpointUrl = $@"{APIEndpointUrl}/signalr/spectator";
-            MultiplayerEndpointUrl = $@"{APIEndpointUrl}/signalr/multiplayer";
-            MetadataEndpointUrl = $@"{APIEndpointUrl}/signalr/metadata";
+            const string spectator_server_root_url = @"http://wph.btmc.live:8081";
+            SpectatorEndpointUrl = $@"{spectator_server_root_url}/spectator";
+            MultiplayerEndpointUrl = $@"{spectator_server_root_url}/multiplayer";
+            MetadataEndpointUrl = $@"{spectator_server_root_url}/metadata";
         }
     }
 }
