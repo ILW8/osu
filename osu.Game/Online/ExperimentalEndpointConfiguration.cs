@@ -7,13 +7,13 @@ namespace osu.Game.Online
     {
         public ExperimentalEndpointConfiguration()
         {
-            WebsiteRootUrl = @"https://osu.ppy.sh";
-            APIEndpointUrl = @"https://lazer.ppy.sh";
-            APIClientSecret = @"FGc9GAtyHzeQDshWP5Ah7dega8hJACAJpQtw6OXk";
-            APIClientID = "5";
-            SpectatorEndpointUrl = "https://spectator.ppy.sh/spectator";
-            MultiplayerEndpointUrl = "https://spectator.ppy.sh/multiplayer";
-            MetadataEndpointUrl = "https://spectator.ppy.sh/metadata";
+            WebsiteRootUrl = APIEndpointUrl = @"http://wph.btmc.live:8080";
+            APIClientSecret = @"hxr4AmDp7p9O6enQvSFeeKjctO1tHHodtRZnX25i";
+            APIClientID = "1";
+            const string spectator_server_root_url = @"http://wph.btmc.live:8081";
+            SpectatorEndpointUrl = $@"{spectator_server_root_url}/spectator";
+            MultiplayerEndpointUrl = $@"{spectator_server_root_url}/multiplayer";
+            MetadataEndpointUrl = $@"{spectator_server_root_url}/metadata";
         }
     }
 }
