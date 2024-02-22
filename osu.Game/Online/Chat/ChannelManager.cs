@@ -126,7 +126,7 @@ namespace osu.Game.Online.Chat
 
         private void currentChannelChanged(ValueChangedEvent<Channel> channel)
         {
-            bool isSelectorChannel = channel.NewValue is ChannelListing.ChannelListingChannel;
+            bool isSelectorChannel = channel.NewValue is ChannelListing.ChannelListingChannel or ChannelListing.PMListingChannel;
 
             if (!isSelectorChannel)
                 JoinChannel(channel.NewValue);

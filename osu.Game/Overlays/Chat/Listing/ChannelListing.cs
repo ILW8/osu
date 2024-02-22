@@ -82,5 +82,14 @@ namespace osu.Game.Overlays.Chat.Listing
                 Type = ChannelType.System;
             }
         }
+
+        public class PMListingChannel : Channel
+        {
+            public PMListingChannel()
+            {
+                Name = "Add more PMs";
+                Type = ChannelType.System;
+            }
+        }
     }
 }

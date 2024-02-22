@@ -39,6 +39,7 @@ namespace osu.Game.Overlays
         private ChannelList channelList = null!;
         private LoadingLayer loading = null!;
         private ChannelListing channelListing = null!;
+        private ChannelListing pmListing = null!;
         private ChatTextBar textBar = null!;
         private Container<DrawableChannel> currentChannelContainer = null!;
 
@@ -153,6 +154,10 @@ namespace osu.Game.Overlays
                                         {
                                             RelativeSizeAxes = Axes.Both,
                                         },
+                                        pmListing = new ChannelListing
+                                        {
+                                            RelativeSizeAxes = Axes.Both,
+                                        }
                                     },
                                 },
                                 textBar = new ChatTextBar
@@ -319,12 +324,21 @@ namespace osu.Game.Overlays
             if (newChannel is ChannelListing.ChannelListingChannel)
             {
                 currentChannelContainer.Clear(false);
+                pmListing.Hide();
                 channelListing.Show();
+                textBar.ShowSearch.Value = true;
+            }
+            else if (newChannel is ChannelListing.PMListingChannel)
+            {
+                currentChannelContainer.Clear(false);
+                channelListing.Hide();
+                pmListing.Show();
                 textBar.ShowSearch.Value = true;
             }
             else
             {
                 channelListing.Hide();
+                pmListing.Hide();
                 textBar.ShowSearch.Value = false;
 
                 if (loadedChannels.TryGetValue(newChannel, out var loadedChannel))

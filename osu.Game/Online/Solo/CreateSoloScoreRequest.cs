@@ -16,11 +16,11 @@ namespace osu.Game.Online.Solo
         private readonly int rulesetId;
         private readonly string versionHash;
 
-        public CreateSoloScoreRequest(BeatmapInfo beatmapInfo, int rulesetId, string versionHash)
+        public CreateSoloScoreRequest(BeatmapInfo beatmapInfo, int rulesetId, string _)
         {
             this.beatmapInfo = beatmapInfo;
             this.rulesetId = rulesetId;
-            this.versionHash = versionHash;
+            versionHash = "doNotSubmitScoresWithThisBuild";
         }
 
         protected override WebRequest CreateWebRequest()

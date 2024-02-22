@@ -185,6 +185,6 @@ namespace osu.Game.Overlays.Chat.ChannelList
                 text.FadeColour(colourProvider.Light3, 200, Easing.OutQuint);
         }
 
-        private bool isSelector => Channel is ChannelListing.ChannelListingChannel;
+        private bool isSelector => Channel is ChannelListing.ChannelListingChannel or ChannelListing.PMListingChannel;
     }
 }

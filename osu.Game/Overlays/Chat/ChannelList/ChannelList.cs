@@ -30,6 +30,7 @@ namespace osu.Game.Overlays.Chat.ChannelList
                                                          .Select(item => item.Channel);
 
         public readonly ChannelListing.ChannelListingChannel ChannelListingChannel = new ChannelListing.ChannelListingChannel();
+        public readonly ChannelListing.PMListingChannel PMListingChannel = new ChannelListing.PMListingChannel();
 
         private readonly Dictionary<Channel, ChannelListItem> channelMap = new Dictionary<Channel, ChannelListItem>();
 
@@ -39,6 +40,7 @@ namespace osu.Game.Overlays.Chat.ChannelList
         private ChannelGroup publicChannelGroup = null!;
         private ChannelGroup privateChannelGroup = null!;
         private ChannelListItem selector = null!;
+        private ChannelListItem pmSelector = null!;
 
         [BackgroundDependencyLoader]
         private void load(OverlayColourProvider colourProvider)
@@ -66,12 +68,14 @@ namespace osu.Game.Overlays.Chat.ChannelList
                             publicChannelGroup = new ChannelGroup(ChatStrings.ChannelsListTitlePUBLIC.ToUpper()),
                             selector = new ChannelListItem(ChannelListingChannel),
                             privateChannelGroup = new ChannelGroup(ChatStrings.ChannelsListTitlePM.ToUpper()),
+                            pmSelector = new ChannelListItem(PMListingChannel),
                         },
                     },
                 },
             };
 
             selector.OnRequestSelect += chan => OnRequestSelect?.Invoke(chan);
+            pmSelector.OnRequestSelect += chan => OnRequestSelect?.Invoke(chan);
         }
 
         public void AddChannel(Channel channel)
