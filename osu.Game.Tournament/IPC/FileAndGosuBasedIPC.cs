@@ -148,7 +148,7 @@ namespace osu.Game.Tournament.IPC
         public class GosuJsonRequest : APIRequest<GosuJson>
         {
             protected override string Target => @"json";
-            protected override string Uri => $@"http://localhost:24050/{Target}";
+            protected override string Uri => $@"http://127.0.0.1:24050/{Target}";
 
             protected override WebRequest CreateWebRequest()
             {
@@ -164,7 +164,7 @@ namespace osu.Game.Tournament.IPC
         public class GosuMappoolShowcaseRequest : APIRequest<MappoolShowcaseData>
         {
             protected override string Target => @"showcase.json";
-            protected override string Uri => $@"http://localhost:24050/{Target}";
+            protected override string Uri => $@"http://127.0.0.1:24050/{Target}";
 
             protected override WebRequest CreateWebRequest()
             {
@@ -185,24 +185,24 @@ namespace osu.Game.Tournament.IPC
             Accuracy1.BindValueChanged(_ => Logger.Log($"acc left: {Accuracy1.Value} | acc right: {Accuracy2.Value}", LoggingTarget.Runtime, LogLevel.Important));
             Accuracy2.BindValueChanged(_ => Logger.Log($"acc left: {Accuracy1.Value} | acc right: {Accuracy2.Value}", LoggingTarget.Runtime, LogLevel.Important));
 
-            scheduledShowcase = Scheduler.AddDelayed(delegate
-            {
-                if (!API.IsLoggedIn)
-                {
-                    return;
-                }
-
-                GosuMappoolShowcaseRequest req = new GosuMappoolShowcaseRequest();
-                req.Success += newMappoolData =>
-                {
-                    maps = newMappoolData.Maps;
-                };
-                req.Failure += exception =>
-                {
-                    Logger.Log($"Failed requesting mappool data: {exception}", LoggingTarget.Runtime, LogLevel.Important);
-                };
-                API.Queue(req);
-            }, 5000, true);
+            // scheduledShowcase = Scheduler.AddDelayed(delegate
+            // {
+            //     if (!API.IsLoggedIn)
+            //     {
+            //         return;
+            //     }
+            //
+            //     GosuMappoolShowcaseRequest req = new GosuMappoolShowcaseRequest();
+            //     req.Success += newMappoolData =>
+            //     {
+            //         maps = newMappoolData.Maps;
+            //     };
+            //     req.Failure += exception =>
+            //     {
+            //         Logger.Log($"Failed requesting mappool data: {exception}", LoggingTarget.Runtime, LogLevel.Important);
+            //     };
+            //     API.Queue(req);
+            // }, 5000, true);
 
             scheduled = Scheduler.AddDelayed(delegate
             {
@@ -236,42 +236,13 @@ namespace osu.Game.Tournament.IPC
                     // Logger.Log($"aaaa: {gj.GosuTourney.IpcClients[0].Gameplay.Accuracy}", LoggingTarget.Runtime, LogLevel.Important);
 
                     updateScore(gj);
-
-                    // =====
-                    // set replayer
-                    // Replayer name can appear either in resultScreen.name or gameplay.name, depending on _when_ the API is queried.
-                    string newVal = (gj.GosuGameplay?.Name?.Length > 0
-                        ? gj.GosuGameplay.Name
-                        : gj.GosuResultScreen?.Name) ?? "";
-
-                    if (Replayer.Value == newVal) return; // not strictly necessary with a bindable
-
-                    Logger.Log($"[IPC] Setting Replayer to {newVal}", LoggingTarget.Runtime, LogLevel.Debug);
-                    Replayer.Value = newVal;
-
-                    // ====
-                    // set slot
-                    foreach (var map in maps)
-                    {
-                        if (gj.GosuMenu.Bm.Id != map.Id && gj.GosuMenu.Bm.MD5 != map.MD5) continue;
-
-                        // Logger.Log("we hit a match!", LoggingTarget.Runtime, LogLevel.Important);
-
-                        if (Slot.Value == map.Slot) return;
-
-                        Slot.Value = map.Slot;
-                        break;
-                    }
                 };
                 gosuJsonQueryRequest.Failure += exception =>
                 {
                     Logger.Log($"Failed requesting gosu data: {exception}", LoggingTarget.Runtime, LogLevel.Important);
-                    gosuRequestWaitUntil = DateTime.Now.AddSeconds(2); // inhibit calling gosu api again for 2 seconds if failure occured
+                    gosuRequestWaitUntil = DateTime.Now.AddSeconds(1); // inhibit calling gosu api again for 1s if failure occured
                     Accuracy1.Value = 0f;
                     Accuracy2.Value = 0f;
-                    MissCount1.Value = 0;
-                    MissCount2.Value = 0;
-                    Replayer.Value = "";
                 };
                 API.Queue(gosuJsonQueryRequest);
             }, 250, true);
@@ -283,9 +254,8 @@ namespace osu.Game.Tournament.IPC
 
             foreach (GosuIpcClient ipcClient in gj.GosuTourney.IpcClients ?? new List<GosuIpcClient>()) // assumes there are only two clients
             {
-                Logger.Log($"[{ipcIndex}] {ipcClient.Gameplay}", LoggingTarget.Runtime, LogLevel.Important);
+                Logger.Log($"[updateScore] {ipcIndex}: {ipcClient.Gameplay.Accuracy}", LoggingTarget.Runtime, LogLevel.Important);
                 // Logger.Log($"({ipcIndex}) {ipcClient.Gameplay.Hits.MissCount}: {ipcClient.Gameplay.Accuracy}", LoggingTarget.Runtime, LogLevel.Important);
-                (ipcIndex % 2 == 0 ? MissCount1 : MissCount2).Value = ipcClient.Gameplay.Hits.MissCount;
                 (ipcIndex % 2 == 0 ? Accuracy1 : Accuracy2).Value = ipcClient.Gameplay.Accuracy;
                 ipcIndex++;
                 if (ipcIndex == 2) break; // ermmmmmmmmmmmmmmmmmmmmmmmmmmmm
