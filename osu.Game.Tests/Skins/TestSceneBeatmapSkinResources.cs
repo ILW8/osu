@@ -78,7 +78,7 @@ namespace osu.Game.Tests.Skins
             AddAssert("sample is non-null", () => beatmap.Skin.GetSample(new SampleInfo(@"sample")) != null);
             AddAssert("track is non-null", () =>
             {
-                using (var track = beatmap.LoadTrack())
+                using (var track = beatmap.LoadTrack().GetUnderlyingTrack())
                     return track is not TrackVirtual;
             });
         }

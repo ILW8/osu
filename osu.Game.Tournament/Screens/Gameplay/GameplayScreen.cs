@@ -119,6 +119,26 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             Current = LadderInfo.PlayersPerTeam,
                             KeyboardStep = 1,
                         },
+                        new OsuCheckbox
+                        {
+                            Padding = new MarginPadding
+                            {
+                                Horizontal = 12,
+                                Vertical = 8
+                            },
+                            LabelText = "Show round name in gameplay",
+                            Current = LadderInfo.DisplayRoundTextInGameplay
+                        },
+                        new OsuCheckbox
+                        {
+                            Padding = new MarginPadding
+                            {
+                                Horizontal = 12,
+                                Vertical = 8
+                            },
+                            LabelText = "Show round name in mappool",
+                            Current = LadderInfo.DisplayRoundTextInMappool
+                        }
                     }
                 }
             });
@@ -130,6 +150,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 warmupButton.Alpha = !w.NewValue ? 0.5f : 1;
                 header.ShowScores = !w.NewValue;
             }, true);
+
+            LadderInfo.DisplayRoundTextInGameplay.BindValueChanged(d => header.ShowRoundText = d.NewValue, true);
         }
 
         protected override void LoadComplete()
