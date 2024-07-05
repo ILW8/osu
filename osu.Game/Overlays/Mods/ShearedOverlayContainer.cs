@@ -22,8 +22,6 @@ namespace osu.Game.Overlays.Mods
     {
         protected const float PADDING = 14;
 
-        public const float SHEAR = 0.2f;
-
         [Cached]
         protected readonly OverlayColourProvider ColourProvider;
 
@@ -130,7 +128,6 @@ namespace osu.Game.Overlays.Mods
         {
             const double fade_in_duration = 400;
 
-            base.PopIn();
             this.FadeIn(fade_in_duration, Easing.OutQuint);
 
             Header.MoveToY(0, fade_in_duration, Easing.OutQuint);
