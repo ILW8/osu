@@ -14,7 +14,6 @@ namespace osu.Game.Tournament.Screens
     public abstract partial class BeatmapInfoScreen : TournamentMatchScreen
     {
         protected readonly SongBar SongBar;
-        public bool ShowReplayer = false;
 
         protected BeatmapInfoScreen()
         {
@@ -29,12 +28,8 @@ namespace osu.Game.Tournament.Screens
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
         {
-            SongBar.ShowReplayer = ShowReplayer;
             ipc.Beatmap.BindValueChanged(beatmapChanged, true);
             ipc.Mods.BindValueChanged(modsChanged, true);
-
-            SongBar.Replayer.BindTo(ipc.Replayer);
-            SongBar.Slot.BindTo(ipc.Slot);
         }
 
         private void modsChanged(ValueChangedEvent<LegacyMods> mods)

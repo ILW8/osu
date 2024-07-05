@@ -19,7 +19,6 @@ namespace osu.Game.Tournament.IPC
         private DateTime gosuRequestWaitUntil = DateTime.Now.AddSeconds(5); // allow 15 seconds for lazer to start and get ready
         private List<MappoolShowcaseMap> maps = new List<MappoolShowcaseMap>();
         private ScheduledDelegate scheduled;
-        private ScheduledDelegate scheduledShowcase;
         private GosuJsonRequest gosuJsonQueryRequest;
 
         public class GosuHasNameKey
@@ -180,29 +179,9 @@ namespace osu.Game.Tournament.IPC
         private void load()
         {
             scheduled?.Cancel();
-            scheduledShowcase?.Cancel();
 
             Accuracy1.BindValueChanged(_ => Logger.Log($"acc left: {Accuracy1.Value} | acc right: {Accuracy2.Value}", LoggingTarget.Runtime, LogLevel.Important));
             Accuracy2.BindValueChanged(_ => Logger.Log($"acc left: {Accuracy1.Value} | acc right: {Accuracy2.Value}", LoggingTarget.Runtime, LogLevel.Important));
-
-            // scheduledShowcase = Scheduler.AddDelayed(delegate
-            // {
-            //     if (!API.IsLoggedIn)
-            //     {
-            //         return;
-            //     }
-            //
-            //     GosuMappoolShowcaseRequest req = new GosuMappoolShowcaseRequest();
-            //     req.Success += newMappoolData =>
-            //     {
-            //         maps = newMappoolData.Maps;
-            //     };
-            //     req.Failure += exception =>
-            //     {
-            //         Logger.Log($"Failed requesting mappool data: {exception}", LoggingTarget.Runtime, LogLevel.Important);
-            //     };
-            //     API.Queue(req);
-            // }, 5000, true);
 
             scheduled = Scheduler.AddDelayed(delegate
             {
@@ -212,8 +191,6 @@ namespace osu.Game.Tournament.IPC
                 {
                     Accuracy1.Value = 0f;
                     Accuracy2.Value = 0f;
-                    MissCount1.Value = 0;
-                    MissCount2.Value = 0;
                     return;
                 }
 

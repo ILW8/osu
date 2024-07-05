@@ -7,7 +7,6 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
-using osu.Framework.Logging;
 using osu.Game.Graphics;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests;
@@ -165,7 +164,6 @@ namespace osu.Game.Tournament.Screens.Editors
                     private readonly Bindable<string> mods = new Bindable<string>(string.Empty);
 
                     private readonly Container drawableContainer;
-                    private SettingsDropdown<WinCondition> roundDropdown;
 
                     public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap)
                     {
@@ -227,7 +225,6 @@ namespace osu.Game.Tournament.Screens.Editors
                                             },
                                         }
                                     },
-                                    roundDropdown = new SettingsWinConditionDropdown { LabelText = "Win condition", Current = Model.WinCondition, Width = 0.5f },
                                 }
                             },
 
@@ -245,17 +242,6 @@ namespace osu.Game.Tournament.Screens.Editors
                                 },
                             }
                         };
-                    }
-
-                    private partial class SettingsWinConditionDropdown : SettingsDropdown<WinCondition>
-                    {
-                        public SettingsWinConditionDropdown()
-                        {
-                            Logger.Log($"Created a new win condition dropdown, current value: {Control.Current.Value}", LoggingTarget.Runtime, LogLevel.Important);
-                            Control.AddDropdownItem(WinCondition.Accuracy);
-                            Control.AddDropdownItem(WinCondition.MissCount);
-                            Control.Current.TriggerChange();
-                        }
                     }
 
                     [BackgroundDependencyLoader]
