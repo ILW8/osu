@@ -14,8 +14,10 @@ using osu.Framework.Platform;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Cursor;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.IPC;
 using osu.Game.Overlays;
 using osu.Game.Tournament.Models;
+using osu.Game.Tournament.WebSockets;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament
@@ -39,8 +41,24 @@ namespace osu.Game.Tournament
 
         private LoadingSpinner loadingSpinner = null!;
 
+        private DependencyContainer dependencies = null!;
+
+        protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
+            => dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
+
         [Cached(typeof(IDialogOverlay))]
         private readonly DialogOverlay dialogOverlay = new DialogOverlay();
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            LoadComponentAsync(new TournamentWsControl(), loaded =>
+            {
+                Add(loaded);
+                dependencies.CacheAs<ITournamentWsControl>(loaded);
+            });
+        }
 
         [BackgroundDependencyLoader]
         private void load(FrameworkConfigManager frameworkConfig, GameHost host)
