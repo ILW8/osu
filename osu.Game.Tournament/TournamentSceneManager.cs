@@ -10,7 +10,6 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input;
 using osu.Framework.Input.Events;
 using osu.Framework.Input.StateChanges;
-using osu.Framework.Logging;
 using osu.Framework.Testing;
 using osu.Framework.Threading;
 using osu.Game.Graphics;
@@ -333,8 +332,6 @@ namespace osu.Game.Tournament
 
             protected override bool OnKeyDown(KeyDownEvent e)
             {
-                Logger.Log($"Got KeyDownEvent on ScreenButton: {e.Key}");
-
                 if (e.Key == shortcutKey)
                 {
                     TriggerClick();
