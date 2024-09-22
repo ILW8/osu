@@ -83,13 +83,6 @@ namespace osu.Game.Tournament
             currentMatch.Team2Score.Value = Math.Clamp((currentMatch.Team2Score.Value ?? 0) + scoreDeltaBlue, 0, currentMatch.PointsToWin);
         }
 
-        protected override void Dispose(bool isDisposing)
-        {
-            base.Dispose(isDisposing);
-            websocketController.OnSaveRequested -= saveChanges;
-            websocketController.OnTeamScoreUpdateRequested -= updateTeamScores;
-        }
-
         private async Task checkForChanges()
         {
             string serialisedLadder = await Task.Run(() => tournamentGame.GetSerialisedLadder()).ConfigureAwait(true);

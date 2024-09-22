@@ -187,13 +187,6 @@ namespace osu.Game.Tournament
             websocketController.OnSceneChangeRequested += handleSceneChangeRequest;
         }
 
-        protected override void Dispose(bool isDisposing)
-        {
-            base.Dispose(isDisposing);
-
-            websocketController.OnSceneChangeRequested -= handleSceneChangeRequest;
-        }
-
         private void handleSceneChangeRequest(Key key)
         {
             Schedule(() =>
