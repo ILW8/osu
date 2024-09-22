@@ -73,22 +73,14 @@ namespace osu.Game.Tournament
             websocketController.OnTeamScoreUpdateRequested += updateTeamScores;
         }
 
-        private void updateTeamScores(int teamId, int scoreDelta)
+        private void updateTeamScores(int scoreDeltaRed, int scoreDeltaBlue)
         {
             var currentMatch = LadderInfo.CurrentMatch.Value;
             if (currentMatch == null)
                 return;
 
-            switch (teamId)
-            {
-                case 0:
-                    currentMatch.Team1Score.Value = Math.Clamp((currentMatch.Team1Score.Value ?? 0) + scoreDelta, 0, currentMatch.PointsToWin);
-                    break;
-
-                case 1:
-                    currentMatch.Team2Score.Value = Math.Clamp((currentMatch.Team2Score.Value ?? 0) + scoreDelta, 0, currentMatch.PointsToWin);
-                    break;
-            }
+            currentMatch.Team1Score.Value = Math.Clamp((currentMatch.Team1Score.Value ?? 0) + scoreDeltaRed, 0, currentMatch.PointsToWin);
+            currentMatch.Team2Score.Value = Math.Clamp((currentMatch.Team2Score.Value ?? 0) + scoreDeltaBlue, 0, currentMatch.PointsToWin);
         }
 
         protected override void Dispose(bool isDisposing)

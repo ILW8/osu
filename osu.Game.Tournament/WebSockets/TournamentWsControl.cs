@@ -37,19 +37,19 @@ namespace osu.Game.Tournament.WebSockets
                     break;
 
                 case "red add 1":
-                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(0, 1));
+                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(1, 0));
                     break;
 
                 case "blue add 1":
-                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(1, 1));
+                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(0, 1));
                     break;
 
                 case "red sub 1":
-                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(0, -1));
+                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(-1, 0));
                     break;
 
                 case "blue sub 1":
-                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(1, -1));
+                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(0, -1));
                     break;
             }
         }

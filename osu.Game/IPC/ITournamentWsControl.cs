@@ -13,7 +13,7 @@ namespace osu.Game.IPC
         public event Action? OnSaveRequested;
 
         /// <summary>
-        /// callback taking two params: team id (0 for red, 1 for blue), score change (typically +1 or -1)
+        /// callback taking two params: score change for team red, score change for team blue
         /// </summary>
         public event Action<int, int>? OnTeamScoreUpdateRequested;
     }
