@@ -19,5 +19,7 @@ namespace osu.Game.IPC
         public event Action<int, int>? OnTeamScoreUpdateRequested;
 
         public event Action<Key>? OnSceneChangeRequested;
+
+        public event Action OnWarmupToggleRequested;
     }
 }

@@ -8,6 +8,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.IPC;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
@@ -32,6 +33,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
+
+        [Resolved]
+        private ITournamentWsControl websocketController { get; set; } = null!;
 
         private Drawable chroma = null!;
 
@@ -138,6 +142,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             State.BindTo(ipc.State);
             State.BindValueChanged(_ => updateState(), true);
+
+            websocketController.OnWarmupToggleRequested += () => warmup.Toggle();
         }
 
         protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch?> match)

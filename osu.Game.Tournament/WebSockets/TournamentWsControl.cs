@@ -5,7 +5,6 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
-using osu.Framework.Logging;
 using osu.Game.IPC;
 using osuTK.Input;
 
@@ -21,22 +20,13 @@ namespace osu.Game.Tournament.WebSockets
             Task.Run(Start);
         }
 
-        protected override void OnConnectionReady(WebSocketConnection connection)
-        {
-            Logger.Log($"connection ready {nameof(TournamentWsControl)}", LoggingTarget.Network, LogLevel.Debug);
-        }
-
         protected override void OnConnectionMessage(WebSocketConnection connection, Message message)
         {
             string cmd = Encoding.UTF8.GetString(message.Content.Span).Trim();
-            Logger.Log($"Received message: {cmd}");
 
             if (cmd.StartsWith("scene", StringComparison.Ordinal) && cmd.Contains(' ', StringComparison.Ordinal))
             {
-                string sceneKey = cmd.Split(" ", 2)[1].ToUpperInvariant();
-                bool success = Enum.TryParse(sceneKey, out Key key);
-
-                if (success)
+                if (Enum.TryParse(cmd.Split(" ", 2)[1].ToUpperInvariant(), out Key key))
                     OnSceneChangeRequested?.Invoke(key);
 
                 return;
@@ -63,11 +53,16 @@ namespace osu.Game.Tournament.WebSockets
                 case "blue sub 1":
                     Schedule(() => OnTeamScoreUpdateRequested?.Invoke(0, -1));
                     break;
+
+                case "toggle warmup":
+                    Schedule(() => OnWarmupToggleRequested?.Invoke());
+                    break;
             }
         }
 
         public event Action? OnSaveRequested;
         public event Action<int, int>? OnTeamScoreUpdateRequested;
         public event Action<Key>? OnSceneChangeRequested;
+        public event Action? OnWarmupToggleRequested;
     }
 }
