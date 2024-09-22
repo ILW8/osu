@@ -18,7 +18,6 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders.Physical;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Logging;
 using osu.Framework.Platform;
 
 namespace osu.Game.Tournament.WebSockets

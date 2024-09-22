@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using osuTK.Input;
 
 namespace osu.Game.IPC
 {
@@ -16,5 +17,7 @@ namespace osu.Game.IPC
         /// callback taking two params: score change for team red, score change for team blue
         /// </summary>
         public event Action<int, int>? OnTeamScoreUpdateRequested;
+
+        public event Action<Key>? OnSceneChangeRequested;
     }
 }

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Logging;
 using osu.Game.IPC;
+using osuTK.Input;
 
 namespace osu.Game.Tournament.WebSockets
 {
@@ -29,6 +30,17 @@ namespace osu.Game.Tournament.WebSockets
         {
             string cmd = Encoding.UTF8.GetString(message.Content.Span).Trim();
             Logger.Log($"Received message: {cmd}");
+
+            if (cmd.StartsWith("scene", StringComparison.Ordinal) && cmd.Contains(' ', StringComparison.Ordinal))
+            {
+                string sceneKey = cmd.Split(" ", 2)[1].ToUpperInvariant();
+                bool success = Enum.TryParse(sceneKey, out Key key);
+
+                if (success)
+                    OnSceneChangeRequested?.Invoke(key);
+
+                return;
+            }
 
             switch (cmd)
             {
@@ -56,5 +68,6 @@ namespace osu.Game.Tournament.WebSockets
 
         public event Action? OnSaveRequested;
         public event Action<int, int>? OnTeamScoreUpdateRequested;
+        public event Action<Key>? OnSceneChangeRequested;
     }
 }
