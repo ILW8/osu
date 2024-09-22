@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Text;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
@@ -26,17 +27,34 @@ namespace osu.Game.Tournament.WebSockets
 
         protected override void OnConnectionMessage(WebSocketConnection connection, Message message)
         {
-            Logger.Log($"Received message: {Encoding.UTF8.GetString(message.Content.Span)}");
+            string cmd = Encoding.UTF8.GetString(message.Content.Span).Trim();
+            Logger.Log($"Received message: {cmd}");
+
+            switch (cmd)
+            {
+                case "save":
+                    Schedule(() => OnSaveRequested?.Invoke());
+                    break;
+
+                case "red add 1":
+                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(0, 1));
+                    break;
+
+                case "blue add 1":
+                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(1, 1));
+                    break;
+
+                case "red sub 1":
+                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(0, -1));
+                    break;
+
+                case "blue sub 1":
+                    Schedule(() => OnTeamScoreUpdateRequested?.Invoke(1, -1));
+                    break;
+            }
         }
 
-        public void SaveBracket()
-        {
-            return;
-        }
-
-        public void UpdateScore(int scoreLeft, int scoreRight)
-        {
-            return;
-        }
+        public event Action? OnSaveRequested;
+        public event Action<int, int>? OnTeamScoreUpdateRequested;
     }
 }

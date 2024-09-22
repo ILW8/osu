@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions.Color4Extensions;
@@ -11,7 +12,9 @@ using osu.Framework.Input;
 using osu.Framework.Input.Bindings;
 using osu.Framework.Input.Events;
 using osu.Game.Graphics;
+using osu.Game.IPC;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Tournament.Models;
 using osuTK;
 
 namespace osu.Game.Tournament
@@ -20,6 +23,12 @@ namespace osu.Game.Tournament
     {
         [Resolved]
         private TournamentGame tournamentGame { get; set; } = null!;
+
+        [Resolved]
+        private ITournamentWsControl websocketController { get; set; } = null!;
+
+        [Resolved]
+        protected LadderInfo LadderInfo { get; private set; } = null!;
 
         private string? lastSerialisedLadder;
         private readonly TourneyButton saveChangesButton;
@@ -60,6 +69,33 @@ namespace osu.Game.Tournament
         {
             base.LoadComplete();
             scheduleNextCheck();
+            websocketController.OnSaveRequested += saveChanges;
+            websocketController.OnTeamScoreUpdateRequested += updateTeamScores;
+        }
+
+        private void updateTeamScores(int teamId, int scoreDelta)
+        {
+            var currentMatch = LadderInfo.CurrentMatch.Value;
+            if (currentMatch == null)
+                return;
+
+            switch (teamId)
+            {
+                case 0:
+                    currentMatch.Team1Score.Value = Math.Clamp((currentMatch.Team1Score.Value ?? 0) + scoreDelta, 0, currentMatch.PointsToWin);
+                    break;
+
+                case 1:
+                    currentMatch.Team2Score.Value = Math.Clamp((currentMatch.Team2Score.Value ?? 0) + scoreDelta, 0, currentMatch.PointsToWin);
+                    break;
+            }
+        }
+
+        protected override void Dispose(bool isDisposing)
+        {
+            base.Dispose(isDisposing);
+            websocketController.OnSaveRequested -= saveChanges;
+            websocketController.OnTeamScoreUpdateRequested -= updateTeamScores;
         }
 
         private async Task checkForChanges()

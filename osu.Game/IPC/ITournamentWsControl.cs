@@ -1,11 +1,20 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+
 namespace osu.Game.IPC
 {
     public interface ITournamentWsControl
     {
-        void SaveBracket();
-        void UpdateScore(int scoreLeft, int scoreRight);
+        /// <summary>
+        /// Should trigger a save of bracket.json
+        /// </summary>
+        public event Action? OnSaveRequested;
+
+        /// <summary>
+        /// callback taking two params: team id (0 for red, 1 for blue), score change (typically +1 or -1)
+        /// </summary>
+        public event Action<int, int>? OnTeamScoreUpdateRequested;
     }
 }
