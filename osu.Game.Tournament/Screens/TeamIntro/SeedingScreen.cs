@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Diagnostics;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -11,13 +12,39 @@ using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Ladder.Components;
+using osu.Game.Users.Drawables;
 using osuTK;
 
 namespace osu.Game.Tournament.Screens.TeamIntro
 {
+    [LongRunningLoad]
+    public partial class UserTile : CompositeDrawable
+    {
+        public APIUser? User
+        {
+            get => avatar.User;
+            set => avatar.User = value;
+        }
+
+        private readonly UpdateableAvatar avatar;
+
+        public UserTile()
+        {
+            Size = new Vector2(128);
+            CornerRadius = 5f;
+            Masking = true;
+
+            InternalChildren = new Drawable[]
+            {
+                avatar = new UpdateableAvatar(showUserPanelOnHover: true) { RelativeSizeAxes = Axes.Both },
+            };
+        }
+    }
+
     public partial class SeedingScreen : TournamentMatchScreen
     {
         private Container mainContainer = null!;
@@ -179,7 +206,8 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                             Spacing = new Vector2(40),
                             Children = new Drawable[]
                             {
-                                new TournamentSpriteText { Text = beatmap.Score.ToString(beatmap.Score <= 100 ? "#,0.00" : "#,0") + (beatmap.Score <= 100 ? "%" : ""), Colour = TournamentGame.TEXT_COLOUR, Width = 80 },
+                                new TournamentSpriteText
+                                    { Text = beatmap.Score.ToString(beatmap.Score <= 100 ? "#,0.00" : "#,0") + (beatmap.Score <= 100 ? "%" : ""), Colour = TournamentGame.TEXT_COLOUR, Width = 80 },
                                 new TournamentSpriteText
                                     { Text = "#" + beatmap.Seed.Value.ToString("#,0"), Colour = TournamentGame.TEXT_COLOUR, Font = OsuFont.Torus.With(weight: FontWeight.Regular) },
                             }
@@ -254,14 +282,16 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
         private partial class LeftInfo : CompositeDrawable
         {
+            private readonly FillFlowContainer? fill;
+            private readonly TournamentUser? tourneyUser;
+            private readonly TournamentTeam? team;
+
             public LeftInfo(TournamentTeam? team)
             {
-                FillFlowContainer fill;
+                tourneyUser = team?.Players.FirstOrDefault();
+                this.team = team;
 
                 Width = 200;
-
-                if (team == null) return;
-
                 InternalChildren = new Drawable[]
                 {
                     fill = new FillFlowContainer
@@ -269,14 +299,32 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                         RelativeSizeAxes = Axes.X,
                         AutoSizeAxes = Axes.Y,
                         Direction = FillDirection.Vertical,
+                    },
+                };
+            }
+
+            [BackgroundDependencyLoader]
+            private void load()
+            {
+                if (tourneyUser == null || team == null || fill == null) return;
+
+                LoadComponentAsync(new UserTile { User = tourneyUser?.ToAPIUser(), Margin = new MarginPadding { Right = 20 } }, loaded =>
+                {
+                    fill.Add(loaded);
+                    fill.Add(new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Direction = FillDirection.Vertical,
                         Children = new Drawable[]
                         {
                             new TeamDisplay(team) { Margin = new MarginPadding { Bottom = 30 } },
-                            new RowDisplay("Global Rank:", $"#{team.AverageRank:#,0}"),
                             new RowDisplay("Seed:", team.Seed.Value),
+                            new RowDisplay("Global rank:", $"#{tourneyUser?.Rank ?? 0:#,0}"),
+                            new Container { Margin = new MarginPadding { Bottom = 30 } },
                         }
-                    },
-                };
+                    });
+                });
             }
 
             internal partial class RowDisplay : CompositeDrawable
@@ -323,7 +371,6 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                         Spacing = new Vector2(0, 5),
                         Children = new Drawable[]
                         {
-                            Flag,
                             new OsuSpriteText
                             {
                                 Text = team?.FullName.Value ?? "???",
