@@ -86,6 +86,46 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                             Text = "Show second team",
                             Action = () => currentTeam.Value = CurrentMatch.Value?.Team2.Value,
                         },
+                        showFirstTeamButton = new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Show next team",
+                            Action = () =>
+                            {
+                                int currentIndex = LadderInfo.Teams.IndexOf(currentTeam.Value ?? new TournamentTeam());
+
+                                if (currentIndex != -1)
+                                {
+                                    if (currentIndex == 0) return;
+
+                                    currentTeam.Value = LadderInfo.Teams[currentIndex - 1];
+                                    return;
+                                }
+
+                                // default to last team if not found
+                                currentTeam.Value = LadderInfo.Teams[^1];
+                            },
+                        },
+                        showSecondTeamButton = new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Show previous team",
+                            Action = () =>
+                            {
+                                int currentIndex = LadderInfo.Teams.IndexOf(currentTeam.Value ?? new TournamentTeam());
+
+                                if (currentIndex != -1)
+                                {
+                                    if (currentIndex == LadderInfo.Teams.Count - 1) return;
+
+                                    currentTeam.Value = LadderInfo.Teams[currentIndex + 1];
+                                    return;
+                                }
+
+                                // default to first team if not found
+                                currentTeam.Value = LadderInfo.Teams[0];
+                            },
+                        },
                         new SettingsTeamDropdown(LadderInfo.Teams)
                         {
                             LabelText = "Show specific team",
