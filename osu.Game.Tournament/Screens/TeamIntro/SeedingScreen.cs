@@ -8,7 +8,6 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
-using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
@@ -288,10 +287,10 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
                     if (!string.IsNullOrEmpty(mods))
                     {
-                        row.Add(new Sprite
+                        row.Add(new TournamentModIcon(mods)
                         {
-                            Texture = textures.Get($"Mods/{mods.ToLowerInvariant()}"),
-                            Scale = new Vector2(0.5f)
+                            Height = 16,
+                            Width = 42,
                         });
                     }
 
