@@ -179,7 +179,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                             Spacing = new Vector2(40),
                             Children = new Drawable[]
                             {
-                                new TournamentSpriteText { Text = beatmap.Score.ToString("#,0"), Colour = TournamentGame.TEXT_COLOUR, Width = 80 },
+                                new TournamentSpriteText { Text = beatmap.Score.ToString(beatmap.Score <= 100 ? "#,0.00" : "#,0") + (beatmap.Score <= 100 ? "%" : ""), Colour = TournamentGame.TEXT_COLOUR, Width = 80 },
                                 new TournamentSpriteText
                                     { Text = "#" + beatmap.Seed.Value.ToString("#,0"), Colour = TournamentGame.TEXT_COLOUR, Font = OsuFont.Torus.With(weight: FontWeight.Regular) },
                             }

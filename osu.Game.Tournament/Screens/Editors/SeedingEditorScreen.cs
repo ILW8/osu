@@ -253,7 +253,7 @@ namespace osu.Game.Tournament.Screens.Editors
                         }, true);
 
                         score.Value = Model.Score.ToString();
-                        score.BindValueChanged(str => long.TryParse(str.NewValue, out Model.Score));
+                        score.BindValueChanged(str => double.TryParse(str.NewValue, out Model.Score));
                     }
 
                     private void updatePanel()

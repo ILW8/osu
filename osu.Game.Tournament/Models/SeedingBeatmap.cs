@@ -13,7 +13,7 @@ namespace osu.Game.Tournament.Models
         [JsonProperty("BeatmapInfo")]
         public TournamentBeatmap? Beatmap;
 
-        public long Score;
+        public double Score;
 
         public Bindable<int> Seed = new BindableInt
         {

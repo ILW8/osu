@@ -35,7 +35,54 @@ namespace osu.Game.Tournament.Tests.Screens
                         new SeedingResult
                         {
                             Mod = { Value = "DT" },
-                            Seed = { Value = 8 }
+                            Seed = { Value = 8 },
+                            Beatmaps =
+                            [
+                                new SeedingBeatmap
+                                {
+                                    Beatmap = CreateSampleBeatmap(),
+                                    Score = 847291,
+                                    Seed = { Value = 1 },
+                                },
+                                new SeedingBeatmap
+                                {
+                                    Beatmap = CreateSampleBeatmap(),
+                                    Score = 285172,
+                                    Seed = { Value = 2 },
+                                },
+                                new SeedingBeatmap
+                                {
+                                    Beatmap = CreateSampleBeatmap(),
+                                    Score = 492182,
+                                    Seed = { Value = 3 },
+                                }
+                            ]
+                        },
+                        new SeedingResult
+                        {
+                            Mod = { Value = "ACC" },
+                            Seed = { Value = 16 },
+                            Beatmaps =
+                            [
+                                new SeedingBeatmap
+                                {
+                                    Beatmap = CreateSampleBeatmap(),
+                                    Score = 97.21,
+                                    Seed = { Value = 6 },
+                                },
+                                new SeedingBeatmap
+                                {
+                                    Beatmap = CreateSampleBeatmap(),
+                                    Score = 98.00,
+                                    Seed = { Value = 5 },
+                                },
+                                new SeedingBeatmap
+                                {
+                                    Beatmap = CreateSampleBeatmap(),
+                                    Score = 99.10,
+                                    Seed = { Value = 4 },
+                                }
+                            ]
                         }
                     }
                 }
