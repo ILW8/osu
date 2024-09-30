@@ -14,6 +14,8 @@ namespace osu.Game.Tournament.Tests.Screens
 {
     public partial class TestSceneSeedingScreen : TournamentScreenTestScene
     {
+        private SeedingScreen? seedingScreen;
+
         [Cached]
         private readonly LadderInfo ladder = new LadderInfo
         {
@@ -43,11 +45,17 @@ namespace osu.Game.Tournament.Tests.Screens
         [Test]
         public void TestBasic()
         {
-            AddStep("create seeding screen", () => Add(new SeedingScreen
+            AddStep("create seeding screen", () =>
             {
-                FillMode = FillMode.Fit,
-                FillAspectRatio = 16 / 9f
-            }));
+                if (seedingScreen != null)
+                    Remove(seedingScreen, true);
+
+                Add(seedingScreen = new SeedingScreen
+                {
+                    FillMode = FillMode.Fit,
+                    FillAspectRatio = 16 / 9f
+                });
+            });
 
             AddStep("set team to Japan", () => this.ChildrenOfType<SettingsTeamDropdown>().Single().Current.Value = ladder.Teams.Single());
         }
