@@ -4,7 +4,7 @@
     <OutputType>WinExe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Description>A free-to-win rhythm game. Rhythm is just a *click* away!</Description>
-    <AssemblyName>osu!</AssemblyName>
+    <AssemblyName>osu!</AssemblyName>R
     <Title>osu!</Title>
     <Product>osu!(lazer)</Product>
     <ApplicationIcon>lazer.ico</ApplicationIcon>
@@ -24,7 +24,7 @@
   </ItemGroup>
   <ItemGroup Label="Package References">
     <PackageReference Include="Clowd.Squirrel" Version="2.11.1" />
-    <PackageReference Include="System.IO.Packaging" Version="8.0.0" />
+    <PackageReference Include="System.IO.Packaging" Version="8.0.1" />
     <PackageReference Include="DiscordRichPresence" Version="1.2.1.24" />
   </ItemGroup>
   <ItemGroup Label="Resources">
