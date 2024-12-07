@@ -80,8 +80,6 @@ namespace osu.Game.Screens.Edit
 
         public override float BackgroundParallaxAmount => 0.1f;
 
-        public override bool AllowBackButton => false;
-
         public override bool HideOverlaysOnEnter => true;
 
         public override bool DisallowExternalBeatmapRulesetChanges => true;
@@ -194,6 +192,8 @@ namespace osu.Game.Screens.Edit
             }
         }
 
+        protected override bool InitialBackButtonVisibility => false;
+
         protected override IReadOnlyDependencyContainer CreateChildDependencies(IReadOnlyDependencyContainer parent)
             => dependencies = new DependencyContainer(base.CreateChildDependencies(parent));
 
@@ -214,6 +214,7 @@ namespace osu.Game.Screens.Edit
         private Bindable<bool> editorAutoSeekOnPlacement;
         private Bindable<bool> editorLimitedDistanceSnap;
         private Bindable<bool> editorTimelineShowTimingChanges;
+        private Bindable<bool> editorTimelineShowBreaks;
         private Bindable<bool> editorTimelineShowTicks;
         private Bindable<bool> editorContractSidebars;
 
@@ -323,6 +324,7 @@ namespace osu.Game.Screens.Edit
             editorAutoSeekOnPlacement = config.GetBindable<bool>(OsuSetting.EditorAutoSeekOnPlacement);
             editorLimitedDistanceSnap = config.GetBindable<bool>(OsuSetting.EditorLimitedDistanceSnap);
             editorTimelineShowTimingChanges = config.GetBindable<bool>(OsuSetting.EditorTimelineShowTimingChanges);
+            editorTimelineShowBreaks = config.GetBindable<bool>(OsuSetting.EditorTimelineShowBreaks);
             editorTimelineShowTicks = config.GetBindable<bool>(OsuSetting.EditorTimelineShowTicks);
             editorContractSidebars = config.GetBindable<bool>(OsuSetting.EditorContractSidebars);
 
@@ -390,6 +392,10 @@ namespace osu.Game.Screens.Edit
                                                     {
                                                         State = { BindTarget = editorTimelineShowTicks }
                                                     },
+                                                    new ToggleMenuItem(EditorStrings.TimelineShowBreaks)
+                                                    {
+                                                        State = { BindTarget = editorTimelineShowBreaks }
+                                                    },
                                                 ]
                                             },
                                             new BackgroundDimMenuItem(editorBackgroundDim),
@@ -415,7 +421,7 @@ namespace osu.Game.Screens.Edit
                                     {
                                         Items = new MenuItem[]
                                         {
-                                            new EditorMenuItem(EditorStrings.SetPreviewPointToCurrent, MenuItemType.Standard, SetPreviewPointToCurrentTime)
+                                            new EditorMenuItem(EditorStrings.SetPreviewPointToCurrent, MenuItemType.Standard, SetPreviewPointToCurrentTime),
                                         }
                                     }
                                 }
@@ -754,11 +760,6 @@ namespace osu.Game.Screens.Edit
 
             switch (e.Action)
             {
-                case GlobalAction.Back:
-                    // as we don't want to display the back button, manual handling of exit action is required.
-                    this.Exit();
-                    return true;
-
                 case GlobalAction.EditorCloneSelection:
                     Clone();
                     return true;
