@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
@@ -59,6 +60,8 @@ namespace osu.Game.Tournament.WebSockets
                     break;
             }
         }
+
+        public void BroadcastMappoolChange(Dictionary<string, int> poolSize) => Broadcast(System.Text.Json.JsonSerializer.Serialize(new { sizes = poolSize }));
 
         public event Action? OnSaveRequested;
         public event Action<int, int>? OnTeamScoreUpdateRequested;

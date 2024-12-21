@@ -1,7 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
+using System.Linq;
+using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Game.IPC;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Screens
@@ -10,6 +14,9 @@ namespace osu.Game.Tournament.Screens
     {
         protected readonly Bindable<TournamentMatch?> CurrentMatch = new Bindable<TournamentMatch?>();
         private WarningBox? noMatchWarning;
+
+        [Resolved]
+        private ITournamentWsControl websocketController { get; set; } = null!;
 
         protected override void LoadComplete()
         {
@@ -29,6 +36,20 @@ namespace osu.Game.Tournament.Screens
 
             noMatchWarning?.Expire();
             noMatchWarning = null;
+
+            if (CurrentMatch.Value == null)
+                return;
+
+            if (CurrentMatch.Value.Round.Value == null)
+            {
+                websocketController.BroadcastMappoolChange(new Dictionary<string, int>());
+                return;
+            }
+
+            var modsCount = CurrentMatch.Value.Round.Value.Beatmaps.GroupBy(b => b.Mods)
+                                        .ToDictionary(g => g.Key, g => g.Count());
+
+            websocketController.BroadcastMappoolChange(modsCount);
         }
     }
 }

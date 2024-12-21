@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using osuTK.Input;
 
 namespace osu.Game.IPC
@@ -21,5 +22,7 @@ namespace osu.Game.IPC
         public event Action<Key>? OnSceneChangeRequested;
 
         public event Action OnWarmupToggleRequested;
+
+        public void BroadcastMappoolChange(Dictionary<string, int> poolSize);
     }
 }
