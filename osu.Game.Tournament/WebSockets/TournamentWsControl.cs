@@ -33,6 +33,17 @@ namespace osu.Game.Tournament.WebSockets
                 return;
             }
 
+            if (cmd.StartsWith("pickban ", StringComparison.Ordinal))
+            {
+                string[] parts = cmd.Split(" ");
+
+                if (parts.Length != 3)
+                    return;
+
+                if (int.TryParse(parts[2], out int isPick))
+                    OnPickBanActionUpdate?.Invoke(parts[1], isPick);
+            }
+
             switch (cmd)
             {
                 case "save":
@@ -65,6 +76,7 @@ namespace osu.Game.Tournament.WebSockets
 
         public event Action? OnSaveRequested;
         public event Action<int, int>? OnTeamScoreUpdateRequested;
+        public event Action<string, int>? OnPickBanActionUpdate;
         public event Action<Key>? OnSceneChangeRequested;
         public event Action? OnWarmupToggleRequested;
     }

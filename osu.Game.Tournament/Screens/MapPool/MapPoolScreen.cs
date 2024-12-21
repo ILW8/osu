@@ -1,14 +1,17 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
+using osu.Framework.Logging;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.IPC;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -26,6 +29,9 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
+
+        [Resolved]
+        private ITournamentWsControl websocketController { get; set; } = null!;
 
         private TeamColour pickColour;
         private ChoiceType pickType;
@@ -119,6 +125,33 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             splitMapPoolByMods = LadderInfo.SplitMapPoolByMods.GetBoundCopy();
             splitMapPoolByMods.BindValueChanged(_ => updateDisplay());
+
+            websocketController.OnPickBanActionUpdate += updatePickBanAction;
+        }
+
+        private void updatePickBanAction(string teamColourStr, int isPick)
+        {
+            var currentMatch = LadderInfo.CurrentMatch.Value;
+            if (currentMatch == null)
+                return;
+
+            TeamColour teamColour;
+
+            try
+            {
+                teamColour = (TeamColour)Enum.Parse(typeof(TeamColour), teamColourStr, ignoreCase: true);
+            }
+            catch (ArgumentException)
+            {
+                return;
+            }
+
+            if (isPick is < 0 or > 1)
+                return;
+
+            Logger.Log($"Setting pick/ban mode for {teamColour} to {isPick}");
+
+            setMode(teamColour, isPick == 1 ? ChoiceType.Pick : ChoiceType.Ban);
         }
 
         private void beatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)

@@ -19,6 +19,12 @@ namespace osu.Game.IPC
         /// </summary>
         public event Action<int, int>? OnTeamScoreUpdateRequested;
 
+        /// <summary>
+        /// 1st param: team name (red/blue)
+        /// 2nd param: is pick (false: 0, true: 1)
+        /// </summary>
+        public event Action<string, int> OnPickBanActionUpdate;
+
         public event Action<Key>? OnSceneChangeRequested;
 
         public event Action OnWarmupToggleRequested;
