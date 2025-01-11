@@ -138,6 +138,13 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (CurrentMatch.Value?.Round.Value == null)
                 return;
 
+            // a bit of a hack, makes it easier on companion side to send the command
+            if (mods.StartsWith('-'))
+            {
+                index = -index;
+                mods = mods[1..];
+            }
+
             var mapsForMod = CurrentMatch.Value.Round.Value.Beatmaps.Where(m => m.Mods == mods).ToList();
             if (mapsForMod.Count < Math.Abs(index))
                 return;
