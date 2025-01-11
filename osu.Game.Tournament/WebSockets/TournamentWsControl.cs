@@ -50,7 +50,7 @@ namespace osu.Game.Tournament.WebSockets
 
             if (cmd.StartsWith("dopickban ", StringComparison.Ordinal))
             {
-                var matcher = new Regex(@"dopickban (\w{2})(\d+)");
+                var matcher = new Regex(@"dopickban (\w{2})(-?\d+)");
                 var match = matcher.Match(cmd);
 
                 if (match.Success)

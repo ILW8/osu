@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
-using osu.Framework.Logging;
 using osu.Game.IPC;
 using osu.Game.Tournament.Models;
 
@@ -43,14 +42,13 @@ namespace osu.Game.Tournament.Screens
 
         protected void UpdatePoolState()
         {
-            Logger.Log("UPDATE POOL STATE!!!!!");
-
             if (CurrentMatch.Value?.Round.Value == null)
             {
                 // websocketController?.BroadcastMappoolChange(new Dictionary<string, int>());
                 return;
             }
 
+            // yeah let's not talk about this...
             var modIndices = new Dictionary<string, int>();
             var poolState = CurrentMatch.Value.Round.Value.Beatmaps
                                         .Select(b =>

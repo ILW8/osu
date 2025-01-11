@@ -27,7 +27,7 @@ namespace osu.Game.IPC
 
         /// <summary>
         /// 1st param: mod string (e.g. "HD")
-        /// 2nd param: slot index (1-indexed)
+        /// 2nd param: slot index (1-indexed). If number is negative, reset the slot instead of picking/banning it
         /// </summary>
         public event Action<string, int>? OnPerformPickBanRequested;
 

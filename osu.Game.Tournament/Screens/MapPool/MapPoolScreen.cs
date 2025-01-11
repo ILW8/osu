@@ -139,12 +139,16 @@ namespace osu.Game.Tournament.Screens.MapPool
                 return;
 
             var mapsForMod = CurrentMatch.Value.Round.Value.Beatmaps.Where(m => m.Mods == mods).ToList();
-
-            if (mapsForMod.Count < index)
+            if (mapsForMod.Count < Math.Abs(index))
                 return;
 
-            var actionMap = mapsForMod[index - 1];
-            if (actionMap.Beatmap != null)
+            var actionMap = mapsForMod[Math.Abs(index) - 1];
+
+            if (actionMap.Beatmap == null) return;
+
+            if (index < 0)
+                removeForBeatmap(actionMap.Beatmap.OnlineID);
+            else
                 addForBeatmap(actionMap.Beatmap.OnlineID);
         }
 
@@ -244,16 +248,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                 if (e.Button == MouseButton.Left && map.Beatmap?.OnlineID > 0)
                     addForBeatmap(map.Beatmap.OnlineID);
                 else
-                {
-                    var existing = CurrentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == map.Beatmap?.OnlineID);
-
-                    if (existing != null)
-                    {
-                        CurrentMatch.Value?.PicksBans.Remove(existing);
-                        UpdatePoolState();
-                        setNextMode();
-                    }
-                }
+                    removeForBeatmap(map.Beatmap?.OnlineID ?? 0);
 
                 return true;
             }
@@ -264,6 +259,17 @@ namespace osu.Game.Tournament.Screens.MapPool
         private void reset()
         {
             CurrentMatch.Value?.PicksBans.Clear();
+            setNextMode();
+        }
+
+        private void removeForBeatmap(int beatmapId)
+        {
+            var existing = CurrentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == beatmapId);
+
+            if (existing == null) return;
+
+            CurrentMatch.Value?.PicksBans.Remove(existing);
+            UpdatePoolState();
             setNextMode();
         }
 
