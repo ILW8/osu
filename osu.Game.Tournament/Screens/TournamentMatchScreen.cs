@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
+using osu.Framework.Logging;
 using osu.Game.IPC;
 using osu.Game.Tournament.Models;
 
@@ -15,8 +16,8 @@ namespace osu.Game.Tournament.Screens
         protected readonly Bindable<TournamentMatch?> CurrentMatch = new Bindable<TournamentMatch?>();
         private WarningBox? noMatchWarning;
 
-        [Resolved]
-        private ITournamentWsControl websocketController { get; set; } = null!;
+        [Resolved(CanBeNull = true)]
+        private ITournamentWsControl? websocketController { get; set; }
 
         protected override void LoadComplete()
         {
@@ -37,19 +38,49 @@ namespace osu.Game.Tournament.Screens
             noMatchWarning?.Expire();
             noMatchWarning = null;
 
-            if (CurrentMatch.Value == null)
-                return;
+            UpdatePoolState();
+        }
 
-            if (CurrentMatch.Value.Round.Value == null)
+        protected void UpdatePoolState()
+        {
+            Logger.Log("UPDATE POOL STATE!!!!!");
+
+            if (CurrentMatch.Value?.Round.Value == null)
             {
-                websocketController.BroadcastMappoolChange(new Dictionary<string, int>());
+                // websocketController?.BroadcastMappoolChange(new Dictionary<string, int>());
                 return;
             }
 
-            var modsCount = CurrentMatch.Value.Round.Value.Beatmaps.GroupBy(b => b.Mods)
-                                        .ToDictionary(g => g.Key, g => g.Count());
+            var modIndices = new Dictionary<string, int>();
+            var poolState = CurrentMatch.Value.Round.Value.Beatmaps
+                                        .Select(b =>
+                                        {
+                                            if (!modIndices.TryGetValue(b.Mods, out int value))
+                                                modIndices[b.Mods] = 1;
+                                            else
+                                                modIndices[b.Mods] = ++value;
 
-            websocketController.BroadcastMappoolChange(modsCount);
+                                            return new { b.Mods, OnlineID = b.Beatmap?.OnlineID ?? 0, Index = modIndices[b.Mods] };
+                                        })
+                                        .ToDictionary(b => $"{b.Mods}{b.Index}",
+                                            b => new Dictionary<string, int?>
+                                            {
+                                                {
+                                                    "Team", CurrentMatch.Value.PicksBans.Where(pb => pb.BeatmapID == b.OnlineID)
+                                                                        .Select(pb => pb.Team == TeamColour.Red ? 0 : 1)
+                                                                        .Cast<int?>()
+                                                                        .FirstOrDefault()
+                                                },
+                                                {
+                                                    "Banned",
+                                                    CurrentMatch.Value.PicksBans.Where(pb => pb.BeatmapID == b.OnlineID)
+                                                                .Select(pb => pb.Type == ChoiceType.Pick ? 0 : 1)
+                                                                .Cast<int?>()
+                                                                .FirstOrDefault()
+                                                }
+                                            });
+
+            websocketController?.BroadcastMappoolChange(poolState);
         }
     }
 }

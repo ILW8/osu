@@ -30,8 +30,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
 
-        [Resolved]
-        private ITournamentWsControl websocketController { get; set; } = null!;
+        [Resolved(CanBeNull = true)]
+        private ITournamentWsControl? websocketController { get; set; }
 
         private TeamColour pickColour;
         private ChoiceType pickType;
@@ -126,7 +126,26 @@ namespace osu.Game.Tournament.Screens.MapPool
             splitMapPoolByMods = LadderInfo.SplitMapPoolByMods.GetBoundCopy();
             splitMapPoolByMods.BindValueChanged(_ => updateDisplay());
 
-            websocketController.OnPickBanActionUpdate += updatePickBanAction;
+            if (websocketController != null)
+            {
+                websocketController.OnPickBanActionUpdate += updatePickBanAction;
+                websocketController.OnPerformPickBanRequested += performPickBan;
+            }
+        }
+
+        private void performPickBan(string mods, int index)
+        {
+            if (CurrentMatch.Value?.Round.Value == null)
+                return;
+
+            var mapsForMod = CurrentMatch.Value.Round.Value.Beatmaps.Where(m => m.Mods == mods).ToList();
+
+            if (mapsForMod.Count < index)
+                return;
+
+            var actionMap = mapsForMod[index - 1];
+            if (actionMap.Beatmap != null)
+                addForBeatmap(actionMap.Beatmap.OnlineID);
         }
 
         private void updatePickBanAction(string teamColourStr, int isPick)
@@ -231,6 +250,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     if (existing != null)
                     {
                         CurrentMatch.Value?.PicksBans.Remove(existing);
+                        UpdatePoolState();
                         setNextMode();
                     }
                 }
@@ -267,6 +287,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                 BeatmapID = beatmapId
             });
 
+            UpdatePoolState();
             setNextMode();
 
             if (LadderInfo.AutoProgressScreens.Value)

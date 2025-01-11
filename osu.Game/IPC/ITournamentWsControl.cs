@@ -25,10 +25,20 @@ namespace osu.Game.IPC
         /// </summary>
         public event Action<string, int> OnPickBanActionUpdate;
 
+        /// <summary>
+        /// 1st param: mod string (e.g. "HD")
+        /// 2nd param: slot index (1-indexed)
+        /// </summary>
+        public event Action<string, int>? OnPerformPickBanRequested;
+
         public event Action<Key>? OnSceneChangeRequested;
 
         public event Action OnWarmupToggleRequested;
 
-        public void BroadcastMappoolChange(Dictionary<string, int> poolSize);
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="poolSize">Dictionary mapping slot name (e.g. "NM1") to pick status. Pick status is a dict with key "banned" and "team", both ints. null value on "team" means unpicked</param>
+        public void BroadcastMappoolChange(Dictionary<string, Dictionary<string, int?>> poolSize);
     }
 }

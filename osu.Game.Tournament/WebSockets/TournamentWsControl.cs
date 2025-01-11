@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Game.IPC;
@@ -33,6 +34,9 @@ namespace osu.Game.Tournament.WebSockets
                 return;
             }
 
+            // `pickban` sets the pickban mode
+            // `dopickban` performs the pick/ban action against a slot
+
             if (cmd.StartsWith("pickban ", StringComparison.Ordinal))
             {
                 string[] parts = cmd.Split(" ");
@@ -42,6 +46,19 @@ namespace osu.Game.Tournament.WebSockets
 
                 if (int.TryParse(parts[2], out int isPick))
                     OnPickBanActionUpdate?.Invoke(parts[1], isPick);
+            }
+
+            if (cmd.StartsWith("dopickban ", StringComparison.Ordinal))
+            {
+                var matcher = new Regex(@"dopickban (\w{2})(\d+)");
+                var match = matcher.Match(cmd);
+
+                if (match.Success)
+                {
+                    var mod = match.Groups[1];
+                    var index = match.Groups[2];
+                    OnPerformPickBanRequested?.Invoke(mod.Value, int.Parse(index.Value));
+                }
             }
 
             switch (cmd)
@@ -72,11 +89,12 @@ namespace osu.Game.Tournament.WebSockets
             }
         }
 
-        public void BroadcastMappoolChange(Dictionary<string, int> poolSize) => Broadcast(System.Text.Json.JsonSerializer.Serialize(new { sizes = poolSize }));
+        public void BroadcastMappoolChange(Dictionary<string, Dictionary<string, int?>> poolSize) => Broadcast(System.Text.Json.JsonSerializer.Serialize(new { sizes = poolSize }));
 
         public event Action? OnSaveRequested;
         public event Action<int, int>? OnTeamScoreUpdateRequested;
         public event Action<string, int>? OnPickBanActionUpdate;
+        public event Action<string, int>? OnPerformPickBanRequested;
         public event Action<Key>? OnSceneChangeRequested;
         public event Action? OnWarmupToggleRequested;
     }
