@@ -77,25 +77,41 @@ namespace osu.Game.Tournament.Screens.MapPool
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Red Ban",
-                            Action = () => setMode(TeamColour.Red, ChoiceType.Ban)
+                            Action = () =>
+                            {
+                                setMode(TeamColour.Red, ChoiceType.Ban);
+                                UpdatePoolState(pickColour, ChoiceType.Ban);
+                            }
                         },
                         buttonBlueBan = new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Blue Ban",
-                            Action = () => setMode(TeamColour.Blue, ChoiceType.Ban)
+                            Action = () =>
+                            {
+                                setMode(TeamColour.Blue, ChoiceType.Ban);
+                                UpdatePoolState(pickColour, ChoiceType.Ban);
+                            }
                         },
                         buttonRedPick = new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Red Pick",
-                            Action = () => setMode(TeamColour.Red, ChoiceType.Pick)
+                            Action = () =>
+                            {
+                                setMode(TeamColour.Red, ChoiceType.Pick);
+                                UpdatePoolState(pickColour, ChoiceType.Pick);
+                            }
                         },
                         buttonBluePick = new TourneyButton
                         {
                             RelativeSizeAxes = Axes.X,
                             Text = "Blue Pick",
-                            Action = () => setMode(TeamColour.Blue, ChoiceType.Pick)
+                            Action = () =>
+                            {
+                                setMode(TeamColour.Blue, ChoiceType.Pick);
+                                UpdatePoolState(pickColour, ChoiceType.Pick);
+                            }
                         },
                         new ControlPanel.Spacer(),
                         new TourneyButton
@@ -276,8 +292,8 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (existing == null) return;
 
             CurrentMatch.Value?.PicksBans.Remove(existing);
-            UpdatePoolState();
             setNextMode();
+            UpdatePoolState(pickColour, pickType);
         }
 
         private void addForBeatmap(int beatmapId)
@@ -300,8 +316,8 @@ namespace osu.Game.Tournament.Screens.MapPool
                 BeatmapID = beatmapId
             });
 
-            UpdatePoolState();
             setNextMode();
+            UpdatePoolState(pickColour, pickType);
 
             if (LadderInfo.AutoProgressScreens.Value)
             {

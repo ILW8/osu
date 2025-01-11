@@ -37,10 +37,10 @@ namespace osu.Game.Tournament.Screens
             noMatchWarning?.Expire();
             noMatchWarning = null;
 
-            UpdatePoolState();
+            UpdatePoolState(pickColour: TeamColour.Red, choiceType: ChoiceType.Ban); // default action when no button is selected is red ban
         }
 
-        protected void UpdatePoolState()
+        protected void UpdatePoolState(TeamColour pickColour, ChoiceType choiceType)
         {
             if (CurrentMatch.Value?.Round.Value == null)
             {
@@ -77,6 +77,8 @@ namespace osu.Game.Tournament.Screens
                                                                 .FirstOrDefault()
                                                 }
                                             });
+
+            poolState["PickAction"] = new Dictionary<string, int?> { { "Team", pickColour == TeamColour.Red ? 0 : 1 }, { "IsBanning", choiceType == ChoiceType.Ban ? 1 : 0 } };
 
             websocketController?.BroadcastMappoolChange(poolState);
         }
