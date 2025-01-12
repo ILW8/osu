@@ -198,6 +198,7 @@ namespace osu.Game.Tournament.Screens.MapPool
             Logger.Log($"Setting pick/ban mode for {teamColour} to {isPick}");
 
             setMode(teamColour, isPick == 1 ? ChoiceType.Pick : ChoiceType.Ban);
+            UpdatePoolState(pickColour, pickType);
         }
 
         private void beatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)
