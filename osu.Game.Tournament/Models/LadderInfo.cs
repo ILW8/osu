@@ -46,5 +46,6 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> DisplayTeamSeeds = new BindableBool();
 
         public Bindable<string?> AutoSyncSlug = new Bindable<string?>();
+        public Bindable<bool> AutoSyncEnabled = new BindableBool();
     }
 }

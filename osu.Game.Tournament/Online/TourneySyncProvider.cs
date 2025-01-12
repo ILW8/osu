@@ -28,7 +28,8 @@ namespace osu.Game.Tournament.Online
         private void load()
         {
             ladder.AutoSyncSlug.BindValueChanged(_ => updateSyncTarget());
-            ladder.CurrentMatch.BindValueChanged(_ => updateSyncTarget(), true);
+            ladder.CurrentMatch.BindValueChanged(_ => updateSyncTarget());
+            ladder.AutoSyncEnabled.BindValueChanged(_ => updateSyncTarget(), true);
         }
 
         private void updateSyncTarget()
@@ -43,7 +44,8 @@ namespace osu.Game.Tournament.Online
                 return;
             }
 
-            scheduleFetchTask(slug, matchID);
+            if (ladder.AutoSyncEnabled.Value)
+                scheduleFetchTask(slug, matchID);
         }
 
         private void scheduleFetchTask(string slug, string matchID)
@@ -81,7 +83,6 @@ namespace osu.Game.Tournament.Online
 
                 Logger.Log($"Got latest sync state: {serializedResponse}");
 
-                // todo: update map pool given state
                 OnMappoolStateUpdate?.Invoke(latestSyncState.Picks, latestSyncState.Bans);
             }
             catch

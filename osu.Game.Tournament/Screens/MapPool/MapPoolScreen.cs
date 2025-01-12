@@ -131,6 +131,11 @@ namespace osu.Game.Tournament.Screens.MapPool
                             LabelText = "Split display by mods",
                             Current = LadderInfo.SplitMapPoolByMods,
                         },
+                        new OsuCheckbox
+                        {
+                            LabelText = "Enable pool sync with server",
+                            Current = LadderInfo.AutoSyncEnabled,
+                        },
                     },
                 }
             };
