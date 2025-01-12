@@ -66,6 +66,8 @@ namespace osu.Game.Tournament.Models
 
         public readonly Bindable<DateTimeOffset> Date = new Bindable<DateTimeOffset>(DateTimeOffset.Now);
 
+        public readonly Bindable<string> SyncId = new Bindable<string> { Default = "" };
+
         [JsonProperty]
         public readonly BindableList<ConditionalTournamentMatch> ConditionalMatches = new BindableList<ConditionalTournamentMatch>();
 

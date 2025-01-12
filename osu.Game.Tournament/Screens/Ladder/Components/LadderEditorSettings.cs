@@ -24,6 +24,7 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         private SettingsDropdown<TournamentRound?> roundDropdown = null!;
         private PlayerCheckbox losersCheckbox = null!;
         private DateTextBox dateTimeBox = null!;
+        private SettingsTextBox matchSyncBox = null!;
         private SettingsTeamDropdown team1Dropdown = null!;
         private SettingsTeamDropdown team2Dropdown = null!;
 
@@ -52,6 +53,7 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                     roundDropdown = new SettingsRoundDropdown(ladderInfo.Rounds) { LabelText = "Round" },
                     losersCheckbox = new PlayerCheckbox { LabelText = "Losers Bracket" },
                     dateTimeBox = new DateTextBox { LabelText = "Match Time" },
+                    matchSyncBox = new SettingsTextBox { LabelText = "Match sync ID" },
                 },
             };
 
@@ -67,6 +69,7 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                 roundDropdown.Current = selection.NewValue.Round;
                 losersCheckbox.Current = selection.NewValue.Losers;
                 dateTimeBox.Current = selection.NewValue.Date;
+                matchSyncBox.Current = selection.NewValue.SyncId;
 
                 team1Dropdown.Current = selection.NewValue.Team1;
                 team2Dropdown.Current = selection.NewValue.Team2;
