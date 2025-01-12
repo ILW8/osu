@@ -148,6 +148,7 @@ namespace osu.Game.Tournament.Screens.Setup
                 },
                 new SyncSlugSelector
                 {
+                    Current = LadderInfo.AutoSyncSlug,
                     Label = "Autosync slug",
                     ButtonText = "Set slug",
                 },
