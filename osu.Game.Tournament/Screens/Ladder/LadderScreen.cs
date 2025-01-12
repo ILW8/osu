@@ -14,6 +14,7 @@ using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Editors;
 using osu.Game.Tournament.Screens.Ladder.Components;
+using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Screens.Ladder
@@ -39,7 +40,7 @@ namespace osu.Game.Tournament.Screens.Ladder
             InternalChild = Content = new Container
             {
                 RelativeSizeAxes = Axes.Both,
-                Masking = true,
+                Masking = false,
                 Children = new Drawable[]
                 {
                     new TourneyVideo("ladder")
@@ -66,6 +67,41 @@ namespace osu.Game.Tournament.Screens.Ladder
                             },
                         }
                     },
+                    new ControlPanel
+                    {
+                        // ScrollContent
+                        Children = new Drawable[]
+                        {
+                            // new TournamentSpriteText
+                            // {
+                            //     Text = "Current Mode"
+                            // },
+                            new TourneyButton
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Text = "Reset position",
+                                Action = () => ScrollContent.SetPosition(new Vector2(0, 0))
+                            },
+                            new TourneyButton
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Text = "Reset zoom",
+                                Action = () => ScrollContent.SetScale(1.0f)
+                            },
+                            new TourneyButton
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Text = "Zoom in",
+                                Action = () => ScrollContent.AdjustScale(0.1f)
+                            },
+                            new TourneyButton
+                            {
+                                RelativeSizeAxes = Axes.X,
+                                Text = "Zoom out",
+                                Action = () => ScrollContent.AdjustScale(-0.1f)
+                            },
+                        },
+                    }
                 }
             };
 
