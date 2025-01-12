@@ -4,10 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Game.IPC;
+using osu.Game.Tournament.Models;
 using osuTK.Input;
 
 namespace osu.Game.Tournament.WebSockets
@@ -50,7 +50,7 @@ namespace osu.Game.Tournament.WebSockets
 
             if (cmd.StartsWith("dopickban ", StringComparison.Ordinal))
             {
-                var match = pickBanModSlotRegex().Match(cmd);
+                var match = RoundBeatmap.PickBanModSlotRegex().Match(cmd[10..]);
 
                 if (match.Success)
                 {
@@ -96,8 +96,5 @@ namespace osu.Game.Tournament.WebSockets
         public event Action<string, int>? OnPerformPickBanRequested;
         public event Action<Key>? OnSceneChangeRequested;
         public event Action? OnWarmupToggleRequested;
-
-        [GeneratedRegex(@"dopickban (-?\w{2})(\d+)")]
-        private static partial Regex pickBanModSlotRegex();
     }
 }

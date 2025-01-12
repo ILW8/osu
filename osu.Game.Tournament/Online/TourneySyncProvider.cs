@@ -1,6 +1,8 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using osu.Framework.Allocation;
@@ -15,6 +17,9 @@ namespace osu.Game.Tournament.Online
     public partial class TourneySyncProvider : Component
     {
         private ScheduledDelegate? scheduled;
+
+        // TODO: use BeatmapChoice instead of PickBan
+        public event Action<List<PickBan>, List<PickBan>>? OnMappoolStateUpdate;
 
         [Resolved]
         private LadderInfo ladder { get; set; } = null!;
@@ -77,6 +82,7 @@ namespace osu.Game.Tournament.Online
                 Logger.Log($"Got latest sync state: {serializedResponse}");
 
                 // todo: update map pool given state
+                OnMappoolStateUpdate?.Invoke(latestSyncState.Picks, latestSyncState.Bans);
             }
             catch
             {

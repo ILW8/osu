@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -15,6 +16,7 @@ using osu.Game.IPC;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
+using osu.Game.Tournament.Online;
 using osu.Game.Tournament.Screens.Gameplay;
 using osu.Game.Tournament.Screens.Gameplay.Components;
 using osuTK;
@@ -32,6 +34,9 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         [Resolved(CanBeNull = true)]
         private ITournamentWsControl? websocketController { get; set; }
+
+        [Resolved]
+        private TourneySyncProvider syncProvider { get; set; } = null!;
 
         private TeamColour pickColour;
         private ChoiceType pickType;
@@ -147,6 +152,66 @@ namespace osu.Game.Tournament.Screens.MapPool
                 websocketController.OnPickBanActionUpdate += updatePickBanAction;
                 websocketController.OnPerformPickBanRequested += performPickBan;
             }
+
+            syncProvider.OnMappoolStateUpdate += syncPoolState;
+        }
+
+        private void syncPoolState(List<PickBan> picks, List<PickBan> bans)
+        {
+            if (CurrentMatch.Value?.PicksBans == null)
+                return;
+
+            var picksBans = picks.Select(p => parsePickBan(ChoiceType.Pick, p))
+                                 .Concat(bans.Select(p => parsePickBan(ChoiceType.Ban, p)))
+                                 .ToList();
+
+            // Remove elements not in picksBans
+            foreach (var toRemove in CurrentMatch.Value.PicksBans.Where(pb => picksBans.All(newPb => newPb.BeatmapID != pb.BeatmapID)))
+                CurrentMatch.Value.PicksBans.Remove(toRemove);
+
+            // Add new elements from picksBans
+            foreach (BeatmapChoice? newPb in picksBans.Where(newPb => CurrentMatch.Value.PicksBans.All(pb => pb.BeatmapID != newPb.BeatmapID)))
+            {
+                CurrentMatch.Value.PicksBans.Add(newPb);
+            }
+
+            UpdatePoolState(pickColour, pickType);
+            return;
+
+            BeatmapChoice parsePickBan(ChoiceType type, PickBan npb)
+            {
+                var beatmap = getMapForSlot(npb.Slot);
+
+                return new BeatmapChoice
+                {
+                    Team = npb.Team == "red" ? TeamColour.Red : TeamColour.Blue,
+                    Type = type,
+                    BeatmapID = beatmap?.Beatmap?.OnlineID ?? 0
+                };
+            }
+        }
+
+        private RoundBeatmap? getMapForSlot(string slotName)
+        {
+            var match = RoundBeatmap.PickBanModSlotRegex().Match(slotName);
+            if (!match.Success)
+                return null;
+
+            var mod = match.Groups[1];
+            var index = match.Groups[2];
+            return getMapForSlot(mod.Value, int.Parse(index.Value));
+        }
+
+        private RoundBeatmap? getMapForSlot(string mods, int index)
+        {
+            if (index < 0)
+                return null;
+
+            if (CurrentMatch.Value?.Round.Value == null)
+                return null;
+
+            var mapsForMod = CurrentMatch.Value.Round.Value.Beatmaps.Where(m => m.Mods == mods).ToList();
+            return mapsForMod.Count < index ? null : mapsForMod[index - 1];
         }
 
         private void performPickBan(string mods, int index)
@@ -161,13 +226,9 @@ namespace osu.Game.Tournament.Screens.MapPool
                 mods = mods[1..];
             }
 
-            var mapsForMod = CurrentMatch.Value.Round.Value.Beatmaps.Where(m => m.Mods == mods).ToList();
-            if (mapsForMod.Count < Math.Abs(index))
-                return;
+            var actionMap = getMapForSlot(mods, Math.Abs(index));
 
-            var actionMap = mapsForMod[Math.Abs(index) - 1];
-
-            if (actionMap.Beatmap == null) return;
+            if (actionMap?.Beatmap == null) return;
 
             if (index < 0)
                 removeForBeatmap(actionMap.Beatmap.OnlineID);
