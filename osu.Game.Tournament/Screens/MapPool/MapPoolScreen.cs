@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -9,6 +10,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -34,6 +36,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         private OsuButton buttonBlueBan = null!;
         private OsuButton buttonRedPick = null!;
         private OsuButton buttonBluePick = null!;
+
+        private ScheduledDelegate? debounceDelegate;
 
         private ScheduledDelegate? scheduledScreenChange;
 
@@ -104,6 +108,12 @@ namespace osu.Game.Tournament.Screens.MapPool
                             LabelText = "Split display by mods",
                             Current = LadderInfo.SplitMapPoolByMods,
                         },
+                        new SettingsSlider<float>
+                        {
+                            LabelText = "Beatmap panel width",
+                            Current = LadderInfo.BeatmapPanelWidth,
+                            KeyboardStep = 10,
+                        },
                     },
                 }
             };
@@ -119,6 +129,14 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             splitMapPoolByMods = LadderInfo.SplitMapPoolByMods.GetBoundCopy();
             splitMapPoolByMods.BindValueChanged(_ => updateDisplay());
+
+            LadderInfo.BeatmapPanelWidth.BindValueChanged(_ => debounce(updateDisplay));
+        }
+
+        private void debounce(Action action, int milliseconds = 250)
+        {
+            debounceDelegate?.Cancel();
+            debounceDelegate = Scheduler.AddDelayed(action, milliseconds);
         }
 
         private void beatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)
@@ -302,6 +320,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                         Anchor = Anchor.TopCentre,
                         Origin = Anchor.TopCentre,
                         Height = 42,
+                        Width = LadderInfo.BeatmapPanelWidth.Value
                     });
                 }
             }

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using osu.Framework.Bindables;
 using osu.Game.Rulesets;
+using osu.Game.Tournament.Components;
 
 namespace osu.Game.Tournament.Models
 {
@@ -42,6 +43,12 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> AutoProgressScreens = new BindableBool(true);
 
         public Bindable<bool> SplitMapPoolByMods = new BindableBool(true);
+
+        public BindableNumber<float> BeatmapPanelWidth = new BindableNumber<float>(TournamentBeatmapPanel.WIDTH)
+        {
+            MinValue = 100,
+            MaxValue = TournamentBeatmapPanel.WIDTH,
+        };
 
         public Bindable<bool> DisplayTeamSeeds = new BindableBool();
     }
