@@ -138,9 +138,9 @@ namespace osu.Game.Tournament
                             {
                                 new ScreenButton(typeof(SetupScreen)) { Text = "Setup", RequestSelection = SetScreen },
                                 new Separator(),
-                                new ScreenButton(typeof(TeamEditorScreen)) { Text = "Team Editor", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(RoundEditorScreen)) { Text = "Rounds Editor", RequestSelection = SetScreen },
-                                new ScreenButton(typeof(LadderEditorScreen)) { Text = "Bracket Editor", RequestSelection = SetScreen },
+                                new ScreenButton(typeof(TeamEditorScreen), Key.T) { Text = "Team Editor", RequestSelection = SetScreen },
+                                new ScreenButton(typeof(RoundEditorScreen), Key.R) { Text = "Rounds Editor", RequestSelection = SetScreen },
+                                new ScreenButton(typeof(LadderEditorScreen), Key.E) { Text = "Bracket Editor", RequestSelection = SetScreen },
                                 new Separator(),
                                 new ScreenButton(typeof(ScheduleScreen), Key.S) { Text = "Schedule", RequestSelection = SetScreen },
                                 new ScreenButton(typeof(LadderScreen), Key.B) { Text = "Bracket", RequestSelection = SetScreen },

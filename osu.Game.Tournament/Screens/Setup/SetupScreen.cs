@@ -146,6 +146,12 @@ namespace osu.Game.Tournament.Screens.Setup
                     Description = "Team seeds will display alongside each team at the top in gameplay/map pool screens.",
                     Current = LadderInfo.DisplayTeamSeeds,
                 },
+                new SyncSlugSelector
+                {
+                    Current = LadderInfo.AutoSyncSlug,
+                    Label = "Autosync slug",
+                    ButtonText = "Set slug",
+                },
             };
         }
 

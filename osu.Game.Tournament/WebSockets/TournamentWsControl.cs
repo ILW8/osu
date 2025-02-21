@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Logging;
 using osu.Game.IPC;
+using osu.Game.Tournament.Models;
 using osuTK;
 using osuTK.Input;
 
@@ -129,7 +130,7 @@ namespace osu.Game.Tournament.WebSockets
 
             if (cmd.StartsWith("dopickban ", StringComparison.Ordinal))
             {
-                var match = pickBanModSlotRegex().Match(cmd);
+                var match = RoundBeatmap.PickBanModSlotRegex().Match(cmd[10..]);
 
                 if (match.Success)
                 {
@@ -175,7 +176,6 @@ namespace osu.Game.Tournament.WebSockets
         public event Action<string, int>? OnPerformPickBanRequested;
         public event Action<Key>? OnSceneChangeRequested;
         public event Action? OnWarmupToggleRequested;
-
         public event Action<ITournamentWsControl.BracketViewTransformMode, float>? OnBracketZoomChangeRequested;
         public event Action<ITournamentWsControl.BracketViewTransformMode, Vector2>? OnBracketTranslateChangeRequested;
 
