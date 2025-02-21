@@ -3,12 +3,19 @@
 
 using System;
 using System.Collections.Generic;
+using osuTK;
 using osuTK.Input;
 
 namespace osu.Game.IPC
 {
     public interface ITournamentWsControl
     {
+        public enum BracketViewTransformMode
+        {
+            Relative,
+            Absolute
+        }
+
         /// <summary>
         /// Should trigger a save of bracket.json
         /// </summary>
@@ -34,6 +41,10 @@ namespace osu.Game.IPC
         public event Action<Key>? OnSceneChangeRequested;
 
         public event Action OnWarmupToggleRequested;
+
+        public event Action<BracketViewTransformMode, float>? OnBracketZoomChangeRequested;
+
+        public event Action<BracketViewTransformMode, Vector2>? OnBracketTranslateChangeRequested;
 
         /// <summary>
         ///

@@ -35,6 +35,11 @@ namespace osu.Game.Tournament.Screens.Ladder
             this.MoveTo(target = position, duration, easing);
         }
 
+        public void AdjustPosition(Vector2 delta, float duration = 1000, Easing easing = Easing.OutQuint)
+        {
+            this.MoveTo(target += delta, duration, easing);
+        }
+
         public void SetScale(float newScale, float duration = 1000, Easing easing = Easing.OutQuint)
         {
             newScale = Math.Clamp(newScale, min_scale, max_scale);

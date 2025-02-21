@@ -7,7 +7,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
+using osu.Framework.Logging;
 using osu.Game.IPC;
+using osuTK;
 using osuTK.Input;
 
 namespace osu.Game.Tournament.WebSockets
@@ -32,6 +34,83 @@ namespace osu.Game.Tournament.WebSockets
                     OnSceneChangeRequested?.Invoke(key);
 
                 return;
+            }
+
+            // bracket <verb> <argument>
+            // verb: move, zoom
+            // arg: reset, (x,y) for move, 0.0f scale adjust factor for zoom
+            if (cmd.StartsWith("bracket ", StringComparison.Ordinal))
+            {
+                string[] bracketCmds = cmd.Split(" ", 3);
+                Logger.Log($"got bracket command: {string.Join(',', bracketCmds)}");
+
+                if (bracketCmds.Length == 3)
+                {
+                    string verb = bracketCmds[1];
+                    string arg = bracketCmds[2];
+
+                    Logger.Log($"verb: {verb}, arg: {arg}");
+
+                    // todo: fix this messy nesting
+                    switch (verb)
+                    {
+                        case "move":
+                            Logger.Log("move");
+
+                            if (arg.Equals("reset", StringComparison.OrdinalIgnoreCase))
+                            {
+                                Logger.Log("move reset");
+
+                                Schedule(() => OnBracketTranslateChangeRequested?.Invoke(ITournamentWsControl.BracketViewTransformMode.Absolute, new Vector2(0, 0)));
+                            }
+                            else
+                            {
+                                string[] coords = arg.Split(',');
+
+                                if (coords.Length == 2)
+                                {
+                                    if (float.TryParse(coords[0], out float x) && float.TryParse(coords[1], out float y))
+                                    {
+                                        Schedule(() => OnBracketTranslateChangeRequested?.Invoke(ITournamentWsControl.BracketViewTransformMode.Absolute, new Vector2(x, y)));
+                                    }
+                                }
+                            }
+
+                            break;
+
+                        case "translate":
+                            string[] translateDelta = arg.Split(',');
+
+                            if (translateDelta.Length == 2)
+                            {
+                                if (float.TryParse(translateDelta[0], out float x) && float.TryParse(translateDelta[1], out float y))
+                                {
+                                    Schedule(() => OnBracketTranslateChangeRequested?.Invoke(ITournamentWsControl.BracketViewTransformMode.Relative, new Vector2(x, y)));
+                                }
+                            }
+
+                            break;
+
+                        case "zoom":
+                            if (arg.Equals("reset", StringComparison.OrdinalIgnoreCase))
+                            {
+                                Schedule(() => OnBracketZoomChangeRequested?.Invoke(ITournamentWsControl.BracketViewTransformMode.Absolute, 1.0f));
+                            }
+                            else
+                            {
+                                if (float.TryParse(arg, out float zoomChange))
+                                {
+                                    Schedule(() => OnBracketZoomChangeRequested?.Invoke(ITournamentWsControl.BracketViewTransformMode.Relative, zoomChange));
+                                }
+                            }
+
+                            break;
+
+                        default:
+                            Logger.Log($"unknown bracket command verb: {verb}");
+                            break;
+                    }
+                }
             }
 
             // `pickban` sets the pickban mode
@@ -96,6 +175,9 @@ namespace osu.Game.Tournament.WebSockets
         public event Action<string, int>? OnPerformPickBanRequested;
         public event Action<Key>? OnSceneChangeRequested;
         public event Action? OnWarmupToggleRequested;
+
+        public event Action<ITournamentWsControl.BracketViewTransformMode, float>? OnBracketZoomChangeRequested;
+        public event Action<ITournamentWsControl.BracketViewTransformMode, Vector2>? OnBracketTranslateChangeRequested;
 
         [GeneratedRegex(@"dopickban (-?\w{2})(\d+)")]
         private static partial Regex pickBanModSlotRegex();
