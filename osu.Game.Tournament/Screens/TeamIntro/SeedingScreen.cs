@@ -12,7 +12,6 @@ using osu.Framework.Graphics.Sprites;
 using osu.Framework.Graphics.Textures;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
-using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Ladder.Components;
@@ -91,11 +90,6 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                             Text = "Move to team below",
                             Action = () => currentTeam.Value = LadderInfo.Teams!.GetPreviousAndNext(currentTeam.Value).next,
                         },
-                        new SettingsCheckbox
-                        {
-                            LabelText = "1v1 mode",
-                            Current = LadderInfo.Use1V1Mode
-                        }
                     }
                 }
             };
