@@ -32,6 +32,9 @@ namespace osu.Game.Online.API.Requests.Responses
         [JsonProperty(@"playcount")]
         public int PlayCount { get; set; }
 
+        [JsonProperty(@"current_user_playcount")]
+        public int UserPlayCount { get; set; }
+
         [JsonProperty(@"passcount")]
         public int PassCount { get; set; }
 
@@ -109,6 +112,9 @@ namespace osu.Game.Online.API.Requests.Responses
 
         public double BPM { get; set; }
 
+        [JsonProperty(@"owners")]
+        public BeatmapOwner[] BeatmapOwners { get; set; } = Array.Empty<BeatmapOwner>();
+
         #region Implementation of IBeatmapInfo
 
         public IBeatmapMetadataInfo Metadata => (BeatmapSet as IBeatmapSetInfo)?.Metadata ?? new BeatmapMetadata();
@@ -176,6 +182,15 @@ namespace osu.Game.Online.API.Requests.Responses
 
             // ReSharper disable once NonReadonlyMemberInGetHashCode
             public override int GetHashCode() => OnlineID;
+        }
+
+        public class BeatmapOwner
+        {
+            [JsonProperty(@"id")]
+            public int Id { get; set; }
+
+            [JsonProperty(@"username")]
+            public string Username { get; set; } = string.Empty;
         }
     }
 }
