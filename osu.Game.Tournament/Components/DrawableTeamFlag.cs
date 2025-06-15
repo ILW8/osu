@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using JetBrains.Annotations;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -16,6 +17,8 @@ namespace osu.Game.Tournament.Components
     public partial class DrawableTeamFlag : Container
     {
         private readonly TournamentTeam? team;
+
+        public bool Is1V1 => team?.Players.Count > 1;
 
         [UsedImplicitly]
         private Bindable<string>? flag;
@@ -33,7 +36,7 @@ namespace osu.Game.Tournament.Components
         {
             if (team == null) return;
 
-            Size = new Vector2(75);
+            Size = Is1V1 ? new Vector2(75, 54) : new Vector2(75);
 
             Children = new Drawable[]
             {
@@ -63,8 +66,16 @@ namespace osu.Game.Tournament.Components
             (flag = team.FlagName.GetBoundCopy()).BindValueChanged(_ =>
             {
                 flagSprite.Texture = textures.Get($@"Flags/{team.FlagName}");
-                overlayFlag.Texture = textures.Get($@"Flags/AU"); // Or different texture path
+                overlayFlag.Texture = textures.Get($@"Flags/{team.Players.FirstOrDefault()?.CountryCode}");
             }, true);
+
+            team?.Players.BindCollectionChanged((_, _) =>
+            {
+                if (Is1V1)
+                    overlayFlag.Show();
+                else
+                    overlayFlag.Hide();
+            });
         }
     }
 }
