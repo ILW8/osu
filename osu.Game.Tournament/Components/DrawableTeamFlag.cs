@@ -18,7 +18,7 @@ namespace osu.Game.Tournament.Components
     {
         private readonly TournamentTeam? team;
 
-        public bool Is1V1 => team?.Players.Count > 1;
+        public bool Is1V1 => team?.Players.Count <= 1;
 
         [UsedImplicitly]
         private Bindable<string>? flag;
@@ -36,7 +36,7 @@ namespace osu.Game.Tournament.Components
         {
             if (team == null) return;
 
-            Size = Is1V1 ? new Vector2(75, 54) : new Vector2(75);
+            Size = Is1V1 ? new Vector2(75) : new Vector2(75, 54);
 
             Children = new Drawable[]
             {
@@ -75,7 +75,7 @@ namespace osu.Game.Tournament.Components
                     overlayFlag.Show();
                 else
                     overlayFlag.Hide();
-            });
+            }, true);
         }
     }
 }
