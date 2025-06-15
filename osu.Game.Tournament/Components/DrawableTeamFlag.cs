@@ -21,6 +21,7 @@ namespace osu.Game.Tournament.Components
         private Bindable<string>? flag;
 
         private Sprite? flagSprite;
+        private Sprite? overlayFlag;
 
         public DrawableTeamFlag(TournamentTeam? team)
         {
@@ -32,18 +33,38 @@ namespace osu.Game.Tournament.Components
         {
             if (team == null) return;
 
-            Size = new Vector2(75, 54);
-            Masking = true;
-            CornerRadius = 5;
-            Child = flagSprite = new Sprite
+            Size = new Vector2(75);
+
+            Children = new Drawable[]
             {
-                RelativeSizeAxes = Axes.Both,
-                Anchor = Anchor.Centre,
-                Origin = Anchor.Centre,
-                FillMode = FillMode.Fill
+                new Container
+                {
+                    RelativeSizeAxes = Axes.Both,
+                    Masking = true,
+                    CornerRadius = 5,
+                    Child = flagSprite = new Sprite
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Anchor = Anchor.Centre,
+                        Origin = Anchor.Centre,
+                        FillMode = FillMode.Fill
+                    }
+                },
+                overlayFlag = new Sprite
+                {
+                    Size = new Vector2(75, 54),
+                    Scale = new Vector2(0.6f),
+                    Anchor = Anchor.BottomRight,
+                    Origin = Anchor.Centre,
+                    Position = new Vector2(-12, -8)
+                }
             };
 
-            (flag = team.FlagName.GetBoundCopy()).BindValueChanged(_ => flagSprite.Texture = textures.Get($@"Flags/{team.FlagName}"), true);
+            (flag = team.FlagName.GetBoundCopy()).BindValueChanged(_ =>
+            {
+                flagSprite.Texture = textures.Get($@"Flags/{team.FlagName}");
+                overlayFlag.Texture = textures.Get($@"Flags/AU"); // Or different texture path
+            }, true);
         }
     }
 }
