@@ -60,7 +60,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     {
                         AutoSizeAxes = Axes.Both,
                         Direction = FillDirection.Horizontal,
-                        Spacing = new Vector2(5),
+                        Spacing = new Vector2(12),
                         Children = new Drawable[]
                         {
                             Flag,

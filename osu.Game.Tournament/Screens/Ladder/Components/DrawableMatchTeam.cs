@@ -63,11 +63,11 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
             this.losers = losers;
             Size = new Vector2(150, 40);
 
-            Flag.Scale = new Vector2(0.54f);
+            Flag.Scale = new Vector2(Flag.Is1V1 ? 0.42f : 0.54f);
             Flag.Anchor = Flag.Origin = Anchor.CentreLeft;
 
             AcronymText.Anchor = AcronymText.Origin = Anchor.CentreLeft;
-            AcronymText.Padding = new MarginPadding { Left = 50 };
+            AcronymText.Padding = new MarginPadding { Left = Flag.Is1V1 ? 44 : 50 };
             AcronymText.Font = OsuFont.Torus.With(size: 22, weight: FontWeight.Bold);
 
             isWinner = () => match.Winner == Team;
