@@ -63,13 +63,6 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
             this.losers = losers;
             Size = new Vector2(150, 40);
 
-            Flag.Scale = new Vector2(Flag.Is1V1 ? 0.42f : 0.54f);
-            Flag.Anchor = Flag.Origin = Anchor.CentreLeft;
-
-            AcronymText.Anchor = AcronymText.Origin = Anchor.CentreLeft;
-            AcronymText.Padding = new MarginPadding { Left = Flag.Is1V1 ? 44 : 50 };
-            AcronymText.Font = OsuFont.Torus.With(size: 22, weight: FontWeight.Bold);
-
             isWinner = () => match.Winner == Team;
 
             completed.BindTo(match.Completed);
@@ -81,6 +74,16 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         private void load(LadderEditorScreen ladderEditor)
         {
             this.ladderEditor = ladderEditor;
+
+            ladderInfo?.Use1V1Mode.BindValueChanged((use1V1) =>
+            {
+                Flag.Scale = new Vector2(use1V1.NewValue ? 0.42f : 0.54f);
+                AcronymText.Padding = new MarginPadding { Left = use1V1.NewValue ? 44 : 50 };
+            }, true);
+
+            Flag.Anchor = Flag.Origin = Anchor.CentreLeft;
+            AcronymText.Anchor = AcronymText.Origin = Anchor.CentreLeft;
+            AcronymText.Font = OsuFont.Torus.With(size: 22, weight: FontWeight.Bold);
 
             colourWinner = losers
                 ? Color4Extensions.FromHex("#8E7F48")
