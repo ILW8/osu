@@ -61,14 +61,6 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         {
             this.match = match;
             this.losers = losers;
-            Size = new Vector2(150, 40);
-
-            Flag.Scale = new Vector2(Flag.Is1V1 ? 0.42f : 0.54f);
-            Flag.Anchor = Flag.Origin = Anchor.CentreLeft;
-
-            AcronymText.Anchor = AcronymText.Origin = Anchor.CentreLeft;
-            AcronymText.Padding = new MarginPadding { Left = Flag.Is1V1 ? 44 : 50 };
-            AcronymText.Font = OsuFont.Torus.With(size: 22, weight: FontWeight.Bold);
 
             isWinner = () => match.Winner == Team;
 
@@ -81,6 +73,17 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         private void load(LadderEditorScreen ladderEditor)
         {
             this.ladderEditor = ladderEditor;
+
+            ladderInfo?.Use1V1Mode.BindValueChanged((use1V1) =>
+            {
+                Flag.Scale = new Vector2(use1V1.NewValue ? 0.42f : 0.54f);
+                AcronymText.Padding = new MarginPadding { Left = use1V1.NewValue ? 44 : 50 };
+                AcronymText.Font = OsuFont.Torus.With(size: use1V1.NewValue ? 20 : 22, weight: FontWeight.Bold);
+                Size = new Vector2(use1V1.NewValue ? 240 : 150, 40);
+            }, true);
+
+            Flag.Anchor = Flag.Origin = Anchor.CentreLeft;
+            AcronymText.Anchor = AcronymText.Origin = Anchor.CentreLeft;
 
             colourWinner = losers
                 ? Color4Extensions.FromHex("#8E7F48")
@@ -105,10 +108,10 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                 new Container
                 {
                     Masking = true,
-                    Width = 0.3f,
+                    Width = Height,
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
-                    RelativeSizeAxes = Axes.Both,
+                    RelativeSizeAxes = Axes.Y,
                     Children = new Drawable[]
                     {
                         backgroundRight = new Box

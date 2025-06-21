@@ -152,6 +152,12 @@ namespace osu.Game.Tournament.Screens.Setup
                     Label = "Autosync slug",
                     ButtonText = "Set slug",
                 },
+                new LabelledSwitchButton
+                {
+                    Label = "1v1 mode",
+                    Description = "Text elements referring to \"Team\"s will be updated to \"Player\"s and team players lists will be hidden",
+                    Current = LadderInfo.Use1V1Mode
+                },
             };
         }
 

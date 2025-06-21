@@ -18,7 +18,8 @@ namespace osu.Game.Tournament.Components
     {
         private readonly TournamentTeam? team;
 
-        public bool Is1V1 => team?.Players.Count <= 1;
+        [Resolved]
+        private LadderInfo ladder { get; set; } = null!;
 
         [UsedImplicitly]
         private Bindable<string>? flag;
@@ -36,7 +37,7 @@ namespace osu.Game.Tournament.Components
         {
             if (team == null) return;
 
-            Size = Is1V1 ? new Vector2(75) : new Vector2(75, 54);
+            Size = ladder.Use1V1Mode.Value ? new Vector2(75) : new Vector2(75, 54);
 
             Children = new Drawable[]
             {
@@ -71,7 +72,7 @@ namespace osu.Game.Tournament.Components
 
             team?.Players.BindCollectionChanged((_, _) =>
             {
-                if (Is1V1)
+                if (ladder.Use1V1Mode.Value)
                     overlayFlag.Show();
                 else
                     overlayFlag.Hide();
