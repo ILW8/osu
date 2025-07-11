@@ -98,33 +98,9 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void updateCumulativeScore()
         {
-            // if (ladder.CurrentMatch.Value?.Round.Value == null)
-            //     return;
-            //
-            // if (beatmap.Value == null)
-            //     return;
-            //
-            // // get the current set
-            // var currentSet = ladder.CurrentMatch.Value.Sets.FirstOrDefault(s => s.Map1Id.Value == beatmap.Value.OnlineID || s.Map2Id.Value == beatmap.Value.OnlineID);
-            //
-            // if (currentSet == null)
-            //     return;
-            //
-            // // lookup roundbeatmap
-            // var map1RoundBeatmap = ladder.CurrentMatch.Value.Round.Value?.Beatmaps.FirstOrDefault(poolMap => poolMap.ID == currentSet.Map1Id.Value);
-            // var map2RoundBeatmap = ladder.CurrentMatch.Value.Round.Value?.Beatmaps.FirstOrDefault(poolMap => poolMap.ID == currentSet.Map2Id.Value);
-            //
-            // if (map1RoundBeatmap == null && map2RoundBeatmap == null)
-            //     return;
-            //
-            // // get scores from both maps
-            // long score = 0;
-            //
-            // if (ladder.CurrentMatch.Value.MapScores.TryGetValue(map1RoundBeatmap?.SlotName ?? "INVALID_SLOT", out var map1Score))
-            //     score += teamColour == TeamColour.Red ? map1Score.Item1 : map1Score.Item2;
-            //
-            // if (ladder.CurrentMatch.Value.MapScores.TryGetValue(map2RoundBeatmap?.SlotName ?? "INVALID_SLOT", out var map2Score))
-            //     score += teamColour == TeamColour.Red ? map2Score.Item1 : map2Score.Item2;
+            // don't check set scoring if using stable IPC
+            if (!ladder.UseLazerIpc.Value)
+                return;
 
             if (ladder.CurrentMatch.Value?.Round.Value == null)
                 return;
