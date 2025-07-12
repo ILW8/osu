@@ -9,6 +9,7 @@ using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -36,6 +37,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         private OsuButton buttonBlueBan = null!;
         private OsuButton buttonRedPick = null!;
         private OsuButton buttonBluePick = null!;
+        private SettingsLongNumberBox team1ScoreOverride = null!;
+        private SettingsLongNumberBox team2ScoreOverride = null!;
 
         private ScheduledDelegate? scheduledScreenChange;
 
@@ -105,6 +108,22 @@ namespace osu.Game.Tournament.Screens.MapPool
                         {
                             LabelText = "Split display by mods",
                             Current = LadderInfo.SplitMapPoolByMods,
+                        },
+                        team1ScoreOverride = new SettingsLongNumberBox
+                        {
+                            LabelText = "Team red score override",
+                            RelativeSizeAxes = Axes.None,
+                            Width = 200,
+                            ShowsDefaultIndicator = false,
+                            Current = { Default = 0 }
+                        },
+                        team2ScoreOverride = new SettingsLongNumberBox
+                        {
+                            LabelText = "Team blue score override",
+                            RelativeSizeAxes = Axes.None,
+                            Width = 200,
+                            ShowsDefaultIndicator = false,
+                            Current = { Default = 0 }
                         },
                     },
                 }
@@ -264,6 +283,14 @@ namespace osu.Game.Tournament.Screens.MapPool
         {
             base.CurrentMatchChanged(match);
             updateDisplay();
+
+            if (match.NewValue == null)
+                return;
+
+            team1ScoreOverride.Current.UnbindBindings();
+            team1ScoreOverride.Current.BindTo(match.NewValue.Team1Score);
+            team2ScoreOverride.Current.UnbindBindings();
+            team2ScoreOverride.Current.BindTo(match.NewValue.Team2Score);
         }
 
         private void updateDisplay()
