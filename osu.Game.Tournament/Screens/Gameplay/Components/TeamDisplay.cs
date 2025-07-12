@@ -69,7 +69,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             new FillFlowContainer
                             {
                                 AutoSizeAxes = Axes.Both,
-                                Direction = FillDirection.Vertical,
+                                Direction = FillDirection.Horizontal,
                                 Origin = anchor,
                                 Anchor = anchor,
                                 Spacing = new Vector2(5),
@@ -78,65 +78,75 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                     new FillFlowContainer
                                     {
                                         AutoSizeAxes = Axes.Both,
-                                        Direction = FillDirection.Horizontal,
-                                        Spacing = new Vector2(5),
+                                        Direction = FillDirection.Vertical,
                                         Origin = anchor,
                                         Anchor = anchor,
-                                        Children = new Drawable[]
-                                        {
-                                            new DrawableTeamHeader(colour)
-                                            {
-                                                Scale = new Vector2(0.75f),
-                                                Origin = anchor,
-                                                Anchor = anchor,
-                                            },
-                                            score = new TeamScore(currentTeamScore, colour, pointsToWin)
-                                            {
-                                                Origin = anchor,
-                                                Anchor = anchor,
-                                            }
-                                        }
-                                    },
-                                    new FillFlowContainer
-                                    {
-                                        AutoSizeAxes = Axes.Both,
-                                        Direction = FillDirection.Horizontal,
                                         Spacing = new Vector2(5),
-                                        Origin = anchor,
-                                        Anchor = anchor,
                                         Children = new Drawable[]
                                         {
                                             new FillFlowContainer
                                             {
                                                 AutoSizeAxes = Axes.Both,
-                                                Direction = FillDirection.Vertical,
+                                                Direction = FillDirection.Horizontal,
+                                                Spacing = new Vector2(5),
                                                 Origin = anchor,
                                                 Anchor = anchor,
-                                                Spacing = new Vector2(5),
                                                 Children = new Drawable[]
                                                 {
-                                                    teamNameText = new TournamentSpriteTextWithBackground
+                                                    new DrawableTeamHeader(colour)
                                                     {
-                                                        Scale = new Vector2(0.5f),
+                                                        Scale = new Vector2(0.75f),
                                                         Origin = anchor,
                                                         Anchor = anchor,
                                                     },
-                                                    new DrawableTeamSeed(Team)
+                                                    score = new TeamScore(currentTeamScore, colour, pointsToWin)
                                                     {
-                                                        Scale = new Vector2(0.5f),
                                                         Origin = anchor,
                                                         Anchor = anchor,
+                                                    }
+                                                }
+                                            },
+                                            new FillFlowContainer
+                                            {
+                                                AutoSizeAxes = Axes.Both,
+                                                Direction = FillDirection.Horizontal,
+                                                Spacing = new Vector2(5),
+                                                Origin = anchor,
+                                                Anchor = anchor,
+                                                Children = new Drawable[]
+                                                {
+                                                    new FillFlowContainer
+                                                    {
+                                                        AutoSizeAxes = Axes.Both,
+                                                        Direction = FillDirection.Vertical,
+                                                        Origin = anchor,
+                                                        Anchor = anchor,
+                                                        Spacing = new Vector2(5),
+                                                        Children = new Drawable[]
+                                                        {
+                                                            teamNameText = new TournamentSpriteTextWithBackground
+                                                            {
+                                                                Scale = new Vector2(0.5f),
+                                                                Origin = anchor,
+                                                                Anchor = anchor,
+                                                            },
+                                                            new DrawableTeamSeed(Team)
+                                                            {
+                                                                Scale = new Vector2(0.5f),
+                                                                Origin = anchor,
+                                                                Anchor = anchor,
+                                                            },
+                                                        }
                                                     },
                                                 }
                                             },
-
-                                            teamScoreCumulative = new TeamScoreCumulative(colour)
-                                            {
-                                                Origin = anchor,
-                                                Anchor = anchor,
-                                                Margin = new MarginPadding { Horizontal = 12 },
-                                            },
                                         }
+                                    },
+                                    teamScoreCumulative = new TeamScoreCumulative(colour)
+                                    {
+                                        Origin = anchor,
+                                        Anchor = anchor,
+                                        Margin = new MarginPadding { Horizontal = 12 },
                                     },
                                 }
                             },
