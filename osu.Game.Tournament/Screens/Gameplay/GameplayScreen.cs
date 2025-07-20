@@ -351,11 +351,25 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         long scoreDelta = Math.Min(50_000, Math.Abs(legacyIpc.Score1.Value - legacyIpc.Score2.Value));
 
                         if (legacyIpc.Score1.Value > legacyIpc.Score2.Value)
-                        {
                             CurrentMatch.Value.Team1Score.Value += scoreDelta;
-                        }
                         else
                             CurrentMatch.Value.Team2Score.Value += scoreDelta;
+
+                        if ((CurrentMatch.Value.Round.Value?.MapCount.Value ?? 0) > 0)
+                        {
+                            // set match as completed if current score difference is larger than recoverable
+
+                            int mapsLeftToPlay = CurrentMatch.Value.PicksBans.Count(pb => pb.Type == ChoiceType.Pick);
+                            int maxPossibleScore = 50_000 * mapsLeftToPlay;
+
+                            long currentScoreDelta = Math.Abs((CurrentMatch.Value.Team1Score.Value ?? 0) - (CurrentMatch.Value.Team2Score.Value ?? 0));
+
+                            if (currentScoreDelta > maxPossibleScore)
+                            {
+                                CurrentMatch.Value.Completed.Value = true;
+                                Logger.Log($"setting match as completed: {mapsLeftToPlay} maps left to play, {currentScoreDelta} current score delta, {maxPossibleScore} max possible score");
+                            }
+                        }
                     }
                     else
                     {
