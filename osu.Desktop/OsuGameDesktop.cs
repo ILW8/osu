@@ -16,6 +16,7 @@ using osu.Framework.Logging;
 using osu.Game.Updater;
 using osu.Desktop.Windows;
 using osu.Framework.Allocation;
+using osu.Game.Configuration;
 using osu.Game.IO;
 using osu.Game.IPC;
 using osu.Game.Online.Multiplayer;
@@ -37,6 +38,8 @@ namespace osu.Desktop
 
         [Cached(typeof(IHighPerformanceSessionManager))]
         private readonly HighPerformanceSessionManager highPerformanceSessionManager = new HighPerformanceSessionManager();
+
+        public bool IsFirstRun { get; init; }
 
         public OsuGameDesktop(string[]? args = null)
             : base(args)
