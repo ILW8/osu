@@ -16,7 +16,7 @@ using osu.Game.Online.API;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets.Scoring;
-using osu.Game.Screens.Play.HUD;
+using osu.Game.Screens.Select.Leaderboards;
 
 namespace osu.Game.TournamentIpc
 {
@@ -25,7 +25,7 @@ namespace osu.Game.TournamentIpc
     {
         private readonly MultiplayerRoomUser[] playingUsers;
 
-        protected readonly Dictionary<int, MultiplayerGameplayLeaderboard.TrackedUserData> UserScores = new Dictionary<int, MultiplayerGameplayLeaderboard.TrackedUserData>();
+        protected readonly Dictionary<int, MultiplayerLeaderboardProvider.TrackedUserData> UserScores = new Dictionary<int, MultiplayerLeaderboardProvider.TrackedUserData>();
 
         public readonly SortedDictionary<int, BindableLong> TeamScores = new SortedDictionary<int, BindableLong>();
 
@@ -65,7 +65,7 @@ namespace osu.Game.TournamentIpc
                 scoreProcessor.TotalScore.BindValueChanged(_ => Scheduler.AddOnce(updateTotals));
                 AddInternal(scoreProcessor);
 
-                var trackedUser = new MultiplayerGameplayLeaderboard.TrackedUserData(user, scoreProcessor);
+                var trackedUser = new MultiplayerLeaderboardProvider.TrackedUserData(user, scoreProcessor);
                 UserScores[user.UserID] = trackedUser;
 
                 if (trackedUser.Team is int team && !TeamScores.ContainsKey(team))
