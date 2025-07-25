@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics.Sprites;
@@ -28,13 +29,13 @@ namespace osu.Game.Updater
             version = game.Version;
         }
 
-        protected override async Task<bool> PerformUpdateCheck()
+        protected override async Task<bool> PerformUpdateCheck(CancellationToken cancellationToken)
         {
             try
             {
                 var releases = new OsuJsonWebRequest<GitHubRelease>(@"https://api.github.com/repos/ILW8/osu-tclient/releases/latest");
 
-                await releases.PerformAsync().ConfigureAwait(false);
+                await releases.PerformAsync(cancellationToken).ConfigureAwait(false);
 
                 var latest = releases.ResponseObject;
 
