@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Diagnostics;
 using osu.Framework.Allocation;
 using osu.Framework.Extensions.Color4Extensions;
@@ -9,10 +10,12 @@ using osu.Framework.Graphics.Colour;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Graphics.UserInterface;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Backgrounds;
 using osu.Game.Graphics.Carousel;
 using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
 using osuTK;
 using osuTK.Graphics;
@@ -26,6 +29,8 @@ namespace osu.Game.Screens.SelectV2
         private Drawable iconContainer = null!;
         private OsuSpriteText titleText = null!;
         private TrianglesV2 triangles = null!;
+        private CircularContainer countPill = null!;
+        private OsuSpriteText countText = null!;
         private Box glow = null!;
 
         [Resolved]
@@ -85,12 +90,12 @@ namespace osu.Game.Screens.SelectV2
                     UseFullGlyphHeight = false,
                     X = 10f,
                 },
-                new CircularContainer
+                countPill = new CircularContainer
                 {
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
                     Size = new Vector2(50f, 14f),
-                    Margin = new MarginPadding { Right = 20f },
+                    Margin = new MarginPadding { Right = 30f },
                     Masking = true,
                     Children = new Drawable[]
                     {
@@ -99,13 +104,11 @@ namespace osu.Game.Screens.SelectV2
                             RelativeSizeAxes = Axes.Both,
                             Colour = Color4.Black.Opacity(0.7f),
                         },
-                        new OsuSpriteText
+                        countText = new OsuSpriteText
                         {
                             Anchor = Anchor.Centre,
                             Origin = Anchor.Centre,
                             Font = OsuFont.Style.Caption1.With(weight: FontWeight.Bold),
-                            // TODO: requires Carousel/CarouselItem-side implementation
-                            Text = "43",
                             UseFullGlyphHeight = false,
                         }
                     },
@@ -144,6 +147,29 @@ namespace osu.Game.Screens.SelectV2
             GroupDefinition group = (GroupDefinition)Item.Model;
 
             titleText.Text = group.Title;
+            countText.Text = Item.NestedItemCount.ToString("N0");
+        }
+
+        protected override void UpdateAfterChildren()
+        {
+            base.UpdateAfterChildren();
+
+            // Move the count pill in the opposite direction to keep it pinned to the screen regardless of the X position of TopLevelContent.
+            countPill.X = -TopLevelContent.X;
+        }
+
+        public override MenuItem[] ContextMenuItems
+        {
+            get
+            {
+                if (Item == null)
+                    return Array.Empty<MenuItem>();
+
+                return new MenuItem[]
+                {
+                    new OsuMenuItem(Expanded.Value ? "Collapse" : "Expand", MenuItemType.Highlighted, () => TriggerClick())
+                };
+            }
         }
     }
 }

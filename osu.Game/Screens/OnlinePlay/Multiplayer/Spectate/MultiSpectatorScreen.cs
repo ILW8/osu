@@ -68,13 +68,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         private SpectatorSyncManager syncManager = null!;
         private PlayerSettingsOverlay settingsOverlay = null!;
         private PlayerGrid grid = null!;
-        private TournamentSpectatorStatisticsTracker statisticsTracker = null!;
+        private readonly TournamentSpectatorStatisticsTracker statisticsTracker;
         private PlayerArea? currentAudioSource;
 
         private Bindable<bool> showSettingsOverlay = null!;
 
         private readonly Room room;
-        private readonly MultiplayerRoomUser[] users;
 
         private static MultiplayerRoomUser[] sortUsersByTeam(MultiplayerRoomUser[] users)
         {
@@ -94,9 +93,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             : base(sortUsersByTeam(users).Select(u => u.UserID).ToArray())
         {
             this.room = room;
-            this.users = sortUsersByTeam(users);
+            // this.users = sortUsersByTeam(users);
 
             instances = new PlayerArea[UserIds.Count];
+            statisticsTracker = new TournamentSpectatorStatisticsTracker(sortUsersByTeam(users));
         }
 
         [BackgroundDependencyLoader]
@@ -163,33 +163,13 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             for (int i = 0; i < Math.Min(PlayerGrid.MAX_PLAYERS, UserIds.Count); i++)
                 grid.Add(instances[i] = new PlayerArea(UserIds[i], syncManager.CreateManagedClock()));
 
-            LoadComponentAsync(statisticsTracker = new TournamentSpectatorStatisticsTracker(users), _ =>
+            LoadComponentAsync(statisticsTracker, _ =>
             {
                 foreach (var instance in instances)
                     statisticsTracker.AddClock(instance.UserId, instance.SpectatorPlayerClock);
 
                 AddInternal(statisticsTracker);
             });
-
-            // LoadComponentAsync(leaderboard = new MultiSpectatorLeaderboard(users)
-            // {
-            //     Expanded = { Value = true },
-            // }, _ =>
-            // {
-            //     foreach (var instance in instances)
-            //         leaderboard.AddClock(instance.UserId, instance.SpectatorPlayerClock);
-            //
-            //     leaderboardFlow.Insert(0, leaderboard);
-            //
-            //     if (leaderboard.TeamScores.Count == 2)
-            //     {
-            //         LoadComponentAsync(new MatchScoreDisplay
-            //         {
-            //             Team1Score = { BindTarget = leaderboard.TeamScores.First().Value },
-            //             Team2Score = { BindTarget = leaderboard.TeamScores.Last().Value },
-            //         }, scoreDisplayContainer.Add);
-            //     }
-            // });
 
             LoadComponentAsync(new GameplayChatDisplay(room)
             {
