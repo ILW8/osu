@@ -19,7 +19,6 @@ using osu.Game.Online.Rooms;
 using osu.Game.Online.Spectator;
 using osu.Game.Screens.Play;
 using osu.Game.Screens.Play.HUD;
-using osu.Game.Screens.Select.Leaderboards;
 using osu.Game.Screens.Spectate;
 using osu.Game.TournamentIpc;
 using osu.Game.Users;
@@ -61,9 +60,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         [Resolved]
         private MultiplayerClient multiplayerClient { get; set; } = null!;
 
-        [Cached(typeof(IGameplayLeaderboardProvider))]
-        private MultiSpectatorLeaderboardProvider leaderboardProvider { get; set; }
-
         private IAggregateAudioAdjustment? boundAdjustments;
 
         private readonly PlayerArea[] instances;
@@ -72,7 +68,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         private SpectatorSyncManager syncManager = null!;
         private PlayerSettingsOverlay settingsOverlay = null!;
         private PlayerGrid grid = null!;
-        private TournamentSpectatorStatisticsTracker statisticsTracker = null!;
+        private readonly TournamentSpectatorStatisticsTracker statisticsTracker;
         private PlayerArea? currentAudioSource;
 
         private Bindable<bool> showSettingsOverlay = null!;
@@ -100,8 +96,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             // this.users = sortUsersByTeam(users);
 
             instances = new PlayerArea[UserIds.Count];
-            // leaderboardProvider = new MultiSpectatorLeaderboardProvider(users);
-            // todo: use
+            statisticsTracker = new TournamentSpectatorStatisticsTracker(sortUsersByTeam(users));
         }
 
         [BackgroundDependencyLoader]
@@ -168,28 +163,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             for (int i = 0; i < Math.Min(PlayerGrid.MAX_PLAYERS, UserIds.Count); i++)
                 grid.Add(instances[i] = new PlayerArea(UserIds[i], syncManager.CreateManagedClock()));
 
-            /* LoadComponentAsync(statisticsTracker = new TournamentSpectatorStatisticsTracker(users), _ =>
+            LoadComponentAsync(statisticsTracker, _ =>
             {
                 foreach (var instance in instances)
                     statisticsTracker.AddClock(instance.UserId, instance.SpectatorPlayerClock);
 
                 AddInternal(statisticsTracker);
-            }); */
-
-            LoadComponentAsync(leaderboardProvider, _ =>
-            {
-                AddInternal(leaderboardProvider);
-                foreach (var instance in instances)
-                    leaderboardProvider.AddClock(instance.UserId, instance.SpectatorPlayerClock);
-
-                /* if (leaderboardProvider.TeamScores.Count == 2)
-                {
-                    LoadComponentAsync(new MatchScoreDisplay
-                    {
-                        Team1Score = { BindTarget = leaderboardProvider.TeamScores.First().Value },
-                        Team2Score = { BindTarget = leaderboardProvider.TeamScores.Last().Value },
-                    }, scoreDisplayContainer.Add);
-                } */
             });
 
             LoadComponentAsync(new GameplayChatDisplay(room)
