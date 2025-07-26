@@ -228,7 +228,7 @@ namespace osu.Game.Configuration
 
             SetDefault(OsuSetting.WasSupporter, false);
 
-            SetDefault<long>(OsuSetting.IpcScoreFlushInterval, 200);
+            SetDefault<int?>(OsuSetting.IpcScoreFlushInterval, 200);
         }
 
         protected override bool CheckLookupContainsPrivateInformation(OsuSetting lookup)

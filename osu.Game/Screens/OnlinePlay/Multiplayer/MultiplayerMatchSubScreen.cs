@@ -152,12 +152,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             Padding = new MarginPadding { Top = Header.HEIGHT };
         }
 
-        private Bindable<long?> scoreFlushInterval = null!;
+        private Bindable<int?> scoreFlushInterval = null!;
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
-            scoreFlushInterval = config.GetBindable<long?>(OsuSetting.IpcScoreFlushInterval);
+            scoreFlushInterval = config.GetBindable<int?>(OsuSetting.IpcScoreFlushInterval);
             sampleStart = audio.Samples.Get(@"SongSelect/confirm-selection");
 
             InternalChild = new OsuContextMenuContainer
@@ -252,7 +252,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                         },
                                                                         new Drawable[]
                                                                         {
-                                                                            new SettingsLongNumberBox
+                                                                            new SettingsNumberBox
                                                                             {
                                                                                 LabelText = @"IPC scores flush interval (ms)",
                                                                                 Current = scoreFlushInterval,

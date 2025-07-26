@@ -149,11 +149,11 @@ namespace osu.Game.TournamentIpc
                 }
             }, true);
 
-            var scoresFlushInterval = config.GetBindable<long>(OsuSetting.IpcScoreFlushInterval);
+            var scoresFlushInterval = config.GetBindable<int?>(OsuSetting.IpcScoreFlushInterval);
             scoresFlushInterval.BindValueChanged(flushInterval =>
             {
                 flushScoresDelegate?.Cancel();
-                flushScoresDelegate = Scheduler.AddDelayed(flushPendingScoresToDisk, flushInterval.NewValue, true);
+                flushScoresDelegate = Scheduler.AddDelayed(flushPendingScoresToDisk, flushInterval.NewValue ?? 200, true);
             }, true);
 
             flushChatMessagesDelegate?.Cancel();
@@ -338,6 +338,8 @@ namespace osu.Game.TournamentIpc
                         scoresIpcWriter.Write($"{score}\n");
                     }
                 }
+
+                Logger.Log($"flushed scores to disk ({scoresToWrite[0]} - {scoresToWrite[1]})");
             }
             catch
             {
