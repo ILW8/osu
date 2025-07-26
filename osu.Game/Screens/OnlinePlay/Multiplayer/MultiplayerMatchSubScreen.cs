@@ -17,6 +17,7 @@ using osu.Framework.Logging;
 using osu.Framework.Screens;
 using osu.Game.Audio;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.Graphics.Cursor;
 using osu.Game.Online;
 using osu.Game.Online.API;
@@ -25,6 +26,7 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Dialog;
+using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets;
 using osu.Game.Screens.Menu;
 using osu.Game.Screens.OnlinePlay.Components;
@@ -150,9 +152,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             Padding = new MarginPadding { Top = Header.HEIGHT };
         }
 
+        private Bindable<long?> scoreFlushInterval = null!;
+
         [BackgroundDependencyLoader]
-        private void load()
+        private void load(OsuConfigManager config)
         {
+            scoreFlushInterval = config.GetBindable<long?>(OsuSetting.IpcScoreFlushInterval);
             sampleStart = audio.Samples.Get(@"SongSelect/confirm-selection");
 
             InternalChild = new OsuContextMenuContainer
@@ -228,6 +233,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                     RelativeSizeAxes = Axes.Both,
                                                                     RowDimensions = new[]
                                                                     {
+                                                                        new Dimension(GridSizeMode.AutoSize),
+                                                                        new Dimension(),
                                                                         new Dimension(GridSizeMode.AutoSize)
                                                                     },
                                                                     Content = new[]
@@ -242,6 +249,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                             {
                                                                                 RelativeSizeAxes = Axes.Both
                                                                             },
+                                                                        },
+                                                                        new Drawable[]
+                                                                        {
+                                                                            new SettingsLongNumberBox
+                                                                            {
+                                                                                LabelText = @"IPC scores flush interval (ms)",
+                                                                                Current = scoreFlushInterval,
+                                                                            }
                                                                         }
                                                                     }
                                                                 },

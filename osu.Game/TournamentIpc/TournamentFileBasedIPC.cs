@@ -15,6 +15,7 @@ using osu.Framework.Logging;
 using osu.Framework.Platform;
 using osu.Framework.Threading;
 using osu.Game.Beatmaps;
+using osu.Game.Configuration;
 using osu.Game.IO.Serialization;
 using osu.Game.Online.Chat;
 using osu.Game.Online.Multiplayer;
@@ -119,7 +120,7 @@ namespace osu.Game.TournamentIpc
         }
 
         [BackgroundDependencyLoader]
-        private void load(Storage storage, IBindable<WorkingBeatmap> workingBeatmap)
+        private void load(Storage storage, OsuConfigManager config)
         {
             tournamentStorage = storage.GetStorageForDirectory(@"tournaments");
 
@@ -148,8 +149,12 @@ namespace osu.Game.TournamentIpc
                 }
             }, true);
 
-            flushScoresDelegate?.Cancel();
-            flushScoresDelegate = Scheduler.AddDelayed(flushPendingScoresToDisk, 200, true);
+            var scoresFlushInterval = config.GetBindable<long>(OsuSetting.IpcScoreFlushInterval);
+            scoresFlushInterval.BindValueChanged(flushInterval =>
+            {
+                flushScoresDelegate?.Cancel();
+                flushScoresDelegate = Scheduler.AddDelayed(flushPendingScoresToDisk, flushInterval.NewValue, true);
+            }, true);
 
             flushChatMessagesDelegate?.Cancel();
             flushChatMessagesDelegate = Scheduler.AddDelayed(updateChatMessages, 500, true);
