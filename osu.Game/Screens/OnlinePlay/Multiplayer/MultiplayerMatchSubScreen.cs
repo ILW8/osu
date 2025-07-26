@@ -19,6 +19,7 @@ using osu.Game.Audio;
 using osu.Game.Beatmaps;
 using osu.Game.Configuration;
 using osu.Game.Graphics.Cursor;
+using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Online;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
@@ -152,12 +153,20 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
             Padding = new MarginPadding { Top = Header.HEIGHT };
         }
 
-        private Bindable<int?> scoreFlushInterval = null!;
+        private FormSliderBar<int> formSliderBar = null!;
+        private RoundedButton applyFlushRateButton = null!;
+        private Bindable<int?> settingsIpcFlushRate = null!;
+
+        private void updateApplyEnableState()
+        {
+            applyFlushRateButton.Enabled.Value = formSliderBar.Current.Value != settingsIpcFlushRate.Value;
+        }
 
         [BackgroundDependencyLoader]
         private void load(OsuConfigManager config)
         {
-            scoreFlushInterval = config.GetBindable<int?>(OsuSetting.IpcScoreFlushInterval);
+            settingsIpcFlushRate = config.GetBindable<int?>(OsuSetting.IpcScoreFlushInterval);
+
             sampleStart = audio.Samples.Get(@"SongSelect/confirm-selection");
 
             InternalChild = new OsuContextMenuContainer
@@ -235,7 +244,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                     {
                                                                         new Dimension(GridSizeMode.AutoSize),
                                                                         new Dimension(),
-                                                                        new Dimension(GridSizeMode.AutoSize)
+                                                                        new Dimension()
                                                                     },
                                                                     Content = new[]
                                                                     {
@@ -248,15 +257,37 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
                                                                             new ParticipantsList
                                                                             {
                                                                                 RelativeSizeAxes = Axes.Both
-                                                                            },
+                                                                            }
                                                                         },
                                                                         new Drawable[]
                                                                         {
-                                                                            new SettingsNumberBox
+                                                                            new FillFlowContainer
                                                                             {
-                                                                                LabelText = @"IPC scores flush interval (ms)",
-                                                                                Current = scoreFlushInterval,
-                                                                            }
+                                                                                Direction = FillDirection.Vertical,
+                                                                                RelativeSizeAxes = Axes.X,
+                                                                                Children = new Drawable[]
+                                                                                {
+                                                                                    formSliderBar = new FormSliderBar<int>
+                                                                                    {
+                                                                                        Caption = @"IPC score flush interval (ms)",
+                                                                                        Current = new BindableInt
+                                                                                        {
+                                                                                            MinValue = 20,
+                                                                                            MaxValue = 1000,
+                                                                                        },
+                                                                                    },
+                                                                                    applyFlushRateButton = new RoundedButton
+                                                                                    {
+                                                                                        RelativeSizeAxes = Axes.X,
+                                                                                        Text = "Apply flush interval",
+                                                                                        Action = () =>
+                                                                                        {
+                                                                                            Logger.Log($"Changing ipc flush interval to {formSliderBar.Current.Value}");
+                                                                                            settingsIpcFlushRate.Value = formSliderBar.Current.Value;
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            },
                                                                         }
                                                                     }
                                                                 },
@@ -426,6 +457,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer
         protected override void LoadComplete()
         {
             base.LoadComplete();
+
+            formSliderBar.Current.Value = settingsIpcFlushRate.Value ?? 200;
+
+            settingsIpcFlushRate.BindValueChanged(_ => updateApplyEnableState());
+            formSliderBar.Current.BindValueChanged(_ => updateApplyEnableState(), true);
 
             userModsSelectOverlayRegistration = overlayManager?.RegisterBlockingOverlay(userModsSelectOverlay);
 
