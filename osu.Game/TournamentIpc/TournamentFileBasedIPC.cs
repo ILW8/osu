@@ -335,7 +335,7 @@ namespace osu.Game.TournamentIpc
                 {
                     foreach (long score in scoresToWrite)
                     {
-                        scoresIpcWriter.Write($"{score}\n");
+                        scoresIpcWriter.Write($"{score * 2}\n");
                     }
                 }
 
