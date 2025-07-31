@@ -272,22 +272,22 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
         private void onResultsReady()
         {
-            if (multiplayerClient.LocalUser?.State != MultiplayerUserState.Spectating)
-                return;
-
-            if (!AllPlayersInResults)
-            {
-                Scheduler.AddDelayed(onResultsReady, 200);
-                return;
-            }
-
-            // add conditional to wait for spectator players to all finish playing first
-            Scheduler.AddDelayed(() =>
-            {
-                if (!this.IsCurrentScreen()) return;
-
-                this.Exit();
-            }, 20_000);
+            // if (multiplayerClient.LocalUser?.State != MultiplayerUserState.Spectating)
+            //     return;
+            //
+            // if (!AllPlayersInResults)
+            // {
+            //     Scheduler.AddDelayed(onResultsReady, 200);
+            //     return;
+            // }
+            //
+            // // add conditional to wait for spectator players to all finish playing first
+            // Scheduler.AddDelayed(() =>
+            // {
+            //     if (!this.IsCurrentScreen()) return;
+            //
+            //     this.Exit();
+            // }, 20_000);
         }
 
         protected override void StartGameplay(int userId, SpectatorGameplayState spectatorGameplayState) => Schedule(() =>
