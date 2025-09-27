@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using osu.Framework.Bindables;
+using osu.Framework.Graphics;
 using osu.Game.Rulesets;
 
 namespace osu.Game.Tournament.Models
@@ -44,5 +45,7 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> SplitMapPoolByMods = new BindableBool(true);
 
         public Bindable<bool> DisplayTeamSeeds = new BindableBool();
+
+        public Bindable<Colour4> ChromaAreaColour = new Bindable<Colour4>(new Colour4(0, 255, 0, 255));
     }
 }
