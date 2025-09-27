@@ -75,5 +75,7 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> CumulativeScore = new BindableBool();
 
         public Bindable<Colour4> TextForegroundColour = new Bindable<Colour4>(Colour4.White);
+
+        public Bindable<Colour4> ChromaAreaColour = new Bindable<Colour4>(new Colour4(0, 255, 0, 255));
     }
 }

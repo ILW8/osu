@@ -6,6 +6,7 @@ using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Graphics.Cursor;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
 using osu.Framework.Testing;
@@ -85,7 +86,7 @@ namespace osu.Game.Tournament
                             Loop = true,
                             RelativeSizeAxes = Axes.Both,
                         },
-                        screens = new Container
+                        screens = new PopoverContainer
                         {
                             RelativeSizeAxes = Axes.Both,
                             Children = new Drawable[]

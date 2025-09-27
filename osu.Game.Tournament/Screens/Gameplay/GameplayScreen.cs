@@ -132,6 +132,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         {
                             LabelText = "match complete?",
                         },
+                        new SettingsColour
+                        {
+                            LabelText = "Chroma area colour",
+                            Current = { BindTarget = LadderInfo.ChromaAreaColour },
+                        },
                     }
                 }
             });
@@ -389,6 +394,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 Colour = new Color4(0, 255, 0, 255);
 
                 ladder.PlayersPerTeam.BindValueChanged(performLayout, true);
+                ladder.ChromaAreaColour.BindValueChanged(colour => Colour = colour.NewValue, true);
             }
 
             private void performLayout(ValueChangedEvent<int> playerCount)
