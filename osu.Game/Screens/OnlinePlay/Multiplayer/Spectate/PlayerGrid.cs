@@ -29,6 +29,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         public Facade MaximisedFacade { get; }
 
+        /// <summary>
+        /// The currently-maximised cell.
+        /// </summary>
+        public Cell? MaximisedCell { get; private set; }
+
         private readonly Container paddingContainer;
         private readonly FillFlowContainer<Facade> facadeContainer;
         private readonly Container<Cell> cellContainer;

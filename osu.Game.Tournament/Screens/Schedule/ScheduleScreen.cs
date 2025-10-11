@@ -9,6 +9,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Localisation;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays.Settings;
@@ -310,9 +311,9 @@ namespace osu.Game.Tournament.Screens.Schedule
             {
             }
 
-            protected override string Format() => Date < DateTimeOffset.Now
-                ? $"Started {base.Format()}"
-                : $"Starting {base.Format()}";
+            protected override LocalisableString Format() => Date < DateTimeOffset.Now
+                ? LocalisableString.Interpolate($"Started {base.Format()}")
+                : LocalisableString.Interpolate($"Starting {base.Format()}");
         }
 
         public partial class ScheduleContainer : Container

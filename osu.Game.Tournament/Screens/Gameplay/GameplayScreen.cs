@@ -10,6 +10,7 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Logging;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
@@ -48,6 +49,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
         {
             this.legacyIpc = legacyIpc;
             this.lazerIpc = lazerIpc;
+
+            LabelledSwitchButton chatToggle;
 
             AddRangeInternal(new Drawable[]
             {
@@ -104,17 +107,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     Children = new Drawable[]
                     {
-                        warmupButton = new TourneyButton
+                        new LabelledSwitchButton
                         {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "Toggle warmup",
-                            Action = () => warmup.Toggle()
+                            Label = "Warmup",
+                            Current = warmup,
                         },
-                        new TourneyButton
+                        chatToggle = new LabelledSwitchButton
                         {
-                            RelativeSizeAxes = Axes.X,
-                            Text = "Toggle chat",
-                            Action = () => { LegacyState.Value = LegacyState.Value == LegacyTourneyState.Idle ? LegacyTourneyState.Playing : LegacyTourneyState.Idle; }
+                            Label = "Show chat",
                         },
                         new SettingsSlider<int>
                         {
@@ -159,13 +159,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 }
             });
 
+            LegacyState.BindValueChanged(state => chatToggle.Current.Value = LegacyState.Value == LegacyTourneyState.Idle, true);
+            chatToggle.Current.BindValueChanged(v => LegacyState.Value = LegacyState.Value == LegacyTourneyState.Idle ? LegacyTourneyState.Playing : LegacyTourneyState.Idle);
+
             LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
 
-            warmup.BindValueChanged(w =>
-            {
-                warmupButton.Alpha = !w.NewValue ? 0.5f : 1;
-                header.ShowScores = !w.NewValue;
-            }, true);
+            warmup.BindValueChanged(w => header.ShowScores = !w.NewValue, true);
         }
 
         protected override void LoadComplete()
