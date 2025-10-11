@@ -29,7 +29,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         public readonly Bindable<LegacyTourneyState> LegacyState = new Bindable<LegacyTourneyState>();
         public readonly Bindable<TourneyState> LazerState = new Bindable<TourneyState>();
-        private OsuButton warmupButton = null!;
         private SettingsLongNumberBox team1ScoreOverride = null!;
         private SettingsLongNumberBox team2ScoreOverride = null!;
         private OsuCheckbox matchCompleteOverride = null!;
