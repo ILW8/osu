@@ -289,16 +289,15 @@ namespace osu.Game.Tournament.Screens.MapPool
                 BeatmapID = beatmapId
             });
 
-            setNextMode();
-
-            if (LadderInfo.AutoProgressScreens.Value)
+            if (LadderInfo.AutoProgressScreens.Value && pickType == ChoiceType.Pick)
             {
-                if (pickType == ChoiceType.Pick && CurrentMatch.Value.PicksBans.Any(i => i.Type == ChoiceType.Pick))
-                {
-                    scheduledScreenChange?.Cancel();
-                    scheduledScreenChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(GameplayScreen)); }, 10000);
-                }
+                scheduledScreenChange?.Cancel();
+                scheduledScreenChange = Scheduler.AddDelayed(
+                    () => sceneManager?.SetScreen(typeof(GameplayScreen)),
+                    10000);
             }
+
+            setNextMode();
         }
 
         public override void Hide()
