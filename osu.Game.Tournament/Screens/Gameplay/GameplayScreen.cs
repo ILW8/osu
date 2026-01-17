@@ -113,6 +113,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         {
                             Label = "Show chat",
                         },
+                        new LabelledSwitchButton
+                        {
+                            Label = "Wipe chroma",
+                            Current = LadderInfo.WipeChromaArea,
+                        },
                         new SettingsSlider<int>
                         {
                             LabelText = "Chroma width",
@@ -262,18 +267,23 @@ namespace osu.Game.Tournament.Screens.Gameplay
         {
             updateState();
 
-            chroma.ResizeWidthTo(0);
-            scheduledChromaWipe?.Cancel();
-            scheduledChromaWipe = Scheduler.AddDelayed(
-                () => chroma.ResizeWidthTo(LadderInfo.ChromaKeyWidth.Value, FADE_DELAY, Easing.InOutQuad),
-                FADE_DELAY);
+            if (LadderInfo.WipeChromaArea.Value)
+            {
+                scheduledChromaWipe?.Cancel();
+                scheduledChromaWipe = Scheduler.AddDelayed(
+                    () => chroma.ResizeWidthTo(LadderInfo.ChromaKeyWidth.Value, FADE_DELAY, Easing.InOutQuad),
+                    FADE_DELAY);
+            }
 
             base.Show();
         }
 
         public void WipeChromaArea()
         {
-            chroma.ResizeWidthTo(0, FADE_DELAY, Easing.InOutQuad);
+            if (LadderInfo.WipeChromaArea.Value)
+            {
+                chroma.ResizeWidthTo(0, FADE_DELAY, Easing.InOutQuad);
+            }
         }
 
         private partial class ChromaArea : CompositeDrawable
