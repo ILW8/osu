@@ -195,21 +195,43 @@ namespace osu.Game.Tournament
             var lastScreen = currentScreen;
             currentScreen = target;
 
-            if (currentScreen.ChildrenOfType<TourneyVideo>().FirstOrDefault()?.VideoAvailable == true)
+            switch (lastScreen)
             {
-                video.FadeOut(200);
+                // special handling for allowing the chroma area to wipe before hiding
+                case GameplayScreen gameplayScreen:
+                    if (currentScreen.ChildrenOfType<TourneyVideo>().FirstOrDefault()?.VideoAvailable == true)
+                        video.FadeOut(200);
+                    else
+                        video.Show();
 
-                // delay the hide to avoid a double-fade transition.
-                scheduledHide = Scheduler.AddDelayed(() => lastScreen?.Hide(), TournamentScreen.FADE_DELAY);
-            }
-            else
-            {
-                lastScreen?.Hide();
-                video.Show();
-            }
+                    gameplayScreen.WipeChromaArea();
+                    scheduledHide = Scheduler.AddDelayed(() =>
+                    {
+                        lastScreen.Hide();
+                        screens.ChangeChildDepth(currentScreen, depth--);
+                        currentScreen.Show();
+                    }, 200);
+                    break;
 
-            screens.ChangeChildDepth(currentScreen, depth--);
-            currentScreen.Show();
+                default:
+                    if (currentScreen.ChildrenOfType<TourneyVideo>().FirstOrDefault()?.VideoAvailable == true)
+                    {
+                        video.FadeOut(200);
+
+                        // delay the hide to avoid a double-fade transition.
+                        scheduledHide = Scheduler.AddDelayed(() => lastScreen?.Hide(), 200);
+                    }
+                    else
+                    {
+                        lastScreen?.Hide();
+                        video.Show();
+                    }
+
+                    screens.ChangeChildDepth(currentScreen, depth--);
+                    currentScreen.Show();
+
+                    break;
+            }
 
             switch (currentScreen)
             {

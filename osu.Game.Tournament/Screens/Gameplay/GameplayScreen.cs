@@ -33,6 +33,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TournamentMatchChatDisplay chat { get; set; } = null!;
 
         private Drawable chroma = null!;
+        private Container layoutContainer = null!;
 
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
@@ -66,21 +67,28 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                             Height = 512,
-                            Children = new Drawable[]
+                            Masking = true,
+                            Child = layoutContainer = new Container
                             {
-                                new ChromaArea
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                RelativeSizeAxes = Axes.Y,
+                                Children = new Drawable[]
                                 {
-                                    Name = "Left chroma",
-                                    RelativeSizeAxes = Axes.Both,
-                                    Width = 0.5f,
-                                },
-                                new ChromaArea
-                                {
-                                    Name = "Right chroma",
-                                    RelativeSizeAxes = Axes.Both,
-                                    Anchor = Anchor.TopRight,
-                                    Origin = Anchor.TopRight,
-                                    Width = 0.5f,
+                                    new ChromaArea
+                                    {
+                                        Name = "Left chroma",
+                                        RelativeSizeAxes = Axes.Both,
+                                        Width = 0.5f,
+                                    },
+                                    new ChromaArea
+                                    {
+                                        Name = "Right chroma",
+                                        RelativeSizeAxes = Axes.Both,
+                                        Anchor = Anchor.TopRight,
+                                        Origin = Anchor.TopRight,
+                                        Width = 0.5f,
+                                    }
                                 }
                             }
                         },
@@ -105,6 +113,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         {
                             Label = "Show chat",
                         },
+                        new LabelledSwitchButton
+                        {
+                            Label = "Wipe chroma",
+                            Current = LadderInfo.WipeChromaArea,
+                        },
                         new SettingsSlider<int>
                         {
                             LabelText = "Chroma width",
@@ -124,7 +137,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
             State.BindValueChanged(state => chatToggle.Current.Value = State.Value == TourneyState.Idle, true);
             chatToggle.Current.BindValueChanged(v => State.Value = v.NewValue ? TourneyState.Idle : TourneyState.Playing);
 
-            LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
+            LadderInfo.ChromaKeyWidth.BindValueChanged(width =>
+            {
+                chroma.Width = width.NewValue;
+                layoutContainer.Width = width.NewValue;
+            }, true);
 
             warmup.BindValueChanged(w => header.ShowScores = !w.NewValue, true);
         }
@@ -150,6 +167,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private ScheduledDelegate? scheduledScreenChange;
         private ScheduledDelegate? scheduledContract;
+        private ScheduledDelegate? scheduledChromaWipe;
 
         private TournamentMatchScoreDisplay scoreDisplay = null!;
 
@@ -241,13 +259,31 @@ namespace osu.Game.Tournament.Screens.Gameplay
         public override void Hide()
         {
             scheduledScreenChange?.Cancel();
+            scheduledContract?.Cancel();
             base.Hide();
         }
 
         public override void Show()
         {
             updateState();
+
+            if (LadderInfo.WipeChromaArea.Value)
+            {
+                scheduledChromaWipe?.Cancel();
+                scheduledChromaWipe = Scheduler.AddDelayed(
+                    () => chroma.ResizeWidthTo(LadderInfo.ChromaKeyWidth.Value, FADE_DELAY, Easing.InOutQuad),
+                    FADE_DELAY);
+            }
+
             base.Show();
+        }
+
+        public void WipeChromaArea()
+        {
+            if (LadderInfo.WipeChromaArea.Value)
+            {
+                chroma.ResizeWidthTo(0, FADE_DELAY, Easing.InOutQuad);
+            }
         }
 
         private partial class ChromaArea : CompositeDrawable
