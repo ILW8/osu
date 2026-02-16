@@ -700,12 +700,13 @@ namespace osu.Game.Online.Chat
                     }
                     else
                     {
-                        void printRefsList() => EnqueueBotMessage($@"Match referees: {string.Join(", ", multiplayerRefereeTracker.Referees)}");
+                        void printRefsList() => EnqueueBotMessage($@"Match referees: {string.Join(", ", new[] { API.LocalUser.Value }.Concat(multiplayerRefereeTracker.Referees))}");
 
                         switch (parts.Length)
                         {
                             // special-case addref. only handle it locally
                             case 3 when parts[1] == @"addref":
+                                APIUser? localUser = API.LocalUser.Value;
                                 queryUsername(parts[2]).ContinueWith(t =>
                                 {
                                     APIUser? user = t.GetResultSafely();
@@ -713,6 +714,12 @@ namespace osu.Game.Online.Chat
                                     if (user == null)
                                     {
                                         EnqueueBotMessage($@"Failed to find user {parts[2]}");
+                                        return;
+                                    }
+
+                                    if (user.Id == localUser.Id)
+                                    {
+                                        EnqueueBotMessage(@"You can't addref yourself. Just make sure you have the host.");
                                         return;
                                     }
 
