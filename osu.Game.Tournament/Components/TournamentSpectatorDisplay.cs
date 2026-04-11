@@ -134,11 +134,13 @@ namespace osu.Game.Tournament.Components
                     clearPlayerList();
             }, true);
 
-            multiplayerClient.RoomUpdated += onRoomUpdated;
+            multiplayerClient.UserJoined += onUserChanged;
+            multiplayerClient.UserLeft += onUserChanged;
+            multiplayerClient.UserKicked += onUserChanged;
             spectatorClient.OnNewFrames += onNewFrames;
         }
 
-        private void onRoomUpdated()
+        private void onUserChanged(MultiplayerRoomUser _)
         {
             Schedule(refreshPlayerList);
         }
@@ -227,7 +229,11 @@ namespace osu.Game.Tournament.Components
             base.Dispose(isDisposing);
 
             if (multiplayerClient.IsNotNull())
-                multiplayerClient.RoomUpdated -= onRoomUpdated;
+            {
+                multiplayerClient.UserJoined -= onUserChanged;
+                multiplayerClient.UserLeft -= onUserChanged;
+                multiplayerClient.UserKicked -= onUserChanged;
+            }
 
             if (spectatorClient.IsNotNull())
                 spectatorClient.OnNewFrames -= onNewFrames;
