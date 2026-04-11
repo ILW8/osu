@@ -1,18 +1,23 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Logging;
 using osu.Framework.Threading;
+using osu.Game.Graphics;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Gameplay.Components;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Tournament.Screens.MapPool;
 using osu.Game.Tournament.Screens.TeamWin;
 using osuTK.Graphics;
@@ -32,7 +37,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
 
-        private Drawable chroma = null!;
+        private Container chroma = null!;
+        private ControlPanel controlPanel = null!;
+        private TournamentSpectatorDisplay? spectatorDisplay;
 
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
@@ -92,7 +99,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.TopCentre,
                 },
-                new ControlPanel
+                controlPanel = new ControlPanel
                 {
                     Children = new Drawable[]
                     {
@@ -121,12 +128,107 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 }
             });
 
+            // Add multiplayer room connection controls if using multiplayer spectating.
+            if (ipc is MultiplayerMatchIPCInfo multiplayerIpc)
+            {
+                addMultiplayerControls(multiplayerIpc);
+
+                // Add spectator display that replaces chroma areas when connected.
+                spectatorDisplay = new TournamentSpectatorDisplay(multiplayerIpc)
+                {
+                    Alpha = 0,
+                };
+                chroma.Add(spectatorDisplay);
+
+                multiplayerIpc.IsConnected.BindValueChanged(connected =>
+                {
+                    if (connected.NewValue)
+                    {
+                        // Hide chroma key areas, show spectator display.
+                        foreach (var child in chroma.Children.OfType<ChromaArea>())
+                            child.FadeOut(200);
+                        spectatorDisplay.FadeIn(200);
+                    }
+                    else
+                    {
+                        // Show chroma key areas, hide spectator display.
+                        spectatorDisplay.FadeOut(200);
+                        foreach (var child in chroma.Children.OfType<ChromaArea>())
+                            child.FadeIn(200);
+                    }
+                }, true);
+            }
+
             State.BindValueChanged(state => chatToggle.Current.Value = State.Value == TourneyState.Idle, true);
             chatToggle.Current.BindValueChanged(v => State.Value = v.NewValue ? TourneyState.Idle : TourneyState.Playing);
 
             LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
 
             warmup.BindValueChanged(w => header.ShowScores = !w.NewValue, true);
+        }
+
+        private void addMultiplayerControls(MultiplayerMatchIPCInfo multiplayerIpc)
+        {
+            OsuTextBox roomIdTextBox;
+            TourneyButton connectButton;
+            TournamentSpriteText statusText;
+
+            controlPanel.AddRange(new Drawable[]
+            {
+                new ControlPanel.Spacer(),
+                new TournamentSpriteText
+                {
+                    Text = "Multiplayer Room",
+                    Font = OsuFont.GetFont(weight: FontWeight.Bold, size: 16),
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                },
+                roomIdTextBox = new OsuTextBox
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = 30,
+                    PlaceholderText = "Room ID",
+                },
+                connectButton = new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Connect",
+                    Action = () =>
+                    {
+                        if (multiplayerIpc.IsConnected.Value)
+                        {
+                            multiplayerIpc.Disconnect().FireAndForget();
+                        }
+                        else
+                        {
+                            if (!long.TryParse(roomIdTextBox.Text, out long roomId))
+                            {
+                                Logger.Log("[GameplayScreen] Invalid room ID", LoggingTarget.Runtime, LogLevel.Error);
+                                return;
+                            }
+
+                            multiplayerIpc.Connect(roomId).FireAndForget();
+                        }
+                    }
+                },
+                statusText = new TournamentSpriteText
+                {
+                    Text = "Disconnected",
+                    Font = OsuFont.GetFont(size: 12),
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Colour = OsuColour.Gray(0.6f),
+                },
+            });
+
+            multiplayerIpc.IsConnected.BindValueChanged(connected =>
+            {
+                connectButton.Text = connected.NewValue ? "Disconnect" : "Connect";
+                statusText.Text = connected.NewValue
+                    ? $"Connected (Room {multiplayerIpc.ConnectedRoomId.Value})"
+                    : "Disconnected";
+                statusText.Colour = connected.NewValue ? Colour4.LightGreen : OsuColour.Gray(0.6f);
+            }, true);
         }
 
         protected override void LoadComplete()

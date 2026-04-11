@@ -44,5 +44,11 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> SplitMapPoolByMods = new BindableBool(true);
 
         public Bindable<bool> DisplayTeamSeeds = new BindableBool();
+
+        /// <summary>
+        /// When <c>true</c>, the tournament overlay connects to a multiplayer room via SignalR
+        /// for match data instead of using file-based IPC from the stable client.
+        /// </summary>
+        public Bindable<bool> UseMultiplayerSpectating = new BindableBool();
     }
 }

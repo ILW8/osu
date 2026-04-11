@@ -82,15 +82,24 @@ namespace osu.Game.Tournament.Screens.Setup
             var fileBasedIpc = ipc as FileBasedIPC;
             fillFlow.Children = new Drawable[]
             {
+                new LabelledSwitchButton
+                {
+                    Label = "Use multiplayer spectating",
+                    Description = "When enabled, the overlay connects to a multiplayer room for match data instead of reading from the stable client's IPC files. Requires a restart to apply.",
+                    Current = LadderInfo.UseMultiplayerSpectating,
+                },
                 new ActionableInfo
                 {
                     Label = "Current IPC source",
                     ButtonText = "Change source",
                     Action = () => sceneManager?.SetScreen(new StablePathSelectScreen()),
-                    Value = fileBasedIpc?.IPCStorage?.GetFullPath(string.Empty) ?? "Not found",
-                    Failing = fileBasedIpc?.IPCStorage == null,
-                    Description =
-                        "The osu!stable installation which is currently being used as a data source. If a source is not found, make sure you have created an empty ipc.txt in your stable cutting-edge installation."
+                    Value = LadderInfo.UseMultiplayerSpectating.Value
+                        ? "Multiplayer room (lazer)"
+                        : fileBasedIpc?.IPCStorage?.GetFullPath(string.Empty) ?? "Not found",
+                    Failing = !LadderInfo.UseMultiplayerSpectating.Value && fileBasedIpc?.IPCStorage == null,
+                    Description = LadderInfo.UseMultiplayerSpectating.Value
+                        ? "Match data is sourced from a multiplayer room. Enter the room ID on the gameplay screen to connect."
+                        : "The osu!stable installation which is currently being used as a data source. If a source is not found, make sure you have created an empty ipc.txt in your stable cutting-edge installation."
                 },
                 new ActionableInfo
                 {

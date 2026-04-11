@@ -33,7 +33,7 @@ namespace osu.Game.Tournament
         private LadderInfo ladder = new LadderInfo();
         private TournamentStorage storage = null!;
         private DependencyContainer dependencies = null!;
-        private FileBasedIPC ipc = null!;
+        private MatchIPCInfo ipc = null!;
         private BeatmapLookupCache beatmapCache = null!;
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
@@ -202,7 +202,20 @@ namespace osu.Game.Tournament
                 Ruleset.BindTo(ladder.Ruleset);
 
                 dependencies.Cache(ladder);
-                dependencies.CacheAs<MatchIPCInfo>(ipc = new FileBasedIPC());
+
+                if (ladder.UseMultiplayerSpectating.Value)
+                {
+                    var multiplayerIpc = new MultiplayerMatchIPCInfo();
+                    dependencies.CacheAs<MatchIPCInfo>(multiplayerIpc);
+                    dependencies.CacheAs(multiplayerIpc);
+                    ipc = multiplayerIpc;
+                }
+                else
+                {
+                    ipc = new FileBasedIPC();
+                    dependencies.CacheAs<MatchIPCInfo>(ipc);
+                }
+
                 Add(ipc);
 
                 bracketLoadTaskCompletionSource.SetResult(true);
