@@ -429,7 +429,7 @@ namespace osu.Game.Tournament.IPC
             if (multiplayerClient.Room == null)
                 return;
 
-            ChatChannel.Value = $"#mp_{multiplayerClient.Room.ChannelID}";
+            ChatChannel.Value = multiplayerClient.Room.ChannelID.ToString();
         }
 
         private void updateTeamScores()

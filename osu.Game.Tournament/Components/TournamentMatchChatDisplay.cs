@@ -39,6 +39,8 @@ namespace osu.Game.Tournament.Components
             AddInternal(manager = new ChannelManager(api));
             Channel.BindTo(manager.CurrentChannel);
 
+            bool isMultiplayerSource = ipc is IPC.MultiplayerMatchIPCInfo;
+
             channelName.BindTo(ipc.ChatChannel);
             channelName.BindValueChanged(c =>
             {
@@ -54,7 +56,10 @@ namespace osu.Game.Tournament.Components
                     var channel = new Channel
                     {
                         Id = newChannelId,
-                        Type = ChannelType.Public
+                        // Multiplayer room channels are joined implicitly via SignalR when
+                        // the MultiplayerClient joins the room. Using ChannelType.Multiplayer
+                        // tells the ChannelManager to skip the REST JoinChannelRequest.
+                        Type = isMultiplayerSource ? ChannelType.Multiplayer : ChannelType.Public
                     };
 
                     manager.JoinChannel(channel);
