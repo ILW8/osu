@@ -8,14 +8,12 @@ using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Bindables;
-using osu.Framework.Extensions;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
-using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Spectator;
@@ -51,18 +49,22 @@ namespace osu.Game.Tournament.Components
         private RulesetStore rulesetStore { get; set; } = null!;
 
         [Resolved]
-        private UserLookupCache userLookupCache { get; set; } = null!;
-
-        [Resolved]
         private RealmAccess realm { get; set; } = null!;
 
         private readonly MultiplayerMatchIPCInfo multiplayerIpc;
 
         /// <summary>
-        /// The container holding the gameplay infrastructure (clock container, player areas).
+        /// The outer container holding all gameplay-related drawables.
         /// Recreated each time gameplay starts.
         /// </summary>
         private Container gameplayContainer = null!;
+
+        /// <summary>
+        /// Container for <see cref="PlayerArea"/>s. A child of <see cref="masterClockContainer"/>
+        /// so that the master clock's <see cref="IGameplayClock"/> is in the DI chain
+        /// (matching <see cref="MultiSpectatorScreen"/>'s hierarchy).
+        /// </summary>
+        private Container playerAreasContainer = null!;
 
         private MasterGameplayClockContainer? masterClockContainer;
         private SpectatorSyncManager? syncManager;
@@ -74,7 +76,6 @@ namespace osu.Game.Tournament.Components
         private readonly Dictionary<int, PlayerArea> playerAreas = new Dictionary<int, PlayerArea>();
 
         private readonly IBindableDictionary<int, SpectatorState> watchedStates = new BindableDictionary<int, SpectatorState>();
-        private readonly Dictionary<int, APIUser> userMap = new Dictionary<int, APIUser>();
         private readonly Dictionary<int, SpectatorGameplayState> gameplayStates = new Dictionary<int, SpectatorGameplayState>();
 
         /// <summary>
@@ -156,7 +157,7 @@ namespace osu.Game.Tournament.Components
             switch (newState.State)
             {
                 case SpectatedUserState.Playing:
-                    ensureUserPopulated(userId, () => tryStartGameplay(userId));
+                    tryStartGameplay(userId);
                     break;
 
                 case SpectatedUserState.Passed:
@@ -185,38 +186,20 @@ namespace osu.Game.Tournament.Components
                 syncManager.RemoveManagedClock(area.SpectatorPlayerClock);
         }
 
-        private void ensureUserPopulated(int userId, Action onComplete)
-        {
-            if (userMap.ContainsKey(userId))
-            {
-                onComplete();
-                return;
-            }
-
-            userLookupCache.GetUserAsync(userId).ContinueWith(task =>
-            {
-                var user = task.GetResultSafely();
-
-                if (user != null)
-                {
-                    Schedule(() =>
-                    {
-                        userMap[userId] = user;
-                        onComplete();
-                    });
-                }
-            });
-        }
-
         private void tryStartGameplay(int userId)
         {
             if (!watchedStates.TryGetValue(userId, out var spectatorState))
                 return;
 
-            if (!userMap.TryGetValue(userId, out var user))
+            if (gameplayStates.ContainsKey(userId))
                 return;
 
-            if (gameplayStates.ContainsKey(userId))
+            // Get user info from the multiplayer room — already populated by MultiplayerClient.JoinRoom.
+            // This avoids an async lookup that would delay PlayerArea creation and cause sync gaps.
+            var roomUser = multiplayerClient.Room?.Users.FirstOrDefault(u => u.UserID == userId);
+            var user = roomUser?.User;
+
+            if (user == null)
                 return;
 
             var resolvedRuleset = rulesetStore.AvailableRulesets.FirstOrDefault(r => r.OnlineID == spectatorState.RulesetID)?.CreateInstance();
@@ -287,7 +270,7 @@ namespace osu.Game.Tournament.Components
             };
 
             playerAreas[userId] = playerArea;
-            gameplayContainer.Add(playerArea);
+            playerAreasContainer.Add(playerArea);
 
             playerArea.LoadScore(gameplayState.Score);
 
@@ -306,7 +289,14 @@ namespace osu.Game.Tournament.Components
             if (!workingBeatmap.TrackLoaded)
                 workingBeatmap.LoadTrack();
 
-            masterClockContainer = new MasterGameplayClockContainer(workingBeatmap, 0);
+            playerAreasContainer = new Container { RelativeSizeAxes = Axes.Both };
+
+            masterClockContainer = new MasterGameplayClockContainer(workingBeatmap, 0)
+            {
+                // PlayerAreas are children of the master clock container so that the master's
+                // IGameplayClock is in their DI chain (matching MultiSpectatorScreen's hierarchy).
+                Child = playerAreasContainer,
+            };
 
             syncManager = new SpectatorSyncManager(masterClockContainer)
             {
@@ -386,6 +376,15 @@ namespace osu.Game.Tournament.Components
 
             Logger.Log($"[TournamentGameplayDisplay] Seeking to initial time {startTime:N0}ms", LoggingTarget.Runtime);
             masterClockContainer.Reset(startTime, true);
+
+            // Seek all player clocks to match the master position.
+            // Without this, player clocks start at t=0 while the master is at startTime,
+            // creating a gap that the 2x catchup rate takes ages to close.
+            // This is not needed in MultiSpectatorScreen because spectating starts from the
+            // beginning of the map (clocks are already near 0), but the tournament overlay
+            // joins mid-game so the gap can be tens of seconds.
+            foreach (var area in playerAreas.Values)
+                area.SpectatorPlayerClock.Seek(startTime);
         }
 
         #region Audio source management
@@ -434,13 +433,18 @@ namespace osu.Game.Tournament.Components
             if (changes?.InsertedIndices == null)
                 return;
 
+            if (multiplayerClient.Room == null)
+                return;
+
             // When a beatmap is downloaded, try to start gameplay for any users waiting on it.
             foreach (int c in changes.InsertedIndices)
             {
                 var beatmapSet = items[c];
 
-                foreach ((int userId, _) in userMap)
+                foreach (var user in multiplayerClient.Room.Users)
                 {
+                    int userId = user.UserID;
+
                     if (gameplayStates.ContainsKey(userId))
                         continue;
 
