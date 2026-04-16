@@ -97,6 +97,7 @@ namespace osu.Game.Tournament.Components
         private void load()
         {
             RelativeSizeAxes = Axes.Both;
+            Masking = true;
 
             InternalChild = gameplayContainer = new Container
             {
@@ -269,7 +270,7 @@ namespace osu.Game.Tournament.Components
             // Check if the target side already has a player.
             bool sideOccupied = playerAreas.Values.Any(a =>
             {
-                bool areaIsLeft = a.Anchor == Anchor.TopLeft;
+                bool areaIsLeft = a.Parent?.Anchor == Anchor.TopLeft;
                 return areaIsLeft == isTeamRed;
             });
 
@@ -281,13 +282,18 @@ namespace osu.Game.Tournament.Components
             var playerArea = new PlayerArea(userId, syncManager.CreateManagedClock())
             {
                 RelativeSizeAxes = Axes.Both,
-                Width = 0.5f,
-                Anchor = isTeamRed ? Anchor.TopLeft : Anchor.TopRight,
-                Origin = isTeamRed ? Anchor.TopLeft : Anchor.TopRight,
             };
 
             playerAreas[userId] = playerArea;
-            playerAreasContainer.Add(playerArea);
+            playerAreasContainer.Add(new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Width = 0.5f,
+                Masking = true,
+                Anchor = isTeamRed ? Anchor.TopLeft : Anchor.TopRight,
+                Origin = isTeamRed ? Anchor.TopLeft : Anchor.TopRight,
+                Child = playerArea,
+            });
 
             playerArea.LoadScore(gameplayState.Score);
 
