@@ -78,29 +78,45 @@ namespace osu.Game.Tournament.Screens.Setup
             reload();
         }
 
+        [Resolved]
+        private TournamentGameBase game { get; set; } = null!;
+
         private void reload()
         {
+            bool isCurrentlyMultiplayer = ipc is MultiplayerMatchIPCInfo;
+
             var fileBasedIpc = ipc as FileBasedIPC;
+
+            TourneyButton restartButton;
+
             fillFlow.Children = new Drawable[]
             {
                 new LabelledSwitchButton
                 {
                     Label = "Use multiplayer spectating",
-                    Description = "When enabled, the overlay connects to a multiplayer room for match data instead of reading from the stable client's IPC files. Requires a restart to apply.",
+                    Description = "When enabled, the overlay connects to a multiplayer room for match data instead of reading from the stable client's IPC files.",
                     Current = LadderInfo.UseMultiplayerSpectating,
+                },
+                restartButton = new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Save and restart to apply",
+                    Alpha = LadderInfo.UseMultiplayerSpectating.Value != isCurrentlyMultiplayer ? 1 : 0,
+                    Action = () =>
+                    {
+                        game.SaveChanges();
+                        game.AttemptExit();
+                    },
                 },
                 new ActionableInfo
                 {
                     Label = "Current IPC source",
                     ButtonText = "Change source",
                     Action = () => sceneManager?.SetScreen(new StablePathSelectScreen()),
-                    Value = LadderInfo.UseMultiplayerSpectating.Value
-                        ? "Multiplayer room (lazer)"
-                        : fileBasedIpc?.IPCStorage?.GetFullPath(string.Empty) ?? "Not found",
-                    Failing = !LadderInfo.UseMultiplayerSpectating.Value && fileBasedIpc?.IPCStorage == null,
-                    Description = LadderInfo.UseMultiplayerSpectating.Value
-                        ? "Match data is sourced from a multiplayer room. Enter the room ID on the gameplay screen to connect."
-                        : "The osu!stable installation which is currently being used as a data source. If a source is not found, make sure you have created an empty ipc.txt in your stable cutting-edge installation."
+                    Value = fileBasedIpc?.IPCStorage?.GetFullPath(string.Empty) ?? "Not found",
+                    Failing = fileBasedIpc?.IPCStorage == null,
+                    Description = "The osu!stable installation which is currently being used as a data source. If a source is not found, make sure you have created an empty ipc.txt in your stable cutting-edge installation.",
+                    Alpha = LadderInfo.UseMultiplayerSpectating.Value ? 0 : 1,
                 },
                 new ActionableInfo
                 {
@@ -184,6 +200,14 @@ namespace osu.Game.Tournament.Screens.Setup
                     KeyboardStep = 0.01f,
                 },
             };
+
+            LadderInfo.UseMultiplayerSpectating.BindValueChanged(v =>
+            {
+                if (v.NewValue != isCurrentlyMultiplayer)
+                    restartButton.FadeIn(200);
+                else
+                    restartButton.FadeOut(200);
+            });
         }
 
         private const float aspect_ratio = 16f / 9f;
