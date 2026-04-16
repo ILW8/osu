@@ -3,6 +3,7 @@
 
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -38,11 +39,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TournamentMatchChatDisplay chat { get; set; } = null!;
 
         private Container chroma = null!;
+        private Container chromaOuter = null!;
         private ControlPanel controlPanel = null!;
         private TournamentGameplayDisplay? gameplayDisplay;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load(MatchIPCInfo ipc, AudioManager audio)
         {
             this.ipc = ipc;
 
@@ -59,7 +61,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     ShowLogo = false,
                 },
-                new Container
+                chromaOuter = new Container
                 {
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
@@ -133,12 +135,21 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 addMultiplayerControls(multiplayerIpc);
 
-                // Add gameplay display that replaces chroma areas when connected.
+                // Add gameplay display as a sibling of the UI audio container
+                // (not a child) so its hitsounds bypass the UI sample muting.
                 gameplayDisplay = new TournamentGameplayDisplay(multiplayerIpc)
                 {
                     Alpha = 0,
                 };
-                chroma.Add(gameplayDisplay);
+
+                // Position the gameplay display to match the chroma area exactly.
+                chromaOuter.Add(new Container
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Height = 512,
+                    Child = gameplayDisplay,
+                });
 
                 multiplayerIpc.IsConnected.BindValueChanged(connected =>
                 {
@@ -157,12 +168,21 @@ namespace osu.Game.Tournament.Screens.Gameplay
                             child.FadeIn(200);
                     }
                 }, true);
+
+                // Add volume sliders for multiplayer spectating.
+                addVolumeControls(audio);
             }
 
             State.BindValueChanged(state => chatToggle.Current.Value = State.Value == TourneyState.Idle, true);
             chatToggle.Current.BindValueChanged(v => State.Value = v.NewValue ? TourneyState.Idle : TourneyState.Playing);
 
-            LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
+            LadderInfo.ChromaKeyWidth.BindValueChanged(width =>
+            {
+                chroma.Width = width.NewValue;
+
+                if (gameplayDisplay?.Parent is Container gameplayOuter)
+                    gameplayOuter.Width = width.NewValue;
+            }, true);
 
             warmup.BindValueChanged(w => header.ShowScores = !w.NewValue, true);
         }
@@ -229,6 +249,39 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     : "Disconnected";
                 statusText.Colour = connected.NewValue ? Colour4.LightGreen : OsuColour.Gray(0.6f);
             }, true);
+        }
+
+        private void addVolumeControls(AudioManager audio)
+        {
+            controlPanel.AddRange(new Drawable[]
+            {
+                new ControlPanel.Spacer(),
+                new TournamentSpriteText
+                {
+                    Text = "Volume",
+                    Font = OsuFont.GetFont(weight: FontWeight.Bold, size: 16),
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                },
+                new SettingsSlider<double>
+                {
+                    LabelText = "Master",
+                    Current = audio.Volume,
+                    KeyboardStep = 0.01f,
+                },
+                new SettingsSlider<double>
+                {
+                    LabelText = "Music",
+                    Current = audio.VolumeTrack,
+                    KeyboardStep = 0.01f,
+                },
+                new SettingsSlider<double>
+                {
+                    LabelText = "Effects",
+                    Current = audio.VolumeSample,
+                    KeyboardStep = 0.01f,
+                },
+            });
         }
 
         protected override void LoadComplete()

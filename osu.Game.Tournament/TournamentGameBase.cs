@@ -7,6 +7,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
+using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Textures;
@@ -35,6 +37,7 @@ namespace osu.Game.Tournament
         private DependencyContainer dependencies = null!;
         private MatchIPCInfo ipc = null!;
         private BeatmapLookupCache beatmapCache = null!;
+        private readonly BindableDouble uiSampleMuteAdjustment = new BindableDouble();
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
 
@@ -217,6 +220,12 @@ namespace osu.Game.Tournament
                 }
 
                 Add(ipc);
+
+                // Apply UI sample muting based on the persisted setting.
+                // This targets Audio.Samples (the global sample store used by UI hover/click sounds)
+                // without affecting gameplay hitsounds (which use per-skin sample stores).
+                ladder.MuteUISounds.BindValueChanged(muted => uiSampleMuteAdjustment.Value = muted.NewValue ? 0 : 1, true);
+                Audio.Samples.AddAdjustment(AdjustableProperty.Volume, uiSampleMuteAdjustment);
 
                 bracketLoadTaskCompletionSource.SetResult(true);
 

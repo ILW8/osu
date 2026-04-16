@@ -50,5 +50,11 @@ namespace osu.Game.Tournament.Models
         /// for match data instead of using file-based IPC from the stable client.
         /// </summary>
         public Bindable<bool> UseMultiplayerSpectating = new BindableBool();
+
+        /// <summary>
+        /// When <c>true</c>, mutes UI sample playback (hover/click sounds) globally.
+        /// Gameplay hitsounds are unaffected as they use per-skin sample stores.
+        /// </summary>
+        public Bindable<bool> MuteUISounds = new BindableBool(true);
     }
 }
