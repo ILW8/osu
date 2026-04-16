@@ -351,6 +351,9 @@ namespace osu.Game.Tournament.Components
             boundAdjustments = null;
             currentAudioSource = null;
 
+            // Stop the master clock before clearing so the beatmap track doesn't keep playing.
+            masterClockContainer?.Stop();
+
             playerAreas.Clear();
             gameplayContainer.Clear();
             masterClockContainer = null;
