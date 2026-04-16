@@ -120,6 +120,9 @@ namespace osu.Game.Tournament.Components
                 if (!connected.NewValue)
                     teardownGameplay();
             });
+
+            multiplayerClient.LoadRequested += onLoadRequested;
+            multiplayerClient.GameplayAborted += onGameplayAborted;
         }
 
         protected override void Update()
@@ -172,6 +175,16 @@ namespace osu.Game.Tournament.Components
                     onPlayerFinished(userId);
                     break;
             }
+        }
+
+        private void onLoadRequested()
+        {
+            Schedule(teardownGameplay);
+        }
+
+        private void onGameplayAborted(GameplayAbortReason _)
+        {
+            Schedule(teardownGameplay);
         }
 
         private void onPlayerFinished(int userId)
@@ -458,6 +471,12 @@ namespace osu.Game.Tournament.Components
         {
             base.Dispose(isDisposing);
             realmSubscription?.Dispose();
+
+            if (multiplayerClient.IsNotNull())
+            {
+                multiplayerClient.LoadRequested -= onLoadRequested;
+                multiplayerClient.GameplayAborted -= onGameplayAborted;
+            }
         }
     }
 }
