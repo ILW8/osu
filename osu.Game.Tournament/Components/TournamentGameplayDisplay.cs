@@ -164,15 +164,13 @@ namespace osu.Game.Tournament.Components
                     break;
 
                 case SpectatedUserState.Passed:
-                    onPlayerFinished(userId);
-                    break;
-
                 case SpectatedUserState.Failed:
                     onPlayerFinished(userId);
                     break;
 
                 case SpectatedUserState.Quit:
                     onPlayerFinished(userId);
+                    onPlayerQuit(userId);
                     break;
             }
         }
@@ -197,6 +195,12 @@ namespace osu.Game.Tournament.Components
             // Remove the clock from the sync manager so it doesn't block other players.
             if (playerAreas.TryGetValue(userId, out var area) && syncManager != null)
                 syncManager.RemoveManagedClock(area.SpectatorPlayerClock);
+        }
+
+        private void onPlayerQuit(int userId)
+        {
+            if (playerAreas.TryGetValue(userId, out var area))
+                area.FadeColour(new Colour4(68, 68, 68, 255), 400, Easing.OutQuint);
         }
 
         private void tryStartGameplay(int userId)
