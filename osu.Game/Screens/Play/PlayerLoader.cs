@@ -53,6 +53,11 @@ namespace osu.Game.Screens.Play
 
         protected virtual double PlayerPushDelay => 1800 + disclaimers.Count * 500;
 
+        /// <summary>
+        /// Delay before the player is pushed after content is ready to transition out.
+        /// </summary>
+        protected virtual double ContentOutDelay => 500;
+
         public override bool HideOverlaysOnEnter => hideOverlays;
 
         public override bool DisallowExternalBeatmapRulesetChanges => true;
@@ -710,7 +715,7 @@ namespace osu.Game.Screens.Play
                 },
                 // When a quick restart is activated, the metadata content will display some time later if it's taking too long.
                 // To avoid it appearing too briefly, if it begins to fade in let's induce a standard delay.
-                QuickRestart && content.Alpha == 0 ? 0 : 500);
+                QuickRestart && content.Alpha == 0 ? 0 : ContentOutDelay);
         }
 
         private void cancelLoad()

@@ -24,6 +24,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         // the tournament overlay when the operator alt-tabs.
         protected override bool ReadyForGameplay => true;
 
+        // Skip the metadata display delay — spectators don't need to read map info.
+        protected override double PlayerPushDelay => 0;
+        protected override double ContentOutDelay => 250;
+
         [BackgroundDependencyLoader]
         private void load()
         {
