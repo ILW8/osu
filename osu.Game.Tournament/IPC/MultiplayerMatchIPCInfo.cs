@@ -383,6 +383,8 @@ namespace osu.Game.Tournament.IPC
             if (existing != null)
             {
                 Beatmap.Value = existing.Beatmap;
+                // Ensure the pool beatmap is downloaded locally for gameplay rendering.
+                ensureBeatmapDownloadedById(beatmapId);
             }
             else
             {
@@ -402,9 +404,6 @@ namespace osu.Game.Tournament.IPC
                         ensureBeatmapDownloaded(apiBeatmap);
                 });
             }
-
-            // Also ensure the beatmap is downloaded for maps from the pool.
-            ensureBeatmapDownloadedById(beatmapId);
         }
 
         /// <summary>
