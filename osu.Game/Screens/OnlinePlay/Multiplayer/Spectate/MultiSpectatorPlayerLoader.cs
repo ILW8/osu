@@ -19,6 +19,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         {
         }
 
+        // Spectator loaders should not gate on window focus, hover state, or overlays.
+        // The base PlayerLoader requires host.IsActive (window focused) which blocks
+        // the tournament overlay when the operator alt-tabs.
+        protected override bool ReadyForGameplay => true;
+
         [BackgroundDependencyLoader]
         private void load()
         {
