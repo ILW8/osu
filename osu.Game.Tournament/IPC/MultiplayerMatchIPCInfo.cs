@@ -365,16 +365,10 @@ namespace osu.Game.Tournament.IPC
             if (multiplayerClient.Room == null)
                 return;
 
-            MultiplayerPlaylistItem currentItem;
-
-            try
-            {
-                currentItem = multiplayerClient.Room.CurrentPlaylistItem;
-            }
-            catch
-            {
+            if (multiplayerClient.Room.Playlist.Count == 0)
                 return;
-            }
+
+            var currentItem = multiplayerClient.Room.CurrentPlaylistItem;
 
             int beatmapId = currentItem.BeatmapID;
 
@@ -469,16 +463,10 @@ namespace osu.Game.Tournament.IPC
             if (multiplayerClient.Room == null)
                 return;
 
-            MultiplayerPlaylistItem currentItem;
-
-            try
-            {
-                currentItem = multiplayerClient.Room.CurrentPlaylistItem;
-            }
-            catch
-            {
+            if (multiplayerClient.Room.Playlist.Count == 0)
                 return;
-            }
+
+            var currentItem = multiplayerClient.Room.CurrentPlaylistItem;
 
             var rulesetInfo = rulesetStore.GetRuleset(currentItem.RulesetID);
 
