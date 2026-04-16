@@ -189,6 +189,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private void addMultiplayerControls(MultiplayerMatchIPCInfo multiplayerIpc)
         {
             OsuTextBox roomIdTextBox;
+            OsuPasswordTextBox passwordTextBox;
             TourneyButton connectButton;
             TournamentSpriteText statusText;
 
@@ -208,6 +209,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Height = 30,
                     PlaceholderText = "Room ID",
                 },
+                passwordTextBox = new OsuPasswordTextBox
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Height = 30,
+                    PlaceholderText = "Password (optional)",
+                },
                 connectButton = new TourneyButton
                 {
                     RelativeSizeAxes = Axes.X,
@@ -226,7 +233,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                 return;
                             }
 
-                            multiplayerIpc.Connect(roomId).FireAndForget();
+                            string? password = string.IsNullOrEmpty(passwordTextBox.Text) ? null : passwordTextBox.Text;
+                            multiplayerIpc.Connect(roomId, password).FireAndForget();
                         }
                     }
                 },
@@ -248,6 +256,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     : "Disconnected";
                 statusText.Colour = connected.NewValue ? Colour4.LightGreen : OsuColour.Gray(0.6f);
             }, true);
+
+            multiplayerIpc.ConnectionError.BindValueChanged(error =>
+            {
+                if (error.NewValue != null)
+                {
+                    statusText.Text = error.NewValue;
+                    statusText.Colour = Colour4.OrangeRed;
+                }
+            });
         }
 
         private void addVolumeControls()

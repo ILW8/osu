@@ -44,6 +44,13 @@ namespace osu.Game.Tournament.IPC
 
         private readonly Bindable<long?> connectedRoomId = new Bindable<long?>();
 
+        /// <summary>
+        /// A user-facing error message from the last failed connection attempt, or null if no error.
+        /// </summary>
+        public IBindable<string?> ConnectionError => connectionError;
+
+        private readonly Bindable<string?> connectionError = new Bindable<string?>();
+
         [Resolved]
         private MultiplayerClient multiplayerClient { get; set; } = null!;
 
@@ -89,7 +96,8 @@ namespace osu.Game.Tournament.IPC
         /// Connects to a multiplayer room as a spectator.
         /// </summary>
         /// <param name="roomId">The room ID to connect to.</param>
-        public async Task Connect(long roomId)
+        /// <param name="password">The room password, or null if the room has no password.</param>
+        public async Task Connect(long roomId, string? password = null)
         {
             Logger.Log($"[MultiplayerMatchIPCInfo] Connecting to room {roomId}", LoggingTarget.Network);
 
@@ -117,7 +125,8 @@ namespace osu.Game.Tournament.IPC
                 // on the update thread (JoinRoom uses ConfigureAwait(false) internally,
                 // so the continuation after the first await would be on a thread pool thread).
                 Logger.Log($"[MultiplayerMatchIPCInfo] Joining room {roomId}...", LoggingTarget.Network);
-                await scheduleOnUpdateThread(() => multiplayerClient.JoinRoom(apiRoom)).ConfigureAwait(false);
+                Schedule(() => connectionError.Value = null);
+                await scheduleOnUpdateThread(() => multiplayerClient.JoinRoom(apiRoom, password)).ConfigureAwait(false);
                 Logger.Log($"[MultiplayerMatchIPCInfo] Joined room {roomId}, toggling spectate...", LoggingTarget.Network);
 
                 // Switch to spectator mode. Non-fatal if the server rejects it.
@@ -169,6 +178,12 @@ namespace osu.Game.Tournament.IPC
             catch (Exception e)
             {
                 Logger.Log($"[MultiplayerMatchIPCInfo] Failed to connect to room {roomId}: {e.GetType().Name}: {e.Message}", LoggingTarget.Network, LogLevel.Error);
+
+                string errorMessage = e.ToString().Contains("InvalidPasswordException")
+                    ? "Invalid password"
+                    : $"Failed to connect: {e.InnerException?.Message ?? e.Message}";
+
+                Schedule(() => connectionError.Value = errorMessage);
                 await Disconnect().ConfigureAwait(false);
             }
         }
