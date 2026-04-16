@@ -377,14 +377,6 @@ namespace osu.Game.Tournament.Components
             Logger.Log($"[TournamentGameplayDisplay] Seeking to initial time {startTime:N0}ms", LoggingTarget.Runtime);
             masterClockContainer.Reset(startTime, true);
 
-            // Seek all player clocks to match the master position.
-            // Without this, player clocks start at t=0 while the master is at startTime,
-            // creating a gap that the 2x catchup rate takes ages to close.
-            // This is not needed in MultiSpectatorScreen because spectating starts from the
-            // beginning of the map (clocks are already near 0), but the tournament overlay
-            // joins mid-game so the gap can be tens of seconds.
-            foreach (var area in playerAreas.Values)
-                area.SpectatorPlayerClock.Seek(startTime);
         }
 
         #region Audio source management
