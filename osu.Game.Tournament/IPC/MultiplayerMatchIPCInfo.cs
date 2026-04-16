@@ -51,6 +51,43 @@ namespace osu.Game.Tournament.IPC
 
         private readonly Bindable<string?> connectionError = new Bindable<string?>();
 
+        /// <summary>
+        /// A pending room invitation awaiting user approval, or null if none.
+        /// </summary>
+        public IBindable<PendingInvite?> PendingInvite => pendingInvite;
+
+        private readonly Bindable<PendingInvite?> pendingInvite = new Bindable<PendingInvite?>();
+
+        /// <summary>
+        /// Accepts the current pending invite and connects to the room.
+        /// </summary>
+        public void AcceptPendingInvite()
+        {
+            var invite = pendingInvite.Value;
+
+            if (invite == null)
+                return;
+
+            pendingInvite.Value = null;
+            Connect(invite.RoomId, invite.Password).FireAndForget();
+        }
+
+        /// <summary>
+        /// Dismisses the current pending invite without connecting.
+        /// </summary>
+        public void DismissPendingInvite()
+        {
+            pendingInvite.Value = null;
+        }
+
+        /// <summary>
+        /// Sets a pending invite, scheduling the update to the update thread.
+        /// </summary>
+        public void SetPendingInvite(PendingInvite invite)
+        {
+            Schedule(() => pendingInvite.Value = invite);
+        }
+
         [Resolved]
         private MultiplayerClient multiplayerClient { get; set; } = null!;
 
@@ -553,4 +590,6 @@ namespace osu.Game.Tournament.IPC
             }
         }
     }
+
+    public record PendingInvite(long RoomId, string? Password, string InviterName);
 }

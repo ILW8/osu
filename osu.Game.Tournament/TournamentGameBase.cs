@@ -227,6 +227,21 @@ namespace osu.Game.Tournament
                 ladder.MuteUISounds.BindValueChanged(muted => uiSampleMuteAdjustment.Value = muted.NewValue ? 0 : 1, true);
                 Audio.Samples.AddAdjustment(AdjustableProperty.Volume, uiSampleMuteAdjustment);
 
+                // When using multiplayer spectating, store incoming room invitations as
+                // pending invites that the operator can accept from the Gameplay screen.
+                if (ipc is MultiplayerMatchIPCInfo matchIpc)
+                {
+                    MultiplayerClient.PresentMatch = (room, password) =>
+                    {
+                        long? roomId = room.RoomID;
+
+                        if (roomId != null)
+                            matchIpc.SetPendingInvite(new PendingInvite(roomId.Value, password, room.Name));
+                    };
+
+                    MultiplayerClient.PostNotification = n => n.Activated?.Invoke();
+                }
+
                 // Bind persisted volume settings to the audio system.
                 ladder.VolumeMaster.BindValueChanged(v => Audio.Volume.Value = v.NewValue, true);
                 ladder.VolumeMusic.BindValueChanged(v => Audio.VolumeTrack.Value = v.NewValue, true);

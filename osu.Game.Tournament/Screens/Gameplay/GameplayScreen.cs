@@ -265,6 +265,56 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     statusText.Colour = Colour4.OrangeRed;
                 }
             });
+
+            TextFlowContainer inviteText;
+            TourneyButton acceptButton;
+            TourneyButton dismissButton;
+
+            controlPanel.AddRange(new Drawable[]
+            {
+                inviteText = new TextFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Colour = Colour4.Orange,
+                    Alpha = 0,
+                },
+                acceptButton = new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Accept invite",
+                    Alpha = 0,
+                    Action = multiplayerIpc.AcceptPendingInvite,
+                },
+                dismissButton = new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Dismiss",
+                    Alpha = 0,
+                    Action = multiplayerIpc.DismissPendingInvite,
+                },
+            });
+
+            multiplayerIpc.PendingInvite.BindValueChanged(invite =>
+            {
+                if (invite.NewValue != null)
+                {
+                    inviteText.Clear();
+                    inviteText.AddText($"Invite to room {invite.NewValue.RoomId} ({invite.NewValue.InviterName})",
+                        s => s.Font = OsuFont.GetFont(size: 12));
+                    inviteText.FadeIn(200);
+                    acceptButton.FadeIn(200);
+                    dismissButton.FadeIn(200);
+                }
+                else
+                {
+                    inviteText.FadeOut(200);
+                    acceptButton.FadeOut(200);
+                    dismissButton.FadeOut(200);
+                }
+            }, true);
         }
 
         private void addVolumeControls()
