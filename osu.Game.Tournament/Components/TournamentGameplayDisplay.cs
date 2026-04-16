@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions;
 using osu.Framework.Extensions.ObjectExtensions;
@@ -66,12 +67,22 @@ namespace osu.Game.Tournament.Components
         private MasterGameplayClockContainer? masterClockContainer;
         private SpectatorSyncManager? syncManager;
 
-        private PlayerArea? leftArea;
-        private PlayerArea? rightArea;
+        /// <summary>
+        /// Player areas keyed by user ID. Created on-demand when a player starts gameplay,
+        /// so the sync manager only tracks clocks that have actual scores loaded.
+        /// </summary>
+        private readonly Dictionary<int, PlayerArea> playerAreas = new Dictionary<int, PlayerArea>();
 
         private readonly IBindableDictionary<int, SpectatorState> watchedStates = new BindableDictionary<int, SpectatorState>();
         private readonly Dictionary<int, APIUser> userMap = new Dictionary<int, APIUser>();
         private readonly Dictionary<int, SpectatorGameplayState> gameplayStates = new Dictionary<int, SpectatorGameplayState>();
+
+        /// <summary>
+        /// The player area currently providing audio.
+        /// </summary>
+        private PlayerArea? currentAudioSource;
+
+        private IAggregateAudioAdjustment? boundAdjustments;
 
         private IDisposable? realmSubscription;
         private bool gameplayActive;
@@ -110,6 +121,14 @@ namespace osu.Game.Tournament.Components
             });
         }
 
+        protected override void Update()
+        {
+            base.Update();
+
+            if (gameplayActive)
+                updateAudioSource();
+        }
+
         private void onWatchedStatesChanged(object? sender, NotifyDictionaryChangedEventArgs<int, SpectatorState> e)
         {
             switch (e.Action)
@@ -141,18 +160,29 @@ namespace osu.Game.Tournament.Components
                     break;
 
                 case SpectatedUserState.Passed:
-                    if (gameplayStates.TryGetValue(userId, out var passState))
-                        passState.Score.Replay.HasReceivedAllFrames = true;
+                    onPlayerFinished(userId);
                     break;
 
                 case SpectatedUserState.Failed:
-                case SpectatedUserState.Quit:
-                    if (gameplayStates.TryGetValue(userId, out var endState))
-                        endState.Score.Replay.HasReceivedAllFrames = true;
+                    onPlayerFinished(userId);
+                    break;
 
-                    gameplayStates.Remove(userId);
+                case SpectatedUserState.Quit:
+                    onPlayerFinished(userId);
                     break;
             }
+        }
+
+        private void onPlayerFinished(int userId)
+        {
+            if (gameplayStates.TryGetValue(userId, out var state))
+                state.Score.Replay.HasReceivedAllFrames = true;
+
+            gameplayStates.Remove(userId);
+
+            // Remove the clock from the sync manager so it doesn't block other players.
+            if (playerAreas.TryGetValue(userId, out var area) && syncManager != null)
+                syncManager.RemoveManagedClock(area.SpectatorPlayerClock);
         }
 
         private void ensureUserPopulated(int userId, Action onComplete)
@@ -222,25 +252,48 @@ namespace osu.Game.Tournament.Components
 
         private void loadUserIntoPlayerArea(int userId, SpectatorGameplayState gameplayState)
         {
-            // Ensure gameplay infrastructure is set up.
+            // Ensure master clock + sync manager are set up (created once per gameplay session).
             if (masterClockContainer == null)
                 setupGameplayInfrastructure(gameplayState.Beatmap);
 
             Debug.Assert(syncManager != null);
-            Debug.Assert(leftArea != null);
-            Debug.Assert(rightArea != null);
+
+            // Don't create a second area for this user.
+            if (playerAreas.ContainsKey(userId))
+                return;
 
             // Determine which side this user should be on based on team.
             var roomUser = multiplayerClient.Room?.Users.FirstOrDefault(u => u.UserID == userId);
             bool isTeamRed = roomUser?.MatchState is TeamVersusUserState teamState && teamState.TeamID == 0;
 
-            var targetArea = isTeamRed ? leftArea : rightArea;
+            // Check if the target side already has a player.
+            bool sideOccupied = playerAreas.Values.Any(a =>
+            {
+                bool areaIsLeft = a.Anchor == Anchor.TopLeft;
+                return areaIsLeft == isTeamRed;
+            });
 
-            // Only load if this area doesn't already have a score loaded.
-            if (targetArea.Score != null)
+            if (sideOccupied)
                 return;
 
-            targetArea.LoadScore(gameplayState.Score);
+            // Create managed clock and PlayerArea on-demand so the sync manager
+            // only tracks clocks that have actual scores to play.
+            var playerArea = new PlayerArea(userId, syncManager.CreateManagedClock())
+            {
+                RelativeSizeAxes = Axes.Both,
+                Width = 0.5f,
+                Anchor = isTeamRed ? Anchor.TopLeft : Anchor.TopRight,
+                Origin = isTeamRed ? Anchor.TopLeft : Anchor.TopRight,
+            };
+
+            playerAreas[userId] = playerArea;
+            gameplayContainer.Add(playerArea);
+
+            playerArea.LoadScore(gameplayState.Score);
+
+            // Bind audio adjustments from the first loaded player to keep the master clock in sync.
+            if (boundAdjustments == null)
+                bindAudioAdjustments(playerArea);
         }
 
         private void setupGameplayInfrastructure(WorkingBeatmap workingBeatmap)
@@ -260,34 +313,14 @@ namespace osu.Game.Tournament.Components
                 ReadyToStart = performInitialSeek,
             };
 
-            leftArea = new PlayerArea(0, syncManager.CreateManagedClock())
-            {
-                RelativeSizeAxes = Axes.Both,
-                Width = 0.5f,
-                Anchor = Anchor.TopLeft,
-                Origin = Anchor.TopLeft,
-            };
-
-            rightArea = new PlayerArea(0, syncManager.CreateManagedClock())
-            {
-                RelativeSizeAxes = Axes.Both,
-                Width = 0.5f,
-                Anchor = Anchor.TopRight,
-                Origin = Anchor.TopRight,
-            };
-
-            // Mute the right player, audio from left only.
-            rightArea.Mute = true;
-            leftArea.Mute = false;
-
             gameplayContainer.Children = new Drawable[]
             {
                 masterClockContainer,
                 syncManager,
-                leftArea,
-                rightArea,
             };
 
+            // Reset the master clock but don't start it yet —
+            // performInitialSeek will seek and start once player clocks have frames.
             masterClockContainer.Reset();
         }
 
@@ -301,17 +334,20 @@ namespace osu.Game.Tournament.Components
 
             if (syncManager != null)
             {
-                if (leftArea != null)
-                    syncManager.RemoveManagedClock(leftArea.SpectatorPlayerClock);
-                if (rightArea != null)
-                    syncManager.RemoveManagedClock(rightArea.SpectatorPlayerClock);
+                foreach (var area in playerAreas.Values)
+                    syncManager.RemoveManagedClock(area.SpectatorPlayerClock);
             }
 
+            if (boundAdjustments != null && masterClockContainer != null)
+                masterClockContainer.AdjustmentsFromMods.UnbindAdjustments(boundAdjustments);
+
+            boundAdjustments = null;
+            currentAudioSource = null;
+
+            playerAreas.Clear();
             gameplayContainer.Clear();
             masterClockContainer = null;
             syncManager = null;
-            leftArea = null;
-            rightArea = null;
         }
 
         /// <summary>
@@ -324,9 +360,9 @@ namespace osu.Game.Tournament.Components
 
             var minFrameTimes = new List<double>();
 
-            foreach (var area in new[] { leftArea, rightArea })
+            foreach (var area in playerAreas.Values)
             {
-                if (area?.Score == null)
+                if (area.Score == null)
                     continue;
 
                 var minFrame = area.Score.Replay.Frames.MinBy(f => f.Time);
@@ -335,11 +371,63 @@ namespace osu.Game.Tournament.Components
                     minFrameTimes.Add(minFrame.Time);
             }
 
+            if (minFrameTimes.Count == 0)
+            {
+                masterClockContainer.Reset(0, true);
+                return;
+            }
+
+            // Remove outliers — if one player's earliest frame is >1s behind the mean,
+            // exclude it to avoid seeking too far back.
+            double mean = minFrameTimes.Average();
+            minFrameTimes.RemoveAll(t => mean - t > 1000);
+
             double startTime = minFrameTimes.Count > 0 ? minFrameTimes.Min() : 0;
 
             Logger.Log($"[TournamentGameplayDisplay] Seeking to initial time {startTime:N0}ms", LoggingTarget.Runtime);
             masterClockContainer.Reset(startTime, true);
         }
+
+        #region Audio source management
+
+        /// <summary>
+        /// Selects the best audio source each frame (matching <see cref="MultiSpectatorScreen"/>'s logic)
+        /// and ensures mod rate adjustments are bound to the master clock.
+        /// </summary>
+        private void updateAudioSource()
+        {
+            if (syncManager == null || masterClockContainer == null)
+                return;
+
+            // If the current source is still viable, keep using it.
+            if (isCandidateAudioSource(currentAudioSource?.SpectatorPlayerClock))
+                return;
+
+            // Pick the running player clock closest to the master clock time.
+            currentAudioSource = playerAreas.Values
+                                            .Where(a => isCandidateAudioSource(a.SpectatorPlayerClock))
+                                            .MinBy(a => Math.Abs(a.SpectatorPlayerClock.CurrentTime - syncManager.CurrentMasterTime));
+
+            if (currentAudioSource != null)
+                bindAudioAdjustments(currentAudioSource);
+
+            foreach (var area in playerAreas.Values)
+                area.Mute = area != currentAudioSource;
+        }
+
+        private void bindAudioAdjustments(PlayerArea source)
+        {
+            if (boundAdjustments != null && masterClockContainer != null)
+                masterClockContainer.AdjustmentsFromMods.UnbindAdjustments(boundAdjustments);
+
+            boundAdjustments = source.ClockAdjustmentsFromMods;
+            masterClockContainer?.AdjustmentsFromMods.BindAdjustments(boundAdjustments);
+        }
+
+        private static bool isCandidateAudioSource(SpectatorPlayerClock? clock)
+            => clock?.IsRunning == true && !clock.IsCatchingUp && !clock.WaitingOnFrames;
+
+        #endregion
 
         private void beatmapsChanged(IRealmCollection<BeatmapSetInfo> items, ChangeSet? changes)
         {
