@@ -39,7 +39,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private Container chroma = null!;
         private ControlPanel controlPanel = null!;
-        private TournamentSpectatorDisplay? spectatorDisplay;
+        private TournamentGameplayDisplay? gameplayDisplay;
 
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
@@ -133,26 +133,26 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 addMultiplayerControls(multiplayerIpc);
 
-                // Add spectator display that replaces chroma areas when connected.
-                spectatorDisplay = new TournamentSpectatorDisplay(multiplayerIpc)
+                // Add gameplay display that replaces chroma areas when connected.
+                gameplayDisplay = new TournamentGameplayDisplay(multiplayerIpc)
                 {
                     Alpha = 0,
                 };
-                chroma.Add(spectatorDisplay);
+                chroma.Add(gameplayDisplay);
 
                 multiplayerIpc.IsConnected.BindValueChanged(connected =>
                 {
                     if (connected.NewValue)
                     {
-                        // Hide chroma key areas, show spectator display.
+                        // Hide chroma key areas, show gameplay display.
                         foreach (var child in chroma.Children.OfType<ChromaArea>())
                             child.FadeOut(200);
-                        spectatorDisplay.FadeIn(200);
+                        gameplayDisplay.FadeIn(200);
                     }
                     else
                     {
-                        // Show chroma key areas, hide spectator display.
-                        spectatorDisplay.FadeOut(200);
+                        // Show chroma key areas, hide gameplay display.
+                        gameplayDisplay.FadeOut(200);
                         foreach (var child in chroma.Children.OfType<ChromaArea>())
                             child.FadeIn(200);
                     }
