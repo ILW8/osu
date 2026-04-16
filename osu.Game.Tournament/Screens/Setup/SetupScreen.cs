@@ -13,6 +13,7 @@ using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays;
+using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -163,6 +164,24 @@ namespace osu.Game.Tournament.Screens.Setup
                     Label = "Mute UI sounds",
                     Description = "Mutes hover and click sounds from buttons and controls. Gameplay hitsounds are unaffected.",
                     Current = LadderInfo.MuteUISounds,
+                },
+                new SettingsSlider<double>
+                {
+                    LabelText = "Master volume",
+                    Current = LadderInfo.VolumeMaster,
+                    KeyboardStep = 0.01f,
+                },
+                new SettingsSlider<double>
+                {
+                    LabelText = "Music volume",
+                    Current = LadderInfo.VolumeMusic,
+                    KeyboardStep = 0.01f,
+                },
+                new SettingsSlider<double>
+                {
+                    LabelText = "Effects volume",
+                    Current = LadderInfo.VolumeEffect,
+                    KeyboardStep = 0.01f,
                 },
             };
         }

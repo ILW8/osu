@@ -227,6 +227,16 @@ namespace osu.Game.Tournament
                 ladder.MuteUISounds.BindValueChanged(muted => uiSampleMuteAdjustment.Value = muted.NewValue ? 0 : 1, true);
                 Audio.Samples.AddAdjustment(AdjustableProperty.Volume, uiSampleMuteAdjustment);
 
+                // Bind persisted volume settings to the audio system.
+                ladder.VolumeMaster.BindValueChanged(v => Audio.Volume.Value = v.NewValue, true);
+                ladder.VolumeMusic.BindValueChanged(v => Audio.VolumeTrack.Value = v.NewValue, true);
+                ladder.VolumeEffect.BindValueChanged(v => Audio.VolumeSample.Value = v.NewValue, true);
+
+                // Write back changes from framework (e.g. keyboard shortcuts) to persist them.
+                Audio.Volume.BindValueChanged(v => ladder.VolumeMaster.Value = v.NewValue);
+                Audio.VolumeTrack.BindValueChanged(v => ladder.VolumeMusic.Value = v.NewValue);
+                Audio.VolumeSample.BindValueChanged(v => ladder.VolumeEffect.Value = v.NewValue);
+
                 bracketLoadTaskCompletionSource.SetResult(true);
 
                 initialisationText.Expire();

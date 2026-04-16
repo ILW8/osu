@@ -3,7 +3,6 @@
 
 using System.Linq;
 using osu.Framework.Allocation;
-using osu.Framework.Audio;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
@@ -44,7 +43,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TournamentGameplayDisplay? gameplayDisplay;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc, AudioManager audio)
+        private void load(MatchIPCInfo ipc)
         {
             this.ipc = ipc;
 
@@ -170,7 +169,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 }, true);
 
                 // Add volume sliders for multiplayer spectating.
-                addVolumeControls(audio);
+                addVolumeControls();
             }
 
             State.BindValueChanged(state => chatToggle.Current.Value = State.Value == TourneyState.Idle, true);
@@ -251,7 +250,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }, true);
         }
 
-        private void addVolumeControls(AudioManager audio)
+        private void addVolumeControls()
         {
             controlPanel.AddRange(new Drawable[]
             {
@@ -266,19 +265,19 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 new SettingsSlider<double>
                 {
                     LabelText = "Master",
-                    Current = audio.Volume,
+                    Current = LadderInfo.VolumeMaster,
                     KeyboardStep = 0.01f,
                 },
                 new SettingsSlider<double>
                 {
                     LabelText = "Music",
-                    Current = audio.VolumeTrack,
+                    Current = LadderInfo.VolumeMusic,
                     KeyboardStep = 0.01f,
                 },
                 new SettingsSlider<double>
                 {
                     LabelText = "Effects",
-                    Current = audio.VolumeSample,
+                    Current = LadderInfo.VolumeEffect,
                     KeyboardStep = 0.01f,
                 },
             });

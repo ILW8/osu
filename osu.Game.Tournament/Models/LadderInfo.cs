@@ -56,5 +56,23 @@ namespace osu.Game.Tournament.Models
         /// Gameplay hitsounds are unaffected as they use per-skin sample stores.
         /// </summary>
         public Bindable<bool> MuteUISounds = new BindableBool(true);
+
+        public Bindable<double> VolumeMaster = new BindableDouble(1)
+        {
+            MinValue = 0,
+            MaxValue = 1,
+        };
+
+        public Bindable<double> VolumeMusic = new BindableDouble(1)
+        {
+            MinValue = 0,
+            MaxValue = 1,
+        };
+
+        public Bindable<double> VolumeEffect = new BindableDouble(1)
+        {
+            MinValue = 0,
+            MaxValue = 1,
+        };
     }
 }
