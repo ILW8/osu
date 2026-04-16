@@ -9,9 +9,11 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Logging;
+using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Database;
 using osu.Game.Online.API;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
@@ -56,6 +58,12 @@ namespace osu.Game.Tournament.IPC
 
         [Resolved]
         private BeatmapLookupCache beatmapLookupCache { get; set; } = null!;
+
+        [Resolved]
+        private BeatmapManager beatmapManager { get; set; } = null!;
+
+        [Resolved]
+        private BeatmapModelDownloader beatmapDownloader { get; set; } = null!;
 
         [Resolved]
         private LadderInfo ladder { get; set; } = null!;
@@ -394,8 +402,66 @@ namespace osu.Game.Tournament.IPC
                         if (lastBeatmapId == beatmapId && apiBeatmap != null)
                             Beatmap.Value = new TournamentBeatmap(apiBeatmap);
                     });
+
+                    // Ensure the beatmap is downloaded locally for gameplay rendering.
+                    if (apiBeatmap != null)
+                        ensureBeatmapDownloaded(apiBeatmap);
                 });
             }
+
+            // Also ensure the beatmap is downloaded for maps from the pool.
+            ensureBeatmapDownloadedById(beatmapId);
+        }
+
+        /// <summary>
+        /// Checks if a beatmap is locally available, and triggers a download if not.
+        /// </summary>
+        private void ensureBeatmapDownloadedById(int beatmapId)
+        {
+            var localBeatmap = beatmapManager.QueryBeatmap(b => b.OnlineID == beatmapId);
+
+            if (localBeatmap != null)
+            {
+                Logger.Log($"[MultiplayerMatchIPCInfo] Beatmap {beatmapId} is locally available", LoggingTarget.Network);
+                return;
+            }
+
+            // Need API info to download — trigger a lookup if not already done.
+            Task.Run(async () =>
+            {
+                var apiBeatmap = await beatmapLookupCache.GetBeatmapAsync(beatmapId).ConfigureAwait(false);
+
+                if (apiBeatmap != null)
+                    ensureBeatmapDownloaded(apiBeatmap);
+            });
+        }
+
+        /// <summary>
+        /// Downloads a beatmap set if it's not already available locally or being downloaded.
+        /// </summary>
+        private void ensureBeatmapDownloaded(APIBeatmap apiBeatmap)
+        {
+            Schedule(() =>
+            {
+                // Check if already available locally.
+                if (beatmapManager.QueryBeatmap(b => b.OnlineID == apiBeatmap.OnlineID) != null)
+                    return;
+
+                var beatmapSet = apiBeatmap.BeatmapSet;
+
+                if (beatmapSet == null)
+                {
+                    Logger.Log($"[MultiplayerMatchIPCInfo] Cannot download beatmap {apiBeatmap.OnlineID}: no beatmap set info", LoggingTarget.Network, LogLevel.Important);
+                    return;
+                }
+
+                // Check if already downloading.
+                if (beatmapDownloader.GetExistingDownload(beatmapSet) != null)
+                    return;
+
+                Logger.Log($"[MultiplayerMatchIPCInfo] Downloading beatmap set {beatmapSet.OnlineID} for beatmap {apiBeatmap.OnlineID}", LoggingTarget.Network);
+                beatmapDownloader.Download(beatmapSet);
+            });
         }
 
         private void updateModsFromRoom()

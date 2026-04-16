@@ -249,15 +249,15 @@ namespace osu.Game.Tournament.Components
 
             gameplayActive = true;
 
+            // MasterGameplayClockContainer accesses the track in its constructor.
+            if (!workingBeatmap.TrackLoaded)
+                workingBeatmap.LoadTrack();
+
             masterClockContainer = new MasterGameplayClockContainer(workingBeatmap, 0);
 
             syncManager = new SpectatorSyncManager(masterClockContainer)
             {
-                ReadyToStart = () =>
-                {
-                    Logger.Log("[TournamentGameplayDisplay] Clocks ready, starting master clock", LoggingTarget.Runtime);
-                    masterClockContainer.Reset(startClock: true);
-                }
+                ReadyToStart = performInitialSeek,
             };
 
             leftArea = new PlayerArea(0, syncManager.CreateManagedClock())
@@ -312,6 +312,33 @@ namespace osu.Game.Tournament.Components
             syncManager = null;
             leftArea = null;
             rightArea = null;
+        }
+
+        /// <summary>
+        /// Seeks the master clock to the earliest available frame time across all loaded players
+        /// and starts playback. Mirrors <see cref="MultiSpectatorScreen"/>'s initial seek logic.
+        /// </summary>
+        private void performInitialSeek()
+        {
+            Debug.Assert(masterClockContainer != null);
+
+            var minFrameTimes = new List<double>();
+
+            foreach (var area in new[] { leftArea, rightArea })
+            {
+                if (area?.Score == null)
+                    continue;
+
+                var minFrame = area.Score.Replay.Frames.MinBy(f => f.Time);
+
+                if (minFrame != null)
+                    minFrameTimes.Add(minFrame.Time);
+            }
+
+            double startTime = minFrameTimes.Count > 0 ? minFrameTimes.Min() : 0;
+
+            Logger.Log($"[TournamentGameplayDisplay] Seeking to initial time {startTime:N0}ms", LoggingTarget.Runtime);
+            masterClockContainer.Reset(startTime, true);
         }
 
         private void beatmapsChanged(IRealmCollection<BeatmapSetInfo> items, ChangeSet? changes)
