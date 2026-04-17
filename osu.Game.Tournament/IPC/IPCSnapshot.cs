@@ -68,6 +68,37 @@ namespace osu.Game.Tournament.IPC
 
             return root.ToString(Formatting.None);
         }
+
+        /// <summary>
+        /// Given a live snapshot plus the writer's persisted state (last-connected snapshot
+        /// and previous-tick connection flag), returns the snapshot to actually serialize.
+        /// Implements the disconnect-preservation rule from the design spec:
+        /// on disconnect, reuse the last connected snapshot with <c>Connected = false</c>;
+        /// on reconnect, drop the old session's last-connected snapshot and take the new one.
+        /// </summary>
+        public static IPCSnapshot ComputeOutput(
+            IPCSnapshot live,
+            ref IPCSnapshot? lastConnectedSnapshot,
+            ref bool wasConnected)
+        {
+            if (live.Connected)
+            {
+                // New connection (was false, now true): drop any previous session's memory.
+                if (!wasConnected)
+                    lastConnectedSnapshot = null;
+
+                lastConnectedSnapshot = live;
+                wasConnected = true;
+                return live;
+            }
+
+            wasConnected = false;
+
+            if (lastConnectedSnapshot is { } remembered)
+                return remembered with { Connected = false };
+
+            return EmptyDisconnected;
+        }
     }
 
     /// <summary>

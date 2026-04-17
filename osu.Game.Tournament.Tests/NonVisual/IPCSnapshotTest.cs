@@ -106,5 +106,73 @@ namespace osu.Game.Tournament.Tests.NonVisual
             Assert.That(u0["hits"]!["miss"]!.Value<int>(), Is.EqualTo(2));
             Assert.That(u0["gameplayTimeMs"]!.Value<double>(), Is.EqualTo(47320).Within(1e-9));
         }
+
+        [Test]
+        public void TestComputeOutput_NeverConnected_ReturnsEmpty()
+        {
+            IPCSnapshot? last = null;
+            bool wasConnected = false;
+
+            var output = IPCSnapshot.ComputeOutput(
+                IPCSnapshot.EmptyDisconnected,
+                ref last,
+                ref wasConnected);
+
+            Assert.That(output, Is.EqualTo(IPCSnapshot.EmptyDisconnected));
+            Assert.That(last, Is.Null);
+            Assert.That(wasConnected, Is.False);
+        }
+
+        [Test]
+        public void TestComputeOutput_Connected_ReturnsLiveAndRemembers()
+        {
+            IPCSnapshot? last = null;
+            bool wasConnected = false;
+
+            var live = new IPCSnapshot(true, 77, 99, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
+            var output = IPCSnapshot.ComputeOutput(live, ref last, ref wasConnected);
+
+            Assert.That(output, Is.EqualTo(live));
+            Assert.That(last, Is.EqualTo(live));
+            Assert.That(wasConnected, Is.True);
+        }
+
+        [Test]
+        public void TestComputeOutput_DisconnectAfterSession_PreservesLastFrame()
+        {
+            IPCSnapshot? last = null;
+            bool wasConnected = false;
+
+            var live = new IPCSnapshot(true, 77, 99, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
+            IPCSnapshot.ComputeOutput(live, ref last, ref wasConnected);
+
+            var output = IPCSnapshot.ComputeOutput(IPCSnapshot.EmptyDisconnected, ref last, ref wasConnected);
+
+            Assert.That(output.Connected, Is.False);
+            Assert.That(output.RoomId, Is.EqualTo(77));
+            Assert.That(output.BeatmapId, Is.EqualTo(99));
+            Assert.That(output.Team1Score, Is.EqualTo(100));
+            Assert.That(output.Team2Score, Is.EqualTo(200));
+            Assert.That(wasConnected, Is.False);
+        }
+
+        [Test]
+        public void TestComputeOutput_NewConnection_ClearsOldSession()
+        {
+            IPCSnapshot? last = null;
+            bool wasConnected = false;
+
+            var sessionA = new IPCSnapshot(true, 77, 99, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
+            IPCSnapshot.ComputeOutput(sessionA, ref last, ref wasConnected);
+            IPCSnapshot.ComputeOutput(IPCSnapshot.EmptyDisconnected, ref last, ref wasConnected);
+            // last now holds sessionA; wasConnected is false.
+
+            var sessionB = new IPCSnapshot(true, 88, 111, 0, 0, ImmutableArray<IPCUserSnapshot>.Empty);
+            var output = IPCSnapshot.ComputeOutput(sessionB, ref last, ref wasConnected);
+
+            Assert.That(output, Is.EqualTo(sessionB));
+            Assert.That(last, Is.EqualTo(sessionB));
+            Assert.That(output.RoomId, Is.EqualTo(88));
+        }
     }
 }
