@@ -163,6 +163,9 @@ namespace osu.Game.Tournament.IPC
         {
             base.Dispose(isDisposing);
             tickDelegate?.Cancel();
+            // Explicitly unbind from the long-lived LadderInfo bindable so the callback's
+            // closure over `this` doesn't keep the writer alive past disposal.
+            ladder?.IPCWriteIntervalMilliseconds.UnbindEvents();
         }
     }
 }
