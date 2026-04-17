@@ -173,6 +173,24 @@ namespace osu.Game.Tournament.Tests.NonVisual
             Assert.That(output, Is.EqualTo(sessionB));
             Assert.That(last, Is.EqualTo(sessionB));
             Assert.That(output.RoomId, Is.EqualTo(88));
+            Assert.That(wasConnected, Is.True);
+        }
+
+        [Test]
+        public void TestComputeOutput_StillConnected_OverwritesLastSnapshot()
+        {
+            IPCSnapshot? last = null;
+            bool wasConnected = false;
+
+            var tick1 = new IPCSnapshot(true, 77, 99, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
+            IPCSnapshot.ComputeOutput(tick1, ref last, ref wasConnected);
+
+            var tick2 = new IPCSnapshot(true, 77, 99, 150, 250, ImmutableArray<IPCUserSnapshot>.Empty);
+            var output = IPCSnapshot.ComputeOutput(tick2, ref last, ref wasConnected);
+
+            Assert.That(output, Is.EqualTo(tick2));
+            Assert.That(last, Is.EqualTo(tick2));
+            Assert.That(wasConnected, Is.True);
         }
     }
 }
