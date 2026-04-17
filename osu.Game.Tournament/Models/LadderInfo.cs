@@ -52,6 +52,16 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> UseMultiplayerSpectating = new BindableBool();
 
         /// <summary>
+        /// Interval in milliseconds between IPC file writes when multiplayer spectating is active.
+        /// Defaults to 250 ms to match the stable client's historical IPC polling cadence.
+        /// </summary>
+        public Bindable<int> IPCWriteIntervalMilliseconds = new BindableInt(250)
+        {
+            MinValue = 50,
+            MaxValue = 500,
+        };
+
+        /// <summary>
         /// When <c>true</c>, mutes UI sample playback (hover/click sounds) globally.
         /// Gameplay hitsounds are unaffected as they use per-skin sample stores.
         /// </summary>
