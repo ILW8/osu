@@ -51,6 +51,46 @@ namespace osu.Game.Tournament.Tests.NonVisual
             }
         }
 
+        [Test]
+        public void TestFileUpdatesWhenScoresChange()
+        {
+            using (HeadlessGameHost host = new CleanRunHeadlessGameHost())
+            {
+                try
+                {
+                    var tournament = new TestTournament(runOnLoadComplete: () => seedMultiplayerBracket(host));
+                    LoadTournament(host, tournament);
+                    tournament.BracketLoadTask.WaitSafely();
+
+                    var ipcInfo = tournament.Dependencies.Get<MultiplayerMatchIPCInfo>();
+                    tournament.TestSchedule(() =>
+                    {
+                        ipcInfo.Score1.Value = 42;
+                        ipcInfo.Score2.Value = 17;
+                    });
+
+                    var storage = tournament.Dependencies.Get<Storage>();
+                    string fullPath = storage.GetFullPath(
+                        Path.Combine(MultiplayerIPCWriter.IPC_DIRECTORY, MultiplayerIPCWriter.IPC_FILENAME));
+
+                    WaitForOrAssert(() =>
+                    {
+                        try
+                        {
+                            var parsed = JObject.Parse(File.ReadAllText(fullPath));
+                            return parsed["scores"]!["team1"]!.Value<long>() == 42
+                                && parsed["scores"]!["team2"]!.Value<long>() == 17;
+                        }
+                        catch { return false; }
+                    }, "file did not reflect score change", 5000);
+                }
+                finally
+                {
+                    host.Exit();
+                }
+            }
+        }
+
         /// <summary>
         /// Seeds <c>tournaments/default/bracket.json</c> with <c>UseMultiplayerSpectating = true</c>
         /// so the production branch in <see cref="TournamentGameBase"/> instantiates the writer.
