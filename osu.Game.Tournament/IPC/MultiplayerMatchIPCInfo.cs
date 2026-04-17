@@ -89,6 +89,16 @@ namespace osu.Game.Tournament.IPC
             Schedule(() => pendingInvite.Value = invite);
         }
 
+        /// <summary>
+        /// Test-only helper: forces the connection state without going through <see cref="Connect"/>.
+        /// Allows integration tests to drive IPC-writer behavior without a live SignalR connection.
+        /// </summary>
+        internal void SetConnectedForTesting(bool value, long? roomId = null)
+        {
+            isConnected.Value = value;
+            connectedRoomId.Value = roomId;
+        }
+
         [Resolved]
         private MultiplayerClient multiplayerClient { get; set; } = null!;
 

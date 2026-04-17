@@ -65,6 +65,9 @@ namespace osu.Game.Tournament.Tests.NonVisual
                     var ipcInfo = tournament.Dependencies.Get<MultiplayerMatchIPCInfo>();
                     tournament.TestSchedule(() =>
                     {
+                        // Flip the IPC source into the "connected" state so ComputeOutput
+                        // projects live scores through instead of returning EmptyDisconnected.
+                        ipcInfo.SetConnectedForTesting(true, roomId: 12345);
                         ipcInfo.Score1.Value = 42;
                         ipcInfo.Score2.Value = 17;
                     });
