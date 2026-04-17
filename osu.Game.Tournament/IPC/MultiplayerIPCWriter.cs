@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Immutable;
 using System.IO;
+using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Logging;
@@ -52,13 +53,22 @@ namespace osu.Game.Tournament.IPC
         // what each tick produces) would otherwise compare unequal and re-write every time.
         // Comparing the serialized string is also the most honest dirty-check: "dirty" =
         // "produces different bytes on disk", which is the invariant we actually care about.
+        //
+        // Read and written only on the update thread.
         private string? lastWrittenJson;
+
+        // Guard against overlapping background writes: serialization + file I/O run on the
+        // thread pool, and a slow disk (AV scan, network drive) could otherwise let two ticks
+        // race to replace ipc.json out of order. Mutated only on the update thread.
+        private bool writeInFlight;
 
         [BackgroundDependencyLoader]
         private void load()
         {
             ipcStorage = storage.GetStorageForDirectory(IPC_DIRECTORY);
 
+            // Initial write runs synchronously during BDL (already off the update thread here)
+            // so consumers polling at startup always see a valid ipc.json.
             string initialJson = IPCSnapshot.SerializeToJson(IPCSnapshot.EmptyDisconnected);
             if (writeAtomically(initialJson))
                 lastWrittenJson = initialJson;
@@ -76,18 +86,41 @@ namespace osu.Game.Tournament.IPC
 
         private void tick()
         {
-            var live = buildLiveSnapshot();
-            var output = IPCSnapshot.ComputeOutput(live, ref lastConnectedSnapshot, ref wasConnected);
-            string json = IPCSnapshot.SerializeToJson(output);
-
-            if (json == lastWrittenJson)
+            // buildLiveSnapshot reads update-thread-owned state (bindables, Room.Users,
+            // UserStates) so it must run here. Serialization and file I/O are dispatched
+            // to the thread pool below so a slow disk can't stall the frame loop.
+            if (writeInFlight)
                 return;
 
-            // Only advance lastWrittenJson on a successful write. Otherwise a transient I/O
-            // or permission failure would make the next tick short-circuit on the same payload
-            // and leave a stale ipc.json until the tracked state changes again.
-            if (writeAtomically(json))
-                lastWrittenJson = json;
+            var live = buildLiveSnapshot();
+            var output = IPCSnapshot.ComputeOutput(live, ref lastConnectedSnapshot, ref wasConnected);
+            string? expected = lastWrittenJson;
+
+            writeInFlight = true;
+
+            Task.Run(() =>
+            {
+                string json = IPCSnapshot.SerializeToJson(output);
+
+                if (json == expected)
+                {
+                    Schedule(() => writeInFlight = false);
+                    return;
+                }
+
+                bool success = writeAtomically(json);
+
+                Schedule(() =>
+                {
+                    // Only advance lastWrittenJson on a successful write. Otherwise a transient
+                    // I/O or permission failure would make the next tick short-circuit on the
+                    // same payload and leave a stale ipc.json until the tracked state changes.
+                    if (success)
+                        lastWrittenJson = json;
+
+                    writeInFlight = false;
+                });
+            });
         }
 
         /// <summary>
