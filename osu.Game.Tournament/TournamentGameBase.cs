@@ -221,6 +221,9 @@ namespace osu.Game.Tournament
 
                 Add(ipc);
 
+                if (ipc is MultiplayerMatchIPCInfo)
+                    Add(new MultiplayerIPCWriter());
+
                 // Apply UI sample muting based on the persisted setting.
                 // This targets Audio.Samples (the global sample store used by UI hover/click sounds)
                 // without affecting gameplay hitsounds (which use per-skin sample stores).
