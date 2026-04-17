@@ -62,7 +62,15 @@ namespace osu.Game.Tournament.IPC
             writeAtomically(initialJson);
             lastWrittenJson = initialJson;
 
-            tickDelegate = Scheduler.AddDelayed(tick, ladder.IPCWriteIntervalMilliseconds.Value, true);
+            ladder.IPCWriteIntervalMilliseconds.BindValueChanged(
+                e => rescheduleTicks(e.NewValue),
+                runOnceImmediately: true);
+        }
+
+        private void rescheduleTicks(int intervalMs)
+        {
+            tickDelegate?.Cancel();
+            tickDelegate = Scheduler.AddDelayed(tick, intervalMs, true);
         }
 
         private void tick()

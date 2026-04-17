@@ -12,6 +12,7 @@ using osu.Framework.Extensions;
 using osu.Framework.Platform;
 using osu.Game.Tests;
 using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Tests.NonVisual
 {
@@ -86,6 +87,50 @@ namespace osu.Game.Tournament.Tests.NonVisual
                         }
                         catch { return false; }
                     }, "file did not reflect score change", 5000);
+                }
+                finally
+                {
+                    host.Exit();
+                }
+            }
+        }
+
+        [Test]
+        public void TestIntervalChangeDoesNotBreakWrites()
+        {
+            using (HeadlessGameHost host = new CleanRunHeadlessGameHost())
+            {
+                try
+                {
+                    var tournament = new TestTournament(runOnLoadComplete: () => seedMultiplayerBracket(host));
+                    LoadTournament(host, tournament);
+                    tournament.BracketLoadTask.WaitSafely();
+
+                    var ladder = tournament.Dependencies.Get<LadderInfo>();
+                    var ipcInfo = tournament.Dependencies.Get<MultiplayerMatchIPCInfo>();
+
+                    // Toggle the interval a few times, then change a tracked value.
+                    tournament.TestSchedule(() =>
+                    {
+                        ladder.IPCWriteIntervalMilliseconds.Value = 500;
+                        ladder.IPCWriteIntervalMilliseconds.Value = 50;
+                        ipcInfo.SetConnectedForTesting(true, roomId: 99999);
+                        ipcInfo.Score1.Value = 999;
+                    });
+
+                    var storage = tournament.Dependencies.Get<Storage>();
+                    string fullPath = storage.GetFullPath(
+                        Path.Combine(MultiplayerIPCWriter.IPC_DIRECTORY, MultiplayerIPCWriter.IPC_FILENAME));
+
+                    WaitForOrAssert(() =>
+                    {
+                        try
+                        {
+                            var parsed = JObject.Parse(File.ReadAllText(fullPath));
+                            return parsed["scores"]!["team1"]!.Value<long>() == 999;
+                        }
+                        catch { return false; }
+                    }, "file did not reflect score change after interval toggling", 3000);
                 }
                 finally
                 {
