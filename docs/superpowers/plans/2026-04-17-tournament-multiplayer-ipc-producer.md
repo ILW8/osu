@@ -776,9 +776,7 @@ namespace osu.Game.Tournament.Tests.NonVisual
             {
                 try
                 {
-                    seedMultiplayerBracket(host);
-
-                    var tournament = new TestTournament();
+                    var tournament = new TestTournament(runOnLoadComplete: () => seedMultiplayerBracket(host));
                     LoadTournament(host, tournament);
                     tournament.BracketLoadTask.WaitSafely();
 
@@ -806,7 +804,9 @@ namespace osu.Game.Tournament.Tests.NonVisual
         /// <summary>
         /// Seeds <c>tournaments/default/bracket.json</c> with <c>UseMultiplayerSpectating = true</c>
         /// so the production branch in <see cref="TournamentGameBase"/> instantiates the writer.
-        /// Must run before <see cref="LoadTournament"/>.
+        /// Must run from the tournament's <c>LoadComplete</c> (via <see cref="TestTournament"/>'s
+        /// <c>runOnLoadComplete</c> hook), not before the host starts running —
+        /// <see cref="GameHost.Storage"/> is only populated once the host has begun.
         /// </summary>
         private static void seedMultiplayerBracket(GameHost host)
         {
@@ -818,7 +818,20 @@ namespace osu.Game.Tournament.Tests.NonVisual
 
         public partial class TestTournament : TournamentGameBase
         {
+            private readonly System.Action? runOnLoadComplete;
+
             public new Task BracketLoadTask => base.BracketLoadTask;
+
+            public TestTournament([JetBrains.Annotations.InstantHandle] System.Action? runOnLoadComplete = null)
+            {
+                this.runOnLoadComplete = runOnLoadComplete;
+            }
+
+            protected override void LoadComplete()
+            {
+                runOnLoadComplete?.Invoke();
+                base.LoadComplete();
+            }
 
             /// <summary>
             /// Schedules an action on the update thread. Test-only helper because
@@ -974,9 +987,7 @@ public void TestFileUpdatesWhenScoresChange()
     {
         try
         {
-            seedMultiplayerBracket(host);
-
-            var tournament = new TestTournament();
+            var tournament = new TestTournament(runOnLoadComplete: () => seedMultiplayerBracket(host));
             LoadTournament(host, tournament);
             tournament.BracketLoadTask.WaitSafely();
 
@@ -1210,9 +1221,7 @@ public void TestIntervalChangeDoesNotBreakWrites()
     {
         try
         {
-            seedMultiplayerBracket(host);
-
-            var tournament = new TestTournament();
+            var tournament = new TestTournament(runOnLoadComplete: () => seedMultiplayerBracket(host));
             LoadTournament(host, tournament);
             tournament.BracketLoadTask.WaitSafely();
 
