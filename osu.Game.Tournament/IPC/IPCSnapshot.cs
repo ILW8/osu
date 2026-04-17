@@ -7,7 +7,9 @@ namespace osu.Game.Tournament.IPC
 {
     /// <summary>
     /// Immutable snapshot of the multiplayer room state at a single point in time.
-    /// Drives structural-equality dirty checks and JSON serialization in <see cref="MultiplayerIPCWriter"/>.
+    /// Feeds JSON serialization in <see cref="MultiplayerIPCWriter"/>; the writer's dirty-check
+    /// compares serialized strings (not record equality), since the compiler-generated <c>Equals</c>
+    /// is reference-based for the <c>ImmutableArray</c> / <c>ImmutableDictionary</c> collection fields.
     /// </summary>
     internal readonly record struct IPCSnapshot(
         bool Connected,

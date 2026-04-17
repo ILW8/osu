@@ -276,7 +276,7 @@ git commit -m "add IPCWriteIntervalMilliseconds to LadderInfo (default 250 ms, r
 
 ## Task 3: Add `IPCSnapshot` + `IPCUserSnapshot` record types with equality test
 
-**Goal:** Define the immutable snapshot types whose structural equality drives the writer's dirty-check.
+**Goal:** Define the immutable snapshot types the writer will serialize. The record-struct shape gives us value-copy semantics and cheap construction; structural equality of the collection fields (`Users`, `Hits`) is *not* guaranteed by the compiler-generated `Equals` (it's reference-based for `ImmutableArray` / `ImmutableDictionary`), so the writer's dirty-check will compare serialized JSON strings instead — see Task 7.
 
 **Files:**
 - Create: `osu.Game.Tournament/IPC/IPCSnapshot.cs`
@@ -361,7 +361,9 @@ namespace osu.Game.Tournament.IPC
 {
     /// <summary>
     /// Immutable snapshot of the multiplayer room state at a single point in time.
-    /// Drives structural-equality dirty checks and JSON serialization in <see cref="MultiplayerIPCWriter"/>.
+    /// Feeds JSON serialization in <see cref="MultiplayerIPCWriter"/>; the writer's
+    /// dirty-check compares serialized strings (not record equality), since the compiler-generated
+    /// <c>Equals</c> is reference-based for the <c>ImmutableArray</c> / <c>ImmutableDictionary</c> fields.
     /// </summary>
     internal readonly record struct IPCSnapshot(
         bool Connected,
@@ -499,7 +501,9 @@ namespace osu.Game.Tournament.IPC
 {
     /// <summary>
     /// Immutable snapshot of the multiplayer room state at a single point in time.
-    /// Drives structural-equality dirty checks and JSON serialization in <see cref="MultiplayerIPCWriter"/>.
+    /// Feeds JSON serialization in <see cref="MultiplayerIPCWriter"/>; the writer's
+    /// dirty-check compares serialized strings (not record equality), since the compiler-generated
+    /// <c>Equals</c> is reference-based for the <c>ImmutableArray</c> / <c>ImmutableDictionary</c> fields.
     /// </summary>
     internal readonly record struct IPCSnapshot(
         bool Connected,
@@ -1062,17 +1066,23 @@ namespace osu.Game.Tournament.IPC
         private IPCSnapshot? lastConnectedSnapshot;
         private bool wasConnected;
 
-        // Last successfully-written snapshot; used for the dirty-check.
-        private IPCSnapshot? lastWrittenSnapshot;
+        // Last successfully-written JSON payload. The dirty-check compares the
+        // serialized bytes rather than IPCSnapshot.Equals: ImmutableArray / ImmutableDictionary
+        // use reference equality in the auto-generated record equality comparer, so two
+        // snapshots with identical data but distinct collection backings (which is exactly
+        // what each tick produces) would otherwise compare unequal and re-write every time.
+        // Comparing the serialized string is also the most honest dirty-check: "dirty" =
+        // "produces different bytes on disk", which is the invariant we actually care about.
+        private string? lastWrittenJson;
 
         [BackgroundDependencyLoader]
         private void load()
         {
             ipcStorage = storage.GetStorageForDirectory(IPC_DIRECTORY);
 
-            var initial = IPCSnapshot.EmptyDisconnected;
-            writeAtomically(IPCSnapshot.SerializeToJson(initial));
-            lastWrittenSnapshot = initial;
+            string initialJson = IPCSnapshot.SerializeToJson(IPCSnapshot.EmptyDisconnected);
+            writeAtomically(initialJson);
+            lastWrittenJson = initialJson;
 
             tickDelegate = Scheduler.AddDelayed(tick, ladder.IPCWriteIntervalMilliseconds.Value, true);
         }
@@ -1081,12 +1091,13 @@ namespace osu.Game.Tournament.IPC
         {
             var live = buildLiveSnapshot();
             var output = IPCSnapshot.ComputeOutput(live, ref lastConnectedSnapshot, ref wasConnected);
+            string json = IPCSnapshot.SerializeToJson(output);
 
-            if (lastWrittenSnapshot.HasValue && lastWrittenSnapshot.Value.Equals(output))
+            if (json == lastWrittenJson)
                 return;
 
-            writeAtomically(IPCSnapshot.SerializeToJson(output));
-            lastWrittenSnapshot = output;
+            writeAtomically(json);
+            lastWrittenJson = json;
         }
 
         /// <summary>
@@ -1256,9 +1267,9 @@ private void load()
 {
     ipcStorage = storage.GetStorageForDirectory(IPC_DIRECTORY);
 
-    var initial = IPCSnapshot.EmptyDisconnected;
-    writeAtomically(IPCSnapshot.SerializeToJson(initial));
-    lastWrittenSnapshot = initial;
+    string initialJson = IPCSnapshot.SerializeToJson(IPCSnapshot.EmptyDisconnected);
+    writeAtomically(initialJson);
+    lastWrittenJson = initialJson;
 
     ladder.IPCWriteIntervalMilliseconds.BindValueChanged(
         e => rescheduleTicks(e.NewValue),
