@@ -2,12 +2,14 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Drawing;
+using System.IO;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Configuration;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Platform;
 using osu.Game.Graphics.Containers;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Online.API;
@@ -42,6 +44,9 @@ namespace osu.Game.Tournament.Screens.Setup
 
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
+
+        [Resolved]
+        private Storage storage { get; set; } = null!;
 
         private readonly IBindable<APIUser> localUser = new Bindable<APIUser>();
         private Bindable<Size> windowSize = null!;
@@ -174,6 +179,23 @@ namespace osu.Game.Tournament.Screens.Setup
                     Label = "Display team seeds",
                     Description = "Team seeds will display alongside each team at the top in gameplay/map pool screens.",
                     Current = LadderInfo.DisplayTeamSeeds,
+                },
+                new SettingsSlider<int>
+                {
+                    LabelText = "Multiplayer IPC write interval (ms)",
+                    Current = LadderInfo.IPCWriteIntervalMilliseconds,
+                    KeyboardStep = 10,
+                    Alpha = LadderInfo.UseMultiplayerSpectating.Value ? 1 : 0,
+                },
+                new ActionableInfo
+                {
+                    Label = "Multiplayer IPC output path",
+                    ButtonText = "Open folder",
+                    Action = () => storage.GetStorageForDirectory(MultiplayerIPCWriter.IPC_DIRECTORY).PresentExternally(),
+                    Value = storage.GetFullPath(
+                        Path.Combine(MultiplayerIPCWriter.IPC_DIRECTORY, MultiplayerIPCWriter.IPC_FILENAME)),
+                    Description = "External overlays and scoreboards can poll this file for live room state.",
+                    Alpha = LadderInfo.UseMultiplayerSpectating.Value ? 1 : 0,
                 },
                 new LabelledSwitchButton
                 {
