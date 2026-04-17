@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Immutable;
 using System.IO;
 using osu.Framework.Allocation;
@@ -59,8 +60,8 @@ namespace osu.Game.Tournament.IPC
             ipcStorage = storage.GetStorageForDirectory(IPC_DIRECTORY);
 
             string initialJson = IPCSnapshot.SerializeToJson(IPCSnapshot.EmptyDisconnected);
-            writeAtomically(initialJson);
-            lastWrittenJson = initialJson;
+            if (writeAtomically(initialJson))
+                lastWrittenJson = initialJson;
 
             ladder.IPCWriteIntervalMilliseconds.BindValueChanged(
                 e => rescheduleTicks(e.NewValue),
@@ -82,8 +83,11 @@ namespace osu.Game.Tournament.IPC
             if (json == lastWrittenJson)
                 return;
 
-            writeAtomically(json);
-            lastWrittenJson = json;
+            // Only advance lastWrittenJson on a successful write. Otherwise a transient I/O
+            // or permission failure would make the next tick short-circuit on the same payload
+            // and leave a stale ipc.json until the tracked state changes again.
+            if (writeAtomically(json))
+                lastWrittenJson = json;
         }
 
         /// <summary>
@@ -134,7 +138,12 @@ namespace osu.Game.Tournament.IPC
                 Users: users.ToImmutable());
         }
 
-        private void writeAtomically(string json)
+        /// <summary>
+        /// Writes <paramref name="json"/> via write-to-temp + atomic rename.
+        /// Returns <c>true</c> if the file was replaced; <c>false</c> on a caught I/O or
+        /// permission failure so the caller can keep retrying on subsequent ticks.
+        /// </summary>
+        private bool writeAtomically(string json)
         {
             string tmpFullPath = ipcStorage.GetFullPath(ipc_tmp_filename);
             string finalFullPath = ipcStorage.GetFullPath(IPC_FILENAME);
@@ -143,19 +152,22 @@ namespace osu.Game.Tournament.IPC
             {
                 File.WriteAllText(tmpFullPath, json);
                 File.Move(tmpFullPath, finalFullPath, overwrite: true);
+                return true;
             }
             catch (IOException e)
             {
                 Logger.Log($"[MultiplayerIPCWriter] Failed to write {IPC_FILENAME}: {e.Message}",
                     LoggingTarget.Runtime, LogLevel.Important);
+                return false;
             }
-            catch (System.UnauthorizedAccessException e)
+            catch (UnauthorizedAccessException e)
             {
                 // Per-tick writes can hit permission errors repeatedly (e.g. antivirus quarantine,
                 // read-only directory) — log at Important level so the operator notices, but don't
                 // let it tear down the scheduler.
                 Logger.Log($"[MultiplayerIPCWriter] Permission denied writing {IPC_FILENAME}: {e.Message}",
                     LoggingTarget.Runtime, LogLevel.Important);
+                return false;
             }
         }
 
