@@ -2,6 +2,8 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System.Collections.Immutable;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace osu.Game.Tournament.IPC
 {
@@ -26,6 +28,46 @@ namespace osu.Game.Tournament.IPC
             Team1Score: 0,
             Team2Score: 0,
             Users: ImmutableArray<IPCUserSnapshot>.Empty);
+
+        /// <summary>
+        /// Serializes a snapshot to the JSON schema documented in the design spec.
+        /// </summary>
+        public static string SerializeToJson(IPCSnapshot snap)
+        {
+            var users = new JArray();
+            foreach (var u in snap.Users)
+            {
+                var hits = new JObject();
+                foreach (var (key, count) in u.Hits)
+                    hits[key] = count;
+
+                users.Add(new JObject
+                {
+                    ["userId"] = u.UserId,
+                    ["teamId"] = u.TeamId,
+                    ["score"] = u.Score,
+                    ["combo"] = u.Combo,
+                    ["accuracy"] = u.Accuracy,
+                    ["hits"] = hits,
+                    ["gameplayTimeMs"] = u.GameplayTimeMs,
+                });
+            }
+
+            var root = new JObject
+            {
+                ["connected"] = snap.Connected,
+                ["roomId"] = snap.RoomId.HasValue ? new JValue(snap.RoomId.Value) : JValue.CreateNull(),
+                ["beatmapId"] = snap.BeatmapId.HasValue ? new JValue(snap.BeatmapId.Value) : JValue.CreateNull(),
+                ["scores"] = new JObject
+                {
+                    ["team1"] = snap.Team1Score,
+                    ["team2"] = snap.Team2Score,
+                },
+                ["users"] = users,
+            };
+
+            return root.ToString(Formatting.None);
+        }
     }
 
     /// <summary>
