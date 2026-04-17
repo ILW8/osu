@@ -19,6 +19,7 @@ using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets;
+using osu.Game.Rulesets.Scoring;
 using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.IPC
@@ -113,9 +114,16 @@ namespace osu.Game.Tournament.IPC
         private LadderInfo ladder { get; set; } = null!;
 
         /// <summary>
-        /// Tracks the latest total score per user from spectator frame headers.
+        /// Tracks the latest gameplay snapshot per user from spectator frame bundles.
+        /// Exposed via <see cref="UserStates"/> for the IPC writer.
         /// </summary>
-        private readonly Dictionary<int, long> userScores = new Dictionary<int, long>();
+        private readonly Dictionary<int, UserGameplayState> userStates = new Dictionary<int, UserGameplayState>();
+
+        /// <summary>
+        /// Read-only view of the latest per-user gameplay state. Mutated on the update thread
+        /// from spectator frame bundles; consumers should also read from the update thread.
+        /// </summary>
+        internal IReadOnlyDictionary<int, UserGameplayState> UserStates => userStates;
 
         /// <summary>
         /// The set of user IDs we are currently watching via the spectator client.
@@ -284,7 +292,7 @@ namespace osu.Game.Tournament.IPC
                 isConnected.Value = false;
                 connectedRoomId.Value = null;
                 lastBeatmapId = 0;
-                userScores.Clear();
+                userStates.Clear();
 
                 // Reset bindables to defaults.
                 Beatmap.Value = null;
@@ -304,7 +312,7 @@ namespace osu.Game.Tournament.IPC
                 return;
 
             spectatorClient.WatchUser(userId);
-            userScores[userId] = 0;
+            userStates[userId] = UserGameplayState.Empty;
         }
 
         private void stopWatchingUser(int userId)
@@ -313,7 +321,7 @@ namespace osu.Game.Tournament.IPC
                 return;
 
             spectatorClient.StopWatchingUser(userId);
-            userScores.Remove(userId);
+            userStates.Remove(userId);
         }
 
         #region Spectator event handlers
@@ -325,7 +333,16 @@ namespace osu.Game.Tournament.IPC
 
             Schedule(() =>
             {
-                userScores[userId] = bundle.Header.TotalScore;
+                var header = bundle.Header;
+                double gameplayTime = bundle.Frames.Count > 0 ? bundle.Frames[^1].Time : 0;
+
+                userStates[userId] = new UserGameplayState(
+                    Score: header.TotalScore,
+                    Combo: header.Combo,
+                    Accuracy: header.Accuracy,
+                    Hits: new Dictionary<HitResult, int>(header.Statistics),
+                    GameplayTimeMs: gameplayTime);
+
                 updateTeamScores();
             });
         }
@@ -350,9 +367,9 @@ namespace osu.Game.Tournament.IPC
             {
                 State.Value = TourneyState.WaitingForClients;
 
-                // Reset scores for the new round.
-                foreach (int userId in userScores.Keys.ToArray())
-                    userScores[userId] = 0;
+                // Reset per-user state for the new round. Users are re-populated on next frame.
+                foreach (int userId in userStates.Keys.ToArray())
+                    userStates[userId] = UserGameplayState.Empty;
 
                 Score1.Value = 0;
                 Score2.Value = 0;
@@ -550,13 +567,13 @@ namespace osu.Game.Tournament.IPC
                 if (user.MatchState is not TeamVersusUserState teamState)
                     continue;
 
-                if (!userScores.TryGetValue(user.UserID, out long score))
+                if (!userStates.TryGetValue(user.UserID, out var state))
                     continue;
 
                 if (teamState.TeamID == 0)
-                    team0Score += score;
+                    team0Score += state.Score;
                 else
-                    team1Score += score;
+                    team1Score += state.Score;
             }
 
             Score1.Value = team0Score;
