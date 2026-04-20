@@ -21,7 +21,9 @@ This spec adds a *producer* side: when the overlay runs in multiplayer-spectatin
 **Out of scope:**
 - Changes to the stable (file-based) IPC path. When `UseMultiplayerSpectating` is false, the writer is not instantiated at all; the stable client remains the producer.
 - A line-based / stable-compatible format. Consumers of this new output will be written against the JSON schema defined here, not the legacy line-per-value format.
-- Mods, chat channel, or tourney state fields. The operator uses a separate referee client for state; mods and channel are not required by the target consumers.
+- Mods and chat channel fields — not required by target consumers.
+
+> **Update 2026-04-18:** `state` (the `TourneyState` enum from the overlay's gameplay screen) was added in a follow-up — see §4. Consumers asked for it so they could switch overlays between idle / waiting / playing / ranking without a second file.
 
 ## 3. Output file
 
@@ -38,6 +40,7 @@ The `ipc/` subdirectory is created on first write if missing. The tournament bas
   "connected": true,
   "roomId": 12345,
   "beatmapId": 87654,
+  "state": "playing",
   "scores": { "team1": 1234567, "team2": 1200000 },
   "users": [
     {
@@ -60,6 +63,7 @@ Field semantics:
 | `connected` | bool | `true` iff `MultiplayerMatchIPCInfo.IsConnected` is true. |
 | `roomId` | long \| null | `ConnectedRoomId`, or the last-known room ID when disconnected after a prior connection (see §6). Null if never connected. |
 | `beatmapId` | int \| null | Online ID of the currently selected beatmap, or null if none. |
+| `state` | string | camelCased `TourneyState` name: `"initialising"`, `"idle"`, `"waitingForClients"`, `"playing"`, `"ranking"`. Tracks the overlay's gameplay-screen state so consumers can switch panels without polling a separate file. Preserved with the last-connected snapshot across a disconnect (§6); `"idle"` when no prior connection. |
 | `scores.team1` / `scores.team2` | long | Team totals, mirror `Score1` / `Score2` bindables. |
 | `users[]` | array | One entry per watched user. Order not guaranteed. |
 | `users[].userId` | int | osu! user ID. |
@@ -155,6 +159,7 @@ internal readonly record struct IPCSnapshot(
     bool Connected,
     long? RoomId,
     int? BeatmapId,
+    TourneyState State,
     long Team1Score,
     long Team2Score,
     ImmutableArray<IPCUserSnapshot> Users);

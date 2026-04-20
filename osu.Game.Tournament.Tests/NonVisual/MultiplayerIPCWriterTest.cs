@@ -42,8 +42,48 @@ namespace osu.Game.Tournament.Tests.NonVisual
 
                     Assert.That(parsed["connected"]!.Value<bool>(), Is.False);
                     Assert.That(parsed["roomId"]!.Type, Is.EqualTo(JTokenType.Null));
+                    Assert.That(parsed["state"]!.Value<string>(), Is.EqualTo("idle"));
                     Assert.That(parsed["users"]!.Type, Is.EqualTo(JTokenType.Array));
                     Assert.That(parsed["users"]!.HasValues, Is.False);
+                }
+                finally
+                {
+                    host.Exit();
+                }
+            }
+        }
+
+        [Test]
+        public void TestStateIsProjectedFromLiveInfo()
+        {
+            using (HeadlessGameHost host = new CleanRunHeadlessGameHost())
+            {
+                try
+                {
+                    var tournament = new TestTournament(runOnLoadComplete: () => seedMultiplayerBracket(host));
+                    LoadTournament(host, tournament);
+                    tournament.BracketLoadTask.WaitSafely();
+
+                    var ipcInfo = tournament.Dependencies.Get<MultiplayerMatchIPCInfo>();
+                    tournament.TestSchedule(() =>
+                    {
+                        ipcInfo.SetConnectedForTesting(true, roomId: 55555);
+                        ipcInfo.State.Value = TourneyState.Playing;
+                    });
+
+                    var storage = tournament.Dependencies.Get<Storage>();
+                    string fullPath = storage.GetFullPath(
+                        Path.Combine(MultiplayerIPCWriter.IPC_DIRECTORY, MultiplayerIPCWriter.IPC_FILENAME));
+
+                    WaitForOrAssert(() =>
+                    {
+                        try
+                        {
+                            var parsed = JObject.Parse(File.ReadAllText(fullPath));
+                            return parsed["state"]?.Value<string>() == "playing";
+                        }
+                        catch { return false; }
+                    }, "file did not reflect state change", 5000);
                 }
                 finally
                 {

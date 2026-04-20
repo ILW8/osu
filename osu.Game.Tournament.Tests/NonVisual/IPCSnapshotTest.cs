@@ -21,6 +21,7 @@ namespace osu.Game.Tournament.Tests.NonVisual
             Assert.That(a.Connected, Is.False);
             Assert.That(a.RoomId, Is.Null);
             Assert.That(a.BeatmapId, Is.Null);
+            Assert.That(a.State, Is.EqualTo(TourneyState.Idle));
             Assert.That(a.Team1Score, Is.EqualTo(0));
             Assert.That(a.Team2Score, Is.EqualTo(0));
             Assert.That(a.Users, Is.Empty);
@@ -38,8 +39,8 @@ namespace osu.Game.Tournament.Tests.NonVisual
                 Hits: ImmutableDictionary<string, int>.Empty.Add("great", 5),
                 GameplayTimeMs: 1234));
 
-            var a = new IPCSnapshot(true, 1, 2, 1000, 0, users);
-            var b = new IPCSnapshot(true, 1, 2, 1000, 0, users);
+            var a = new IPCSnapshot(true, 1, 2, TourneyState.Playing, 1000, 0, users);
+            var b = new IPCSnapshot(true, 1, 2, TourneyState.Playing, 1000, 0, users);
 
             Assert.That(a, Is.EqualTo(b));
         }
@@ -47,8 +48,8 @@ namespace osu.Game.Tournament.Tests.NonVisual
         [Test]
         public void TestSnapshotsWithDifferentScoresAreNotEqual()
         {
-            var a = new IPCSnapshot(true, 1, 2, 1000, 0, ImmutableArray<IPCUserSnapshot>.Empty);
-            var b = new IPCSnapshot(true, 1, 2, 1001, 0, ImmutableArray<IPCUserSnapshot>.Empty);
+            var a = new IPCSnapshot(true, 1, 2, TourneyState.Playing, 1000, 0, ImmutableArray<IPCUserSnapshot>.Empty);
+            var b = new IPCSnapshot(true, 1, 2, TourneyState.Playing, 1001, 0, ImmutableArray<IPCUserSnapshot>.Empty);
 
             Assert.That(a, Is.Not.EqualTo(b));
         }
@@ -62,6 +63,7 @@ namespace osu.Game.Tournament.Tests.NonVisual
             Assert.That(parsed["connected"]!.Value<bool>(), Is.False);
             Assert.That(parsed["roomId"]!.Type, Is.EqualTo(Newtonsoft.Json.Linq.JTokenType.Null));
             Assert.That(parsed["beatmapId"]!.Type, Is.EqualTo(Newtonsoft.Json.Linq.JTokenType.Null));
+            Assert.That(parsed["state"]!.Value<string>(), Is.EqualTo("idle"));
             Assert.That(parsed["scores"]!["team1"]!.Value<long>(), Is.EqualTo(0));
             Assert.That(parsed["scores"]!["team2"]!.Value<long>(), Is.EqualTo(0));
             Assert.That(parsed["users"]!.Type, Is.EqualTo(Newtonsoft.Json.Linq.JTokenType.Array));
@@ -84,13 +86,14 @@ namespace osu.Game.Tournament.Tests.NonVisual
                     .Add("miss", 2),
                 GameplayTimeMs: 47320);
 
-            var snap = new IPCSnapshot(true, 12345, 87654, 1234567, 1200000, ImmutableArray.Create(user));
+            var snap = new IPCSnapshot(true, 12345, 87654, TourneyState.WaitingForClients, 1234567, 1200000, ImmutableArray.Create(user));
             string json = IPCSnapshot.SerializeToJson(snap);
             var parsed = Newtonsoft.Json.Linq.JObject.Parse(json);
 
             Assert.That(parsed["connected"]!.Value<bool>(), Is.True);
             Assert.That(parsed["roomId"]!.Value<long>(), Is.EqualTo(12345));
             Assert.That(parsed["beatmapId"]!.Value<int>(), Is.EqualTo(87654));
+            Assert.That(parsed["state"]!.Value<string>(), Is.EqualTo("waitingForClients"));
             Assert.That(parsed["scores"]!["team1"]!.Value<long>(), Is.EqualTo(1234567));
             Assert.That(parsed["scores"]!["team2"]!.Value<long>(), Is.EqualTo(1200000));
 
@@ -129,7 +132,7 @@ namespace osu.Game.Tournament.Tests.NonVisual
             IPCSnapshot? last = null;
             bool wasConnected = false;
 
-            var live = new IPCSnapshot(true, 77, 99, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
+            var live = new IPCSnapshot(true, 77, 99, TourneyState.Playing, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
             var output = IPCSnapshot.ComputeOutput(live, ref last, ref wasConnected);
 
             Assert.That(output, Is.EqualTo(live));
@@ -143,7 +146,7 @@ namespace osu.Game.Tournament.Tests.NonVisual
             IPCSnapshot? last = null;
             bool wasConnected = false;
 
-            var live = new IPCSnapshot(true, 77, 99, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
+            var live = new IPCSnapshot(true, 77, 99, TourneyState.Playing, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
             IPCSnapshot.ComputeOutput(live, ref last, ref wasConnected);
 
             var output = IPCSnapshot.ComputeOutput(IPCSnapshot.EmptyDisconnected, ref last, ref wasConnected);
@@ -162,12 +165,12 @@ namespace osu.Game.Tournament.Tests.NonVisual
             IPCSnapshot? last = null;
             bool wasConnected = false;
 
-            var sessionA = new IPCSnapshot(true, 77, 99, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
+            var sessionA = new IPCSnapshot(true, 77, 99, TourneyState.Playing, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
             IPCSnapshot.ComputeOutput(sessionA, ref last, ref wasConnected);
             IPCSnapshot.ComputeOutput(IPCSnapshot.EmptyDisconnected, ref last, ref wasConnected);
             // last now holds sessionA; wasConnected is false.
 
-            var sessionB = new IPCSnapshot(true, 88, 111, 0, 0, ImmutableArray<IPCUserSnapshot>.Empty);
+            var sessionB = new IPCSnapshot(true, 88, 111, TourneyState.Idle, 0, 0, ImmutableArray<IPCUserSnapshot>.Empty);
             var output = IPCSnapshot.ComputeOutput(sessionB, ref last, ref wasConnected);
 
             Assert.That(output, Is.EqualTo(sessionB));
@@ -182,10 +185,10 @@ namespace osu.Game.Tournament.Tests.NonVisual
             IPCSnapshot? last = null;
             bool wasConnected = false;
 
-            var tick1 = new IPCSnapshot(true, 77, 99, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
+            var tick1 = new IPCSnapshot(true, 77, 99, TourneyState.Playing, 100, 200, ImmutableArray<IPCUserSnapshot>.Empty);
             IPCSnapshot.ComputeOutput(tick1, ref last, ref wasConnected);
 
-            var tick2 = new IPCSnapshot(true, 77, 99, 150, 250, ImmutableArray<IPCUserSnapshot>.Empty);
+            var tick2 = new IPCSnapshot(true, 77, 99, TourneyState.Playing, 150, 250, ImmutableArray<IPCUserSnapshot>.Empty);
             var output = IPCSnapshot.ComputeOutput(tick2, ref last, ref wasConnected);
 
             Assert.That(output, Is.EqualTo(tick2));

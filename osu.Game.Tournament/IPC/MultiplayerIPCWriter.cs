@@ -132,6 +132,7 @@ namespace osu.Game.Tournament.IPC
             bool connected = ipcInfo.IsConnected.Value;
             long? roomId = ipcInfo.ConnectedRoomId.Value;
             int? beatmapId = ipcInfo.Beatmap.Value?.OnlineID;
+            TourneyState tourneyState = ipcInfo.State.Value;
             long score1 = ipcInfo.Score1.Value;
             long score2 = ipcInfo.Score2.Value;
 
@@ -166,6 +167,7 @@ namespace osu.Game.Tournament.IPC
                 Connected: connected,
                 RoomId: roomId,
                 BeatmapId: beatmapId,
+                State: tourneyState,
                 Team1Score: score1,
                 Team2Score: score2,
                 Users: users.ToImmutable());

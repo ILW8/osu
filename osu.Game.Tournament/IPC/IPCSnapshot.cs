@@ -17,6 +17,7 @@ namespace osu.Game.Tournament.IPC
         bool Connected,
         long? RoomId,
         int? BeatmapId,
+        TourneyState State,
         long Team1Score,
         long Team2Score,
         ImmutableArray<IPCUserSnapshot> Users)
@@ -25,6 +26,7 @@ namespace osu.Game.Tournament.IPC
             Connected: false,
             RoomId: null,
             BeatmapId: null,
+            State: TourneyState.Idle,
             Team1Score: 0,
             Team2Score: 0,
             Users: ImmutableArray<IPCUserSnapshot>.Empty);
@@ -58,6 +60,7 @@ namespace osu.Game.Tournament.IPC
                 ["connected"] = snap.Connected,
                 ["roomId"] = snap.RoomId.HasValue ? new JValue(snap.RoomId.Value) : JValue.CreateNull(),
                 ["beatmapId"] = snap.BeatmapId.HasValue ? new JValue(snap.BeatmapId.Value) : JValue.CreateNull(),
+                ["state"] = stateToJson(snap.State),
                 ["scores"] = new JObject
                 {
                     ["team1"] = snap.Team1Score,
@@ -67,6 +70,14 @@ namespace osu.Game.Tournament.IPC
             };
 
             return root.ToString(Formatting.None);
+        }
+
+        // camelCase the TourneyState enum name: Idle → "idle", WaitingForClients → "waitingForClients".
+        // Consumers read this to decide whether to show gameplay HUD, ranking panel, etc.
+        private static string stateToJson(TourneyState state)
+        {
+            string name = state.ToString();
+            return char.ToLowerInvariant(name[0]) + name.Substring(1);
         }
 
         /// <summary>
