@@ -1,9 +1,11 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Immutable;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using osu.Game.Online.Multiplayer;
 
 namespace osu.Game.Tournament.IPC
 {
@@ -47,6 +49,8 @@ namespace osu.Game.Tournament.IPC
                 {
                     ["userId"] = u.UserId,
                     ["teamId"] = u.TeamId,
+                    ["state"] = enumNameToCamelCase(u.State),
+                    ["role"] = enumNameToCamelCase(u.Role),
                     ["score"] = u.Score,
                     ["combo"] = u.Combo,
                     ["accuracy"] = u.Accuracy,
@@ -60,7 +64,7 @@ namespace osu.Game.Tournament.IPC
                 ["connected"] = snap.Connected,
                 ["roomId"] = snap.RoomId.HasValue ? new JValue(snap.RoomId.Value) : JValue.CreateNull(),
                 ["beatmapId"] = snap.BeatmapId.HasValue ? new JValue(snap.BeatmapId.Value) : JValue.CreateNull(),
-                ["state"] = stateToJson(snap.State),
+                ["state"] = enumNameToCamelCase(snap.State),
                 ["scores"] = new JObject
                 {
                     ["team1"] = snap.Team1Score,
@@ -72,11 +76,12 @@ namespace osu.Game.Tournament.IPC
             return root.ToString(Formatting.None);
         }
 
-        // camelCase the TourneyState enum name: Idle → "idle", WaitingForClients → "waitingForClients".
-        // Consumers read this to decide whether to show gameplay HUD, ranking panel, etc.
-        private static string stateToJson(TourneyState state)
+        // camelCase an enum name: Idle → "idle", WaitingForClients → "waitingForClients".
+        // Shared across the room-level TourneyState and the per-user MultiplayerUserState /
+        // MultiplayerRoomUserRole enums so the JSON wire format stays consistent.
+        private static string enumNameToCamelCase<T>(T value) where T : struct, Enum
         {
-            string name = state.ToString();
+            string name = value.ToString();
             return char.ToLowerInvariant(name[0]) + name.Substring(1);
         }
 
@@ -115,11 +120,16 @@ namespace osu.Game.Tournament.IPC
     /// <summary>
     /// Per-user gameplay data included in an <see cref="IPCSnapshot"/>.
     /// <c>TeamId</c> is 1-indexed (internal <c>TeamVersusUserState.TeamID</c> + 1).
+    /// <c>State</c> mirrors <see cref="MultiplayerRoomUser.State"/> so consumers can tell active
+    /// round participants from idle / finished members. <c>Role</c> mirrors
+    /// <see cref="MultiplayerRoomUser.Role"/> so consumers can split referees out of <c>users[]</c>.
     /// <c>Hits</c> keys are lowercase <c>HitResult</c> enum names (values vary by ruleset).
     /// </summary>
     internal readonly record struct IPCUserSnapshot(
         int UserId,
         int TeamId,
+        MultiplayerUserState State,
+        MultiplayerRoomUserRole Role,
         long Score,
         int Combo,
         double Accuracy,

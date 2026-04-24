@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Tournament.IPC;
 
 namespace osu.Game.Tournament.Tests.NonVisual
@@ -33,6 +34,8 @@ namespace osu.Game.Tournament.Tests.NonVisual
             var users = ImmutableArray.Create(new IPCUserSnapshot(
                 UserId: 42,
                 TeamId: 1,
+                State: MultiplayerUserState.Playing,
+                Role: MultiplayerRoomUserRole.Player,
                 Score: 1000,
                 Combo: 10,
                 Accuracy: 0.95,
@@ -76,6 +79,8 @@ namespace osu.Game.Tournament.Tests.NonVisual
             var user = new IPCUserSnapshot(
                 UserId: 9876,
                 TeamId: 1,
+                State: MultiplayerUserState.Playing,
+                Role: MultiplayerRoomUserRole.Player,
                 Score: 612345,
                 Combo: 128,
                 Accuracy: 0.9821,
@@ -102,6 +107,8 @@ namespace osu.Game.Tournament.Tests.NonVisual
             var u0 = users[0]!;
             Assert.That(u0["userId"]!.Value<int>(), Is.EqualTo(9876));
             Assert.That(u0["teamId"]!.Value<int>(), Is.EqualTo(1));
+            Assert.That(u0["state"]!.Value<string>(), Is.EqualTo("playing"));
+            Assert.That(u0["role"]!.Value<string>(), Is.EqualTo("player"));
             Assert.That(u0["score"]!.Value<long>(), Is.EqualTo(612345));
             Assert.That(u0["combo"]!.Value<int>(), Is.EqualTo(128));
             Assert.That(u0["accuracy"]!.Value<double>(), Is.EqualTo(0.9821).Within(1e-9));

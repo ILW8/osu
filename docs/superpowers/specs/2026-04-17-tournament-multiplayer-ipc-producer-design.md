@@ -25,6 +25,8 @@ This spec adds a *producer* side: when the overlay runs in multiplayer-spectatin
 
 > **Update 2026-04-18:** `state` (the `TourneyState` enum from the overlay's gameplay screen) was added in a follow-up — see §4. Consumers asked for it so they could switch overlays between idle / waiting / playing / ranking without a second file.
 
+> **Update 2026-04-24:** per-user `state` and `role` fields were added in a follow-up — see §4. Consumers asked for them so they could distinguish actual players, spectators (when surfaced), and referees sharing the `users[]` array without adding another file. Filter behavior in `BuildUserSnapshots` is unchanged: users without a `UserGameplayState` entry are still skipped, so true spectators excluded at watch time continue to be absent; referees remain present (they pass the non-spectating watch filter and carry an `Empty` gameplay entry).
+
 ## 3. Output file
 
 **Path:** `<osu-base>/tournaments/<current-tournament>/ipc/ipc.json`
@@ -46,6 +48,8 @@ The `ipc/` subdirectory is created on first write if missing. The tournament bas
     {
       "userId": 9876,
       "teamId": 1,
+      "state": "playing",
+      "role": "player",
       "score": 612345,
       "combo": 128,
       "accuracy": 0.9821,
@@ -68,6 +72,8 @@ Field semantics:
 | `users[]` | array | One entry per watched user. Order not guaranteed. |
 | `users[].userId` | int | osu! user ID. |
 | `users[].teamId` | int | `1` or `2` for TeamVs rooms — the JSON output uses 1-indexed teams throughout so consumers never see the internal `0`/`1` `TeamVersusUserState.TeamID` value (computed as `TeamID + 1`). `0` for rooms without team state (head-to-head, battle-royale) so non-TeamVs users still surface in `users[]`. |
+| `users[].state` | string | camelCased `MultiplayerUserState`: `"idle"`, `"ready"`, `"waitingForLoad"`, `"loaded"`, `"readyForGameplay"`, `"playing"`, `"finishedPlay"`, `"results"`, `"spectating"`. Mirrors `MultiplayerRoomUser.State` verbatim. Lets consumers distinguish participants of the current round (`waitingForLoad` / `loaded` / `readyForGameplay` / `playing`) from idle / finished / spectating members. |
+| `users[].role` | string | camelCased `MultiplayerRoomUserRole`: `"player"` or `"referee"`. Mirrors `MultiplayerRoomUser.Role`. Referees are emitted alongside players because they pass the non-spectating watch filter; consumers split them out via this field. |
 | `users[].score` | long | `FrameHeader.TotalScore` of the most recent frame. |
 | `users[].combo` | int | `FrameHeader.Combo` of the most recent frame. |
 | `users[].accuracy` | double | `FrameHeader.Accuracy`, 0.0–1.0. |
@@ -167,6 +173,8 @@ internal readonly record struct IPCSnapshot(
 internal readonly record struct IPCUserSnapshot(
     int UserId,
     int TeamId,              // 1-indexed — see §4
+    MultiplayerUserState State,
+    MultiplayerRoomUserRole Role,
     long Score,
     int Combo,
     double Accuracy,

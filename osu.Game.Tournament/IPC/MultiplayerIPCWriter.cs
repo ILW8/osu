@@ -186,6 +186,8 @@ namespace osu.Game.Tournament.IPC
                 users.Add(new IPCUserSnapshot(
                     UserId: roomUser.UserID,
                     TeamId: teamId,
+                    State: roomUser.State,
+                    Role: roomUser.Role,
                     Score: state.Score,
                     Combo: state.Combo,
                     Accuracy: state.Accuracy,
