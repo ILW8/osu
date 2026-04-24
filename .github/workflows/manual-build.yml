@@ -1,0 +1,89 @@
+on:
+  workflow_dispatch:
+
+name: Build local release
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  build:
+    name: Build
+    runs-on: Ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - linux-x64
+          - win-x64
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install .NET 8.0.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Create publish package (push)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: dotnet publish -c Release -r ${{matrix.os}} --self-contained -warnaserror osu.Desktop.slnf
+
+      - name: Create publish package (tagged release)
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        env:
+          REF: ${{ github.ref }}
+        run: dotnet publish -c Release -r ${{matrix.os}} /p:Version="${REF##*/}" --self-contained -warnaserror osu.Desktop.slnf
+
+      - name: tar releases (for *nix platforms)
+        if: ${{ !startsWith(matrix.os, 'win') }}
+        run: tar -cvzf ${{matrix.os}}.tar.gz osu.Desktop/bin/Release/net8.0/${{matrix.os}}
+
+      - uses: actions/upload-artifact@v4
+        name: upload artifacts (windows)
+        if: ${{ startsWith(matrix.os, 'win') }}
+        with:
+          name: ${{matrix.os}}
+          path: osu.Desktop/bin/Release/net8.0/${{matrix.os}}
+
+      - uses: actions/upload-artifact@v4
+        name: upload artifacts (*nix)
+        if: ${{ !startsWith(matrix.os, 'win') }}
+        with:
+          name: ${{matrix.os}}
+          path: ${{matrix.os}}.tar.gz
+
+  release:
+    name: Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: Ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: zip releases
+        run: |
+          for directory in */
+          do
+            zip -r "${directory::-1}.zip" "$directory"
+          done
+
+      - name: delete artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            win-x64
+            linux-x64
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: ./*
