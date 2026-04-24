@@ -114,9 +114,9 @@ namespace osu.Game.Tournament.IPC
 
     /// <summary>
     /// Per-user gameplay data included in an <see cref="IPCSnapshot"/>.
+    /// <c>TeamId</c> is 1-indexed (internal <c>TeamVersusUserState.TeamID</c> + 1).
+    /// <c>Hits</c> keys are lowercase <c>HitResult</c> enum names (values vary by ruleset).
     /// </summary>
-    /// <param name="TeamId">1-indexed team number (internal <c>TeamVersusUserState.TeamID</c> + 1).</param>
-    /// <param name="Hits">Lowercase <c>HitResult</c> enum name → count. Keys vary by ruleset.</param>
     internal readonly record struct IPCUserSnapshot(
         int UserId,
         int TeamId,
