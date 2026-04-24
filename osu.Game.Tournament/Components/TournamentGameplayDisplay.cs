@@ -320,42 +320,15 @@ namespace osu.Game.Tournament.Components
             // reset to MIN_SLOTS each time gameplay restarts.
             playerAreasContainer.Capacity.BindTo(VisibleSlotCount);
 
-            // Snapshot room users, truncated to MAX_SLOTS. When the room name follows the
-            // convention "ACRONYM: (Name 1) vs (Name 2)", reserve slot 0 for the user whose
-            // username matches Name 1 (left) and slot 1 for Name 2 (right). Remaining users
-            // fill the rest in room join order.
             snapshottedSlots.Clear();
             if (multiplayerClient.Room != null)
             {
-                var pendingUsers = new List<MultiplayerRoomUser>(multiplayerClient.Room.Users);
-
-                if (tryParseRoomNameTeams(multiplayerClient.Room.Settings.Name) is { } names)
+                foreach (var kvp in BuildSnapshottedSlots(
+                             multiplayerClient.Room.Users,
+                             multiplayerClient.Room.Settings.Name,
+                             TournamentPlayerGrid.MAX_SLOTS))
                 {
-                    reserveSlot(names.p1, 0);
-                    reserveSlot(names.p2, 1);
-                }
-
-                int nextSlot = 0;
-                foreach (var user in pendingUsers)
-                {
-                    while (nextSlot < TournamentPlayerGrid.MAX_SLOTS && snapshottedSlots.ContainsValue(nextSlot))
-                        nextSlot++;
-
-                    if (nextSlot >= TournamentPlayerGrid.MAX_SLOTS)
-                        break;
-
-                    snapshottedSlots[user.UserID] = nextSlot++;
-                }
-
-                void reserveSlot(string username, int slotIndex)
-                {
-                    var matched = pendingUsers.FirstOrDefault(u =>
-                        string.Equals(u.User?.Username, username, StringComparison.OrdinalIgnoreCase));
-                    if (matched == null)
-                        return;
-
-                    snapshottedSlots[matched.UserID] = slotIndex;
-                    pendingUsers.Remove(matched);
+                    snapshottedSlots[kvp.Key] = kvp.Value;
                 }
             }
 
@@ -510,6 +483,70 @@ namespace osu.Game.Tournament.Components
 
             return (match.Groups["p1"].Value.Trim(), match.Groups["p2"].Value.Trim());
         }
+
+        /// <summary>
+        /// Projects room users into a user-id→slot-index map for the spectator grid, truncated
+        /// to <paramref name="maxSlots"/>. Only users whose state indicates participation in
+        /// the current round (<see cref="MultiplayerUserState.WaitingForLoad"/>,
+        /// <see cref="MultiplayerUserState.Loaded"/>, <see cref="MultiplayerUserState.ReadyForGameplay"/>,
+        /// <see cref="MultiplayerUserState.Playing"/>) are given a slot. Users in
+        /// <see cref="MultiplayerUserState.Idle"/>, <see cref="MultiplayerUserState.Ready"/>,
+        /// <see cref="MultiplayerUserState.Spectating"/>, or post-play states never produce
+        /// gameplay frames for this round, and reserving a slot for them would leave the grid
+        /// rendering one fewer tile than the capacity slider reads. When <paramref name="roomName"/>
+        /// follows the convention <c>"ACRONYM: (Name 1) vs (Name 2)"</c>, slot 0 is reserved for
+        /// the user whose username matches Name 1 (left) and slot 1 for Name 2 (right).
+        /// Remaining users fill from the first free slot in room join order. Pure function of
+        /// its arguments — extracted for unit testing.
+        /// </summary>
+        internal static Dictionary<int, int> BuildSnapshottedSlots(
+            IEnumerable<MultiplayerRoomUser> roomUsers,
+            string? roomName,
+            int maxSlots)
+        {
+            var pendingUsers = roomUsers
+                               .Where(u => isParticipatingInCurrentRound(u.State))
+                               .ToList();
+
+            var result = new Dictionary<int, int>();
+
+            if (tryParseRoomNameTeams(roomName) is { } names)
+            {
+                reserveSlot(names.p1, 0);
+                reserveSlot(names.p2, 1);
+            }
+
+            int nextSlot = 0;
+            foreach (var user in pendingUsers)
+            {
+                while (nextSlot < maxSlots && result.ContainsValue(nextSlot))
+                    nextSlot++;
+
+                if (nextSlot >= maxSlots)
+                    break;
+
+                result[user.UserID] = nextSlot++;
+            }
+
+            return result;
+
+            void reserveSlot(string username, int slotIndex)
+            {
+                var matched = pendingUsers.FirstOrDefault(u =>
+                    string.Equals(u.User?.Username, username, StringComparison.OrdinalIgnoreCase));
+                if (matched == null)
+                    return;
+
+                result[matched.UserID] = slotIndex;
+                pendingUsers.Remove(matched);
+            }
+        }
+
+        private static bool isParticipatingInCurrentRound(MultiplayerUserState state)
+            => state == MultiplayerUserState.WaitingForLoad
+               || state == MultiplayerUserState.Loaded
+               || state == MultiplayerUserState.ReadyForGameplay
+               || state == MultiplayerUserState.Playing;
 
         private void beatmapsChanged(IRealmCollection<BeatmapSetInfo> items, ChangeSet? changes)
         {
