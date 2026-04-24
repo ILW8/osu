@@ -1,8 +1,10 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using NUnit.Framework;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Testing;
 using osu.Game.Tournament.Components;
@@ -107,6 +109,77 @@ namespace osu.Game.Tournament.Tests.Components
                     }
                     return true;
                 });
+        }
+
+        [Test]
+        public void TestTilesBeyondCapacityAreHidden()
+        {
+            AddStep("resize grid", () =>
+            {
+                grid.RelativeSizeAxes = Axes.None;
+                grid.Size = new osuTK.Vector2(800, 600);
+            });
+            AddStep("add 4 tiles", () =>
+            {
+                for (int i = 0; i < 4; i++)
+                    grid.Add(new Box { RelativeSizeAxes = Axes.Both, Colour = Colour4.Orange }, i);
+            });
+            AddStep("set capacity to 2", () => grid.Capacity.Value = 2);
+            AddUntilStep("first two cells visible, rest hidden",
+                () =>
+                {
+                    var tileCells = grid.ChildrenOfType<Container>().Where(c => c.Masking).ToList();
+                    return tileCells.Count == 4 &&
+                           tileCells[0].Alpha == 1 && tileCells[1].Alpha == 1 &&
+                           tileCells[2].Alpha == 0 && tileCells[3].Alpha == 0;
+                });
+        }
+
+        [Test]
+        public void TestCapacityIncreaseRevealsTiles()
+        {
+            AddStep("resize grid", () =>
+            {
+                grid.RelativeSizeAxes = Axes.None;
+                grid.Size = new osuTK.Vector2(800, 600);
+            });
+            AddStep("add 4 tiles at capacity 2", () =>
+            {
+                grid.Capacity.Value = 2;
+                for (int i = 0; i < 4; i++)
+                    grid.Add(new Box { RelativeSizeAxes = Axes.Both, Colour = Colour4.Orange }, i);
+            });
+            AddStep("raise capacity to 4", () => grid.Capacity.Value = 4);
+            AddUntilStep("all four cells visible",
+                () =>
+                {
+                    var tileCells = grid.ChildrenOfType<Container>().Where(c => c.Masking).ToList();
+                    return tileCells.Count == 4 && tileCells.All(c => c.Alpha == 1);
+                });
+        }
+
+        [Test]
+        public void TestManualInteractive()
+        {
+            for (int n = 2; n <= 8; n++)
+            {
+                int captured = n;
+                AddStep($"fill {captured} tiles", () =>
+                {
+                    grid.Clear();
+                    grid.Capacity.Value = captured;
+                    for (int i = 0; i < captured; i++)
+                    {
+                        grid.Add(new Box
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = Colour4.FromHSV(i / 8f, 0.6f, 0.9f),
+                        }, i);
+                    }
+                });
+            }
+            AddStep("drag capacity down to 2", () => grid.Capacity.Value = 2);
+            AddStep("drag capacity up to 8", () => grid.Capacity.Value = 8);
         }
     }
 }
