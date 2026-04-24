@@ -16,6 +16,7 @@ using osu.Framework.Input;
 using osu.Framework.IO.Stores;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online;
@@ -88,6 +89,9 @@ namespace osu.Game.Tournament
             dependencies.CacheAs(new StableInfo(storage));
 
             beatmapCache = dependencies.Get<BeatmapLookupCache>();
+
+            // Adopt the skin currently selected in the regular client (persisted via OsuSetting.Skin in the shared config file).
+            SkinManager.SetSkinFromConfiguration(LocalConfig.GetBindable<string>(OsuSetting.Skin).Value);
         }
 
         protected override void LoadComplete()
