@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using osu.Framework.Allocation;
 using osu.Framework.Audio;
 using osu.Framework.Bindables;
@@ -319,15 +320,42 @@ namespace osu.Game.Tournament.Components
             // reset to MIN_SLOTS each time gameplay restarts.
             playerAreasContainer.Capacity.BindTo(VisibleSlotCount);
 
-            // Snapshot room users in server order (room join order), truncated to MAX_SLOTS.
+            // Snapshot room users, truncated to MAX_SLOTS. When the room name follows the
+            // convention "ACRONYM: (Name 1) vs (Name 2)", reserve slot 0 for the user whose
+            // username matches Name 1 (left) and slot 1 for Name 2 (right). Remaining users
+            // fill the rest in room join order.
             snapshottedSlots.Clear();
             if (multiplayerClient.Room != null)
             {
-                int slot = 0;
-                foreach (var user in multiplayerClient.Room.Users)
+                var pendingUsers = new List<MultiplayerRoomUser>(multiplayerClient.Room.Users);
+
+                if (tryParseRoomNameTeams(multiplayerClient.Room.Settings.Name) is { } names)
                 {
-                    if (slot >= TournamentPlayerGrid.MAX_SLOTS) break;
-                    snapshottedSlots[user.UserID] = slot++;
+                    reserveSlot(names.p1, 0);
+                    reserveSlot(names.p2, 1);
+                }
+
+                int nextSlot = 0;
+                foreach (var user in pendingUsers)
+                {
+                    while (nextSlot < TournamentPlayerGrid.MAX_SLOTS && snapshottedSlots.ContainsValue(nextSlot))
+                        nextSlot++;
+
+                    if (nextSlot >= TournamentPlayerGrid.MAX_SLOTS)
+                        break;
+
+                    snapshottedSlots[user.UserID] = nextSlot++;
+                }
+
+                void reserveSlot(string username, int slotIndex)
+                {
+                    var matched = pendingUsers.FirstOrDefault(u =>
+                        string.Equals(u.User?.Username, username, StringComparison.OrdinalIgnoreCase));
+                    if (matched == null)
+                        return;
+
+                    snapshottedSlots[matched.UserID] = slotIndex;
+                    pendingUsers.Remove(matched);
                 }
             }
 
@@ -465,6 +493,23 @@ namespace osu.Game.Tournament.Components
             => clock?.IsRunning == true && !clock.IsCatchingUp && !clock.WaitingOnFrames;
 
         #endregion
+
+        private static readonly Regex room_name_teams_regex = new Regex(
+            @"^[^:]*:\s*\((?<p1>.+?)\)\s+vs\s+\((?<p2>.+?)\)\s*$",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static (string p1, string p2)? tryParseRoomNameTeams(string? roomName)
+        {
+            if (string.IsNullOrWhiteSpace(roomName))
+                return null;
+
+            var match = room_name_teams_regex.Match(roomName);
+
+            if (!match.Success)
+                return null;
+
+            return (match.Groups["p1"].Value.Trim(), match.Groups["p2"].Value.Trim());
+        }
 
         private void beatmapsChanged(IRealmCollection<BeatmapSetInfo> items, ChangeSet? changes)
         {
