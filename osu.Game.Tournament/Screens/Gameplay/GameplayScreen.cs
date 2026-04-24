@@ -150,6 +150,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Child = gameplayDisplay,
                 });
 
+                controlPanel.Add(new SettingsSlider<int>
+                {
+                    LabelText = "Visible players",
+                    Current = gameplayDisplay.VisibleSlotCount,
+                    KeyboardStep = 1,
+                });
+
                 multiplayerIpc.IsConnected.BindValueChanged(connected =>
                 {
                     if (connected.NewValue)

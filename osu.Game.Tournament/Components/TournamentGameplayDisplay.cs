@@ -29,7 +29,9 @@ namespace osu.Game.Tournament.Components
 {
     /// <summary>
     /// Embeds actual gameplay rendering from a multiplayer room into the tournament overlay.
-    /// Displays two <see cref="PlayerArea"/> instances side by side (one per team).
+    /// Arranges 2–8 <see cref="PlayerArea"/> instances in a <see cref="TournamentPlayerGrid"/>,
+    /// with a runtime <see cref="VisibleSlotCount"/> cap and a one-time snapshot of
+    /// <c>room.Users</c> fixing each user's slot index for the match.
     /// Manages the spectator lifecycle: watches user states, resolves beatmaps,
     /// creates scores, and handles clock synchronization.
     /// </summary>
