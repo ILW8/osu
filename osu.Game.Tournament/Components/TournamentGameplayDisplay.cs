@@ -15,7 +15,6 @@ using osu.Framework.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Database;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays;
 using osu.Game.Rulesets;
@@ -64,7 +63,7 @@ namespace osu.Game.Tournament.Components
         /// so that the master clock's <see cref="IGameplayClock"/> is in the DI chain
         /// (matching <see cref="MultiSpectatorScreen"/>'s hierarchy).
         /// </summary>
-        private Container playerAreasContainer = null!;
+        private TournamentPlayerGrid playerAreasContainer = null!;
 
         private MasterGameplayClockContainer? masterClockContainer;
         private SpectatorSyncManager? syncManager;
@@ -74,6 +73,24 @@ namespace osu.Game.Tournament.Components
         /// so the sync manager only tracks clocks that have actual scores loaded.
         /// </summary>
         private readonly Dictionary<int, PlayerArea> playerAreas = new Dictionary<int, PlayerArea>();
+
+        /// <summary>
+        /// Snapshot of <c>room.Users</c> taken when gameplay begins. Maps user ID to a
+        /// stable slot index in <see cref="playerAreasContainer"/>. Users that join
+        /// after the snapshot is taken receive no slot.
+        /// </summary>
+        private readonly Dictionary<int, int> snapshottedSlots = new Dictionary<int, int>();
+
+        /// <summary>
+        /// The number of player tiles the operator wants to show simultaneously.
+        /// Bound to <see cref="TournamentPlayerGrid.Capacity"/> in
+        /// <see cref="setupGameplayInfrastructure"/>. Runtime only — not persisted.
+        /// </summary>
+        public BindableInt VisibleSlotCount { get; } = new BindableInt(TournamentPlayerGrid.MIN_SLOTS)
+        {
+            MinValue = TournamentPlayerGrid.MIN_SLOTS,
+            MaxValue = TournamentPlayerGrid.MAX_SLOTS,
+        };
 
         private readonly IBindableDictionary<int, SpectatorState> watchedStates = new BindableDictionary<int, SpectatorState>();
         private readonly Dictionary<int, SpectatorGameplayState> gameplayStates = new Dictionary<int, SpectatorGameplayState>();
@@ -263,18 +280,9 @@ namespace osu.Game.Tournament.Components
             if (playerAreas.ContainsKey(userId))
                 return;
 
-            // Determine which side this user should be on based on team.
-            var roomUser = multiplayerClient.Room?.Users.FirstOrDefault(u => u.UserID == userId);
-            bool isTeamRed = roomUser?.MatchState is TeamVersusUserState teamState && teamState.TeamID == 0;
-
-            // Check if the target side already has a player.
-            bool sideOccupied = playerAreas.Values.Any(a =>
-            {
-                bool areaIsLeft = a.Parent?.Anchor == Anchor.TopLeft;
-                return areaIsLeft == isTeamRed;
-            });
-
-            if (sideOccupied)
+            // Only users present at snapshot time receive a slot. Users who join the
+            // multiplayer room after gameplay began do not appear in the grid.
+            if (!snapshottedSlots.TryGetValue(userId, out int slotIndex))
                 return;
 
             // Create managed clock and PlayerArea on-demand so the sync manager
@@ -285,16 +293,7 @@ namespace osu.Game.Tournament.Components
             };
 
             playerAreas[userId] = playerArea;
-            playerAreasContainer.Add(new Container
-            {
-                RelativeSizeAxes = Axes.Both,
-                Width = 0.5f,
-                Masking = true,
-                Anchor = isTeamRed ? Anchor.TopLeft : Anchor.TopRight,
-                Origin = isTeamRed ? Anchor.TopLeft : Anchor.TopRight,
-                Child = playerArea,
-            });
-
+            playerAreasContainer.Add(playerArea, slotIndex);
             playerArea.LoadScore(gameplayState.Score);
 
             // Bind audio adjustments from the first loaded player to keep the master clock in sync.
@@ -312,7 +311,23 @@ namespace osu.Game.Tournament.Components
             if (!workingBeatmap.TrackLoaded)
                 workingBeatmap.LoadTrack();
 
-            playerAreasContainer = new Container { RelativeSizeAxes = Axes.Both };
+            playerAreasContainer = new TournamentPlayerGrid { RelativeSizeAxes = Axes.Both };
+            // Bind the grid's Capacity TO the display's VisibleSlotCount (not the other way
+            // around) so the operator's slider value survives a grid rebuild instead of being
+            // reset to MIN_SLOTS each time gameplay restarts.
+            playerAreasContainer.Capacity.BindTo(VisibleSlotCount);
+
+            // Snapshot room users in server order (room join order), truncated to MAX_SLOTS.
+            snapshottedSlots.Clear();
+            if (multiplayerClient.Room != null)
+            {
+                int slot = 0;
+                foreach (var user in multiplayerClient.Room.Users)
+                {
+                    if (slot >= TournamentPlayerGrid.MAX_SLOTS) break;
+                    snapshottedSlots[user.UserID] = slot++;
+                }
+            }
 
             masterClockContainer = new MasterGameplayClockContainer(workingBeatmap, 0)
             {
@@ -344,6 +359,7 @@ namespace osu.Game.Tournament.Components
 
             gameplayActive = false;
             gameplayStates.Clear();
+            snapshottedSlots.Clear();
 
             if (syncManager != null)
             {
@@ -359,6 +375,8 @@ namespace osu.Game.Tournament.Components
 
             // Stop the master clock before clearing so the beatmap track doesn't keep playing.
             masterClockContainer?.Stop();
+
+            playerAreasContainer.Capacity.UnbindFrom(VisibleSlotCount);
 
             playerAreas.Clear();
             gameplayContainer.Clear();
