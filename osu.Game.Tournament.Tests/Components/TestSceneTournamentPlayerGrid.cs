@@ -3,6 +3,7 @@
 
 using NUnit.Framework;
 using osu.Framework.Graphics;
+using osu.Framework.Graphics.Shapes;
 using osu.Game.Tournament.Components;
 
 namespace osu.Game.Tournament.Tests.Components
@@ -28,6 +29,49 @@ namespace osu.Game.Tournament.Tests.Components
                 () => grid.Capacity.Value == TournamentPlayerGrid.MIN_SLOTS);
             AddAssert("MIN_SLOTS is 2", () => TournamentPlayerGrid.MIN_SLOTS == 2);
             AddAssert("MAX_SLOTS is 8", () => TournamentPlayerGrid.MAX_SLOTS == 8);
+        }
+
+        [Test]
+        public void TestAddInsertsTileAtSlot()
+        {
+            Drawable? tile = null;
+            AddStep("add tile at slot 0", () =>
+            {
+                tile = new Box { RelativeSizeAxes = Axes.Both, Colour = Colour4.Red };
+                grid.Add(tile, 0);
+            });
+            AddAssert("tile is a descendant of grid", () => tile!.FindClosestParent<TournamentPlayerGrid>() == grid);
+        }
+
+        [Test]
+        public void TestRemoveDisposesTileAtSlot()
+        {
+            Drawable? tile = null;
+            AddStep("add tile at slot 3", () =>
+            {
+                tile = new Box { RelativeSizeAxes = Axes.Both, Colour = Colour4.Green };
+                grid.Add(tile, 3);
+            });
+            AddAssert("tile is in grid", () => tile!.FindClosestParent<TournamentPlayerGrid>() == grid);
+            AddStep("remove slot 3", () => grid.Remove(3));
+            AddAssert("tile is no longer in grid", () => tile!.FindClosestParent<TournamentPlayerGrid>() == null);
+        }
+
+        [Test]
+        public void TestClearRemovesAllTiles()
+        {
+            Drawable? a = null;
+            Drawable? b = null;
+            AddStep("add two tiles", () =>
+            {
+                a = new Box { RelativeSizeAxes = Axes.Both, Colour = Colour4.Red };
+                b = new Box { RelativeSizeAxes = Axes.Both, Colour = Colour4.Blue };
+                grid.Add(a, 0);
+                grid.Add(b, 1);
+            });
+            AddStep("clear", () => grid.Clear());
+            AddAssert("tile a gone", () => a!.FindClosestParent<TournamentPlayerGrid>() == null);
+            AddAssert("tile b gone", () => b!.FindClosestParent<TournamentPlayerGrid>() == null);
         }
     }
 }

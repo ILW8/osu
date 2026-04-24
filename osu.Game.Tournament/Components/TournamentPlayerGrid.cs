@@ -33,17 +33,33 @@ namespace osu.Game.Tournament.Components
 
         public void Add(Drawable tile, int slotIndex)
         {
-            // Implementation in Task 2.
+            if (slotIndex < 0 || slotIndex >= MAX_SLOTS)
+                throw new System.ArgumentOutOfRangeException(nameof(slotIndex),
+                    $"Slot index must be in [0, {MAX_SLOTS}).");
+            if (slots[slotIndex] != null)
+                throw new System.InvalidOperationException($"Slot {slotIndex} is already occupied.");
+
+            slots[slotIndex] = tile;
+            content.Add(tile);
         }
 
         public void Remove(int slotIndex)
         {
-            // Implementation in Task 2.
+            if (slotIndex < 0 || slotIndex >= MAX_SLOTS)
+                return;
+            var tile = slots[slotIndex];
+            if (tile == null)
+                return;
+
+            slots[slotIndex] = null;
+            content.Remove(tile, disposeImmediately: true);
         }
 
         public void Clear()
         {
-            // Implementation in Task 2.
+            for (int i = 0; i < MAX_SLOTS; i++)
+                slots[i] = null;
+            content.Clear(disposeChildren: true);
         }
     }
 }
