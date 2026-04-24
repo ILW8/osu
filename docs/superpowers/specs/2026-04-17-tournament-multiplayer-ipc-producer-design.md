@@ -67,7 +67,7 @@ Field semantics:
 | `scores.team1` / `scores.team2` | long | Team totals, mirror `Score1` / `Score2` bindables. |
 | `users[]` | array | One entry per watched user. Order not guaranteed. |
 | `users[].userId` | int | osu! user ID. |
-| `users[].teamId` | int | 1 or 2 — the JSON output uses 1-indexed teams throughout so consumers never see the internal 0/1 `TeamVersusUserState.TeamID` value. Computed as `TeamID + 1`. Users without a team state are omitted. |
+| `users[].teamId` | int | `1` or `2` for TeamVs rooms — the JSON output uses 1-indexed teams throughout so consumers never see the internal `0`/`1` `TeamVersusUserState.TeamID` value (computed as `TeamID + 1`). `0` for rooms without team state (head-to-head, battle-royale) so non-TeamVs users still surface in `users[]`. |
 | `users[].score` | long | `FrameHeader.TotalScore` of the most recent frame. |
 | `users[].combo` | int | `FrameHeader.Combo` of the most recent frame. |
 | `users[].accuracy` | double | `FrameHeader.Accuracy`, 0.0–1.0. |

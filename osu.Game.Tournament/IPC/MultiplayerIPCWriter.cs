@@ -2,6 +2,7 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
@@ -136,32 +137,9 @@ namespace osu.Game.Tournament.IPC
             long score1 = ipcInfo.Score1.Value;
             long score2 = ipcInfo.Score2.Value;
 
-            var users = ImmutableArray.CreateBuilder<IPCUserSnapshot>();
-
-            if (connected && multiplayerClient.Room is { } room)
-            {
-                foreach (var roomUser in room.Users)
-                {
-                    if (roomUser.MatchState is not TeamVersusUserState teamState)
-                        continue;
-
-                    if (!ipcInfo.UserStates.TryGetValue(roomUser.UserID, out var state))
-                        continue;
-
-                    var hitsBuilder = ImmutableDictionary.CreateBuilder<string, int>();
-                    foreach (var (result, count) in state.Hits)
-                        hitsBuilder[result.ToString().ToLowerInvariant()] = count;
-
-                    users.Add(new IPCUserSnapshot(
-                        UserId: roomUser.UserID,
-                        TeamId: teamState.TeamID + 1, // 1-indexed per schema
-                        Score: state.Score,
-                        Combo: state.Combo,
-                        Accuracy: state.Accuracy,
-                        Hits: hitsBuilder.ToImmutable(),
-                        GameplayTimeMs: state.GameplayTimeMs));
-                }
-            }
+            ImmutableArray<IPCUserSnapshot> users = connected && multiplayerClient.Room is { } room
+                ? BuildUserSnapshots(room.Users, ipcInfo.UserStates)
+                : ImmutableArray<IPCUserSnapshot>.Empty;
 
             return new IPCSnapshot(
                 Connected: connected,
@@ -170,7 +148,52 @@ namespace osu.Game.Tournament.IPC
                 State: tourneyState,
                 Team1Score: score1,
                 Team2Score: score2,
-                Users: users.ToImmutable());
+                Users: users);
+        }
+
+        /// <summary>
+        /// Projects room users + their gameplay states into the serialized <see cref="IPCUserSnapshot"/>
+        /// shape. Users are included regardless of room match type: users with a
+        /// <see cref="TeamVersusUserState"/> get a 1-indexed <c>teamId</c> (internal <c>TeamID + 1</c>);
+        /// users without team state (head-to-head, battle-royale) get <c>teamId = 0</c> as a
+        /// "no team affiliation" sentinel so downstream consumers can distinguish them.
+        /// Users missing a gameplay state entry are skipped (no frames received yet).
+        /// Pure function of its arguments — extracted for unit testing.
+        /// </summary>
+        internal static ImmutableArray<IPCUserSnapshot> BuildUserSnapshots(
+            IEnumerable<MultiplayerRoomUser> roomUsers,
+            IReadOnlyDictionary<int, UserGameplayState> userStates)
+        {
+            var users = ImmutableArray.CreateBuilder<IPCUserSnapshot>();
+
+            foreach (var roomUser in roomUsers)
+            {
+                if (!userStates.TryGetValue(roomUser.UserID, out var state))
+                    continue;
+
+                // TeamVs rooms carry team membership via TeamVersusUserState; other room types
+                // (head-to-head, battle-royale) leave MatchState null. Emit 0 as a "no team"
+                // sentinel so downstream consumers can distinguish them from the 1-indexed
+                // TeamVs values (1 / 2).
+                int teamId = roomUser.MatchState is TeamVersusUserState teamState
+                    ? teamState.TeamID + 1
+                    : 0;
+
+                var hitsBuilder = ImmutableDictionary.CreateBuilder<string, int>();
+                foreach (var (result, count) in state.Hits)
+                    hitsBuilder[result.ToString().ToLowerInvariant()] = count;
+
+                users.Add(new IPCUserSnapshot(
+                    UserId: roomUser.UserID,
+                    TeamId: teamId,
+                    Score: state.Score,
+                    Combo: state.Combo,
+                    Accuracy: state.Accuracy,
+                    Hits: hitsBuilder.ToImmutable(),
+                    GameplayTimeMs: state.GameplayTimeMs));
+            }
+
+            return users.ToImmutable();
         }
 
         /// <summary>
