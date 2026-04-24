@@ -4,6 +4,7 @@
 using NUnit.Framework;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Testing;
 using osu.Game.Tournament.Components;
 
 namespace osu.Game.Tournament.Tests.Components
@@ -72,6 +73,40 @@ namespace osu.Game.Tournament.Tests.Components
             AddStep("clear", () => grid.Clear());
             AddAssert("tile a gone", () => a!.FindClosestParent<TournamentPlayerGrid>() == null);
             AddAssert("tile b gone", () => b!.FindClosestParent<TournamentPlayerGrid>() == null);
+        }
+
+        [TestCase(2, 2, 1)]
+        [TestCase(3, 2, 2)]
+        [TestCase(4, 2, 2)]
+        [TestCase(5, 3, 2)]
+        [TestCase(6, 3, 2)]
+        [TestCase(7, 4, 2)]
+        [TestCase(8, 4, 2)]
+        public void TestLayoutDimensionsForVisibleCount(int tileCount, int expectedCols, int expectedRows)
+        {
+            AddStep($"resize grid to 800x600", () =>
+            {
+                grid.RelativeSizeAxes = Axes.None;
+                grid.Size = new osuTK.Vector2(800, 600);
+            });
+            AddStep($"set capacity to {tileCount}", () => grid.Capacity.Value = tileCount);
+            AddStep($"add {tileCount} tiles", () =>
+            {
+                for (int i = 0; i < tileCount; i++)
+                    grid.Add(new Box { RelativeSizeAxes = Axes.Both, Colour = Colour4.Orange }, i);
+            });
+            AddUntilStep("tiles sized for layout",
+                () =>
+                {
+                    float expectedTileWidth = 800f / expectedCols;
+                    float expectedTileHeight = 600f / expectedRows;
+                    foreach (var child in grid.ChildrenOfType<Box>())
+                    {
+                        if (System.Math.Abs(child.DrawWidth - expectedTileWidth) > 1f) return false;
+                        if (System.Math.Abs(child.DrawHeight - expectedTileHeight) > 1f) return false;
+                    }
+                    return true;
+                });
         }
     }
 }

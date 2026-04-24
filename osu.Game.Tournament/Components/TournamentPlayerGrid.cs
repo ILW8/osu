@@ -23,7 +23,7 @@ namespace osu.Game.Tournament.Components
             MaxValue = MAX_SLOTS,
         };
 
-        private readonly Drawable?[] slots = new Drawable?[MAX_SLOTS];
+        private readonly Container?[] slotContainers = new Container?[MAX_SLOTS];
         private readonly Container content;
 
         public TournamentPlayerGrid()
@@ -36,30 +36,99 @@ namespace osu.Game.Tournament.Components
             if (slotIndex < 0 || slotIndex >= MAX_SLOTS)
                 throw new System.ArgumentOutOfRangeException(nameof(slotIndex),
                     $"Slot index must be in [0, {MAX_SLOTS}).");
-            if (slots[slotIndex] != null)
+            if (slotContainers[slotIndex] != null)
                 throw new System.InvalidOperationException($"Slot {slotIndex} is already occupied.");
 
-            slots[slotIndex] = tile;
-            content.Add(tile);
+            var cell = new Container
+            {
+                Child = tile,
+                Masking = true,
+            };
+            slotContainers[slotIndex] = cell;
+            content.Add(cell);
         }
 
         public void Remove(int slotIndex)
         {
             if (slotIndex < 0 || slotIndex >= MAX_SLOTS)
                 return;
-            var tile = slots[slotIndex];
-            if (tile == null)
+            var cell = slotContainers[slotIndex];
+            if (cell == null)
                 return;
 
-            slots[slotIndex] = null;
-            content.Remove(tile, disposeImmediately: true);
+            slotContainers[slotIndex] = null;
+            content.Remove(cell, disposeImmediately: true);
         }
 
         public void Clear()
         {
             for (int i = 0; i < MAX_SLOTS; i++)
-                slots[i] = null;
+                slotContainers[i] = null;
             content.Clear(disposeChildren: true);
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            int visibleCount = 0;
+            for (int i = 0; i < MAX_SLOTS; i++)
+            {
+                if (slotContainers[i] != null && i < Capacity.Value)
+                    visibleCount++;
+            }
+
+            (int cols, int rows) = dimensionsFor(visibleCount);
+            if (cols == 0 || rows == 0)
+                return;
+
+            float cellWidth = DrawWidth / cols;
+            float cellHeight = DrawHeight / rows;
+
+            int cellIndex = 0;
+            for (int i = 0; i < MAX_SLOTS; i++)
+            {
+                var cell = slotContainers[i];
+                if (cell == null)
+                    continue;
+
+                if (i >= Capacity.Value)
+                {
+                    cell.Alpha = 0;
+                    continue;
+                }
+
+                int col = cellIndex % cols;
+                int row = cellIndex / cols;
+
+                cell.Alpha = 1;
+                cell.Size = new osuTK.Vector2(cellWidth, cellHeight);
+                cell.Position = new osuTK.Vector2(col * cellWidth, row * cellHeight);
+
+                cellIndex++;
+            }
+        }
+
+        private static (int cols, int rows) dimensionsFor(int visibleCount)
+        {
+            switch (visibleCount)
+            {
+                case 0:
+                    return (0, 0);
+                case 1:
+                case 2:
+                    return (2, 1);
+                case 3:
+                case 4:
+                    return (2, 2);
+                case 5:
+                case 6:
+                    return (3, 2);
+                case 7:
+                case 8:
+                default:
+                    return (4, 2);
+            }
         }
     }
 }
