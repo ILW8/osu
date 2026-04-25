@@ -204,18 +204,21 @@ namespace osu.Game.Tournament.IPC
                 multiplayerClient.UserJoined += onUserJoined;
                 multiplayerClient.UserLeft += onUserLeft;
                 multiplayerClient.UserKicked += onUserKicked;
+                multiplayerClient.UserStateChanged += onUserStateChanged;
                 multiplayerClient.GameplayAborted += onGameplayAborted;
 
                 spectatorClient.OnNewFrames += onNewFrames;
 
-                // Start watching all current users for spectator data.
+                // Start watching users who are already participating in the current round.
+                // Users in Idle/Ready/etc. will be picked up via UserStateChanged when they
+                // transition into a participating state.
                 Schedule(() =>
                 {
                     if (multiplayerClient.Room != null)
                     {
                         foreach (var user in multiplayerClient.Room.Users)
                         {
-                            if (user.State != MultiplayerUserState.Spectating)
+                            if (isParticipatingInCurrentRound(user.State))
                                 startWatchingUser(user.UserID);
                         }
 
@@ -281,6 +284,7 @@ namespace osu.Game.Tournament.IPC
             multiplayerClient.UserJoined -= onUserJoined;
             multiplayerClient.UserLeft -= onUserLeft;
             multiplayerClient.UserKicked -= onUserKicked;
+            multiplayerClient.UserStateChanged -= onUserStateChanged;
             multiplayerClient.GameplayAborted -= onGameplayAborted;
 
             try
@@ -389,7 +393,7 @@ namespace osu.Game.Tournament.IPC
                 {
                     foreach (var user in multiplayerClient.Room.Users)
                     {
-                        if (user.State != MultiplayerUserState.Spectating)
+                        if (isParticipatingInCurrentRound(user.State))
                             startWatchingUser(user.UserID);
                     }
                 }
@@ -420,7 +424,7 @@ namespace osu.Game.Tournament.IPC
         {
             Schedule(() =>
             {
-                if (user.State != MultiplayerUserState.Spectating)
+                if (isParticipatingInCurrentRound(user.State))
                     startWatchingUser(user.UserID);
             });
         }
@@ -434,6 +438,24 @@ namespace osu.Game.Tournament.IPC
         {
             Schedule(() => stopWatchingUser(user.UserID));
         }
+
+        private void onUserStateChanged(MultiplayerRoomUser user, MultiplayerUserState state)
+        {
+            // Pick up users transitioning into a participating state (e.g. Ready → WaitingForLoad
+            // when the host starts the round). startWatchingUser is idempotent for already-watched
+            // users. Watches are not torn down on transition out — keeping them alive across
+            // play→FinishedPlay→Results→Idle→Ready→WaitingForLoad avoids losing the final frame
+            // bundle (which carries final score/accuracy) and avoids re-subscription churn each
+            // round. Watches are released when the user leaves the room or on disconnect.
+            if (isParticipatingInCurrentRound(state))
+                Schedule(() => startWatchingUser(user.UserID));
+        }
+
+        private static bool isParticipatingInCurrentRound(MultiplayerUserState state)
+            => state == MultiplayerUserState.WaitingForLoad
+               || state == MultiplayerUserState.Loaded
+               || state == MultiplayerUserState.ReadyForGameplay
+               || state == MultiplayerUserState.Playing;
 
         #endregion
 
@@ -613,6 +635,7 @@ namespace osu.Game.Tournament.IPC
                 multiplayerClient.UserJoined -= onUserJoined;
                 multiplayerClient.UserLeft -= onUserLeft;
                 multiplayerClient.UserKicked -= onUserKicked;
+                multiplayerClient.UserStateChanged -= onUserStateChanged;
                 multiplayerClient.GameplayAborted -= onGameplayAborted;
             }
         }
