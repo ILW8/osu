@@ -117,7 +117,7 @@ namespace osu.Game.Screens.Play
 
             Children = new[]
             {
-                CreateFailingLayer(),
+                configuration.ShowFailingLayer ? CreateFailingLayer() : Empty(),
                 //Needs to be initialized before skinnable drawables.
                 judgementCountController = new JudgementCountController(),
                 clicksPerSecondController = new ClicksPerSecondController(),

@@ -39,5 +39,10 @@ namespace osu.Game.Screens.Play
         /// Whether the gameplay leaderboard should be shown.
         /// </summary>
         public bool ShowLeaderboard { get; set; }
+
+        /// <summary>
+        /// Whether the low-health red overlay (<see cref="HUD.FailingLayer"/>) should be shown.
+        /// </summary>
+        public bool ShowFailingLayer { get; set; } = true;
     }
 }

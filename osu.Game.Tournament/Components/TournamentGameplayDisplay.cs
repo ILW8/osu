@@ -290,7 +290,9 @@ namespace osu.Game.Tournament.Components
 
             // Create managed clock and PlayerArea on-demand so the sync manager
             // only tracks clocks that have actual scores to play.
-            var playerArea = new PlayerArea(userId, syncManager.CreateManagedClock())
+            // The low-health red overlay is suppressed because failed players are
+            // still rendered in the tournament grid and the tint is undesirable on broadcast.
+            var playerArea = new PlayerArea(userId, syncManager.CreateManagedClock(), showFailingLayer: false)
             {
                 RelativeSizeAxes = Axes.Both,
             };
