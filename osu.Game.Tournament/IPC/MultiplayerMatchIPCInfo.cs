@@ -590,7 +590,10 @@ namespace osu.Game.Tournament.IPC
             if (multiplayerClient.Room == null)
                 return;
 
-            var scores = MultiplayerScoreProjection.CalculateTeamScores(multiplayerClient.Room.Users, userStates);
+            var scores = MultiplayerScoreProjection.CalculateTeamScores(
+                multiplayerClient.Room.Users,
+                userStates,
+                multiplayerClient.Room.Settings.Name);
 
             Score1.Value = scores.Team1;
             Score2.Value = scores.Team2;

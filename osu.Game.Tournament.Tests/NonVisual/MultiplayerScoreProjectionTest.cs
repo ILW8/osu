@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using NUnit.Framework;
+using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Rulesets.Scoring;
@@ -51,6 +52,43 @@ namespace osu.Game.Tournament.Tests.NonVisual
 
             Assert.That(scores.Team1, Is.EqualTo(123456));
             Assert.That(scores.Team2, Is.EqualTo(654321));
+        }
+
+        [Test]
+        public void HeadToHeadScoresRespectRoomNameUserOrder()
+        {
+            var users = new[]
+            {
+                new MultiplayerRoomUser(userId: 3) { User = new APIUser { Id = 3, Username = "dev3" } },
+                new MultiplayerRoomUser(userId: 2) { User = new APIUser { Id = 2, Username = "dev2" } },
+            };
+
+            var scores = MultiplayerScoreProjection.CalculateTeamScores(users, new Dictionary<int, UserGameplayState>
+            {
+                [2] = stateWithScore(222222),
+                [3] = stateWithScore(333333),
+            }, "LGA: (dev2) vs (dev3)");
+
+            Assert.That(scores.Team1, Is.EqualTo(222222));
+            Assert.That(scores.Team2, Is.EqualTo(333333));
+        }
+
+        [Test]
+        public void RoomNameSlotsDoNotShiftWhenLeftUserHasNoGameplayState()
+        {
+            var users = new[]
+            {
+                new MultiplayerRoomUser(userId: 3) { User = new APIUser { Id = 3, Username = "dev3" } },
+                new MultiplayerRoomUser(userId: 2) { User = new APIUser { Id = 2, Username = "dev2" } },
+            };
+
+            var scores = MultiplayerScoreProjection.CalculateTeamScores(users, new Dictionary<int, UserGameplayState>
+            {
+                [3] = stateWithScore(333333),
+            }, "LGA: (dev2) vs (dev3)");
+
+            Assert.That(scores.Team1, Is.Zero);
+            Assert.That(scores.Team2, Is.EqualTo(333333));
         }
 
         [Test]
