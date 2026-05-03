@@ -15,7 +15,6 @@ using osu.Game.Database;
 using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
-using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
 using osu.Game.Online.Spectator;
 using osu.Game.Rulesets;
@@ -591,25 +590,10 @@ namespace osu.Game.Tournament.IPC
             if (multiplayerClient.Room == null)
                 return;
 
-            long team0Score = 0;
-            long team1Score = 0;
+            var scores = MultiplayerScoreProjection.CalculateTeamScores(multiplayerClient.Room.Users, userStates);
 
-            foreach (var user in multiplayerClient.Room.Users)
-            {
-                if (user.MatchState is not TeamVersusUserState teamState)
-                    continue;
-
-                if (!userStates.TryGetValue(user.UserID, out var state))
-                    continue;
-
-                if (teamState.TeamID == 0)
-                    team0Score += state.Score;
-                else
-                    team1Score += state.Score;
-            }
-
-            Score1.Value = team0Score;
-            Score2.Value = team1Score;
+            Score1.Value = scores.Team1;
+            Score2.Value = scores.Team2;
         }
 
         #endregion
