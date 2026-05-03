@@ -333,7 +333,7 @@ namespace osu.Game.Rulesets.Osu
                 new StatisticItem("Timing Distribution", () => new HitEventTimingDistributionGraph(timedHitEvents)
                 {
                     RelativeSizeAxes = Axes.X,
-                    Height = 250
+                    Height = 150
                 }, true),
                 new StatisticItem("Accuracy Heatmap", () => new AccuracyHeatmap(score, playableBeatmap)
                 {
