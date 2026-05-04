@@ -92,6 +92,7 @@ namespace osu.Game.Tournament.Components
             multiplayerIpc.IsConnected.BindValueChanged(connected =>
             {
                 connectButton.Text = connected.NewValue ? "Disconnect" : "Connect";
+                reconnectButton.Enabled.Value = connected.NewValue;
                 statusText.Text = connected.NewValue
                     ? $"Connected (Room {multiplayerIpc.ConnectedRoomId.Value})"
                     : "Disconnected";
