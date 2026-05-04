@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using osu.Framework.Allocation;
@@ -17,6 +18,7 @@ using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Overlays;
 using osu.Game.Overlays.Settings;
 using osu.Game.Rulesets;
+using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osuTK;
@@ -92,9 +94,19 @@ namespace osu.Game.Tournament.Screens.Setup
 
             var fileBasedIpc = ipc as FileBasedIPC;
 
-            TourneyButton restartButton;
+            var restartButton = new TourneyButton
+            {
+                RelativeSizeAxes = Axes.X,
+                Text = "Save and restart to apply",
+                Alpha = LadderInfo.UseMultiplayerSpectating.Value != isCurrentlyMultiplayer ? 1 : 0,
+                Action = () =>
+                {
+                    game.SaveChanges();
+                    game.AttemptExit();
+                },
+            };
 
-            fillFlow.Children = new Drawable[]
+            var children = new List<Drawable>
             {
                 new LabelledSwitchButton
                 {
@@ -102,17 +114,14 @@ namespace osu.Game.Tournament.Screens.Setup
                     Description = "When enabled, the overlay connects to a multiplayer room for match data instead of reading from the stable client's IPC files.",
                     Current = LadderInfo.UseMultiplayerSpectating,
                 },
-                restartButton = new TourneyButton
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Text = "Save and restart to apply",
-                    Alpha = LadderInfo.UseMultiplayerSpectating.Value != isCurrentlyMultiplayer ? 1 : 0,
-                    Action = () =>
-                    {
-                        game.SaveChanges();
-                        game.AttemptExit();
-                    },
-                },
+                restartButton,
+            };
+
+            if (ipc is MultiplayerMatchIPCInfo multiplayerIpc)
+                children.Add(new MultiplayerRoomConnectionControls(multiplayerIpc));
+
+            children.AddRange(new Drawable[]
+            {
                 new ActionableInfo
                 {
                     Label = "Current IPC source",
@@ -221,7 +230,9 @@ namespace osu.Game.Tournament.Screens.Setup
                     Current = LadderInfo.VolumeEffect,
                     KeyboardStep = 0.01f,
                 },
-            };
+            });
+
+            fillFlow.Children = children;
 
             LadderInfo.UseMultiplayerSpectating.BindValueChanged(v =>
             {

@@ -7,10 +7,8 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
-using osu.Framework.Logging;
 using osu.Framework.Threading;
 using osu.Game.Graphics;
-using osu.Game.Graphics.UserInterface;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
@@ -195,140 +193,11 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private void addMultiplayerControls(MultiplayerMatchIPCInfo multiplayerIpc)
         {
-            OsuTextBox roomIdTextBox = null!;
-            OsuPasswordTextBox passwordTextBox = null!;
-            TourneyButton connectButton;
-            TournamentSpriteText statusText;
-
-            void performConnectionToggle()
-            {
-                if (multiplayerIpc.IsConnected.Value)
-                {
-                    multiplayerIpc.Disconnect().FireAndForget();
-                }
-                else
-                {
-                    if (!long.TryParse(roomIdTextBox.Text, out long roomId))
-                    {
-                        Logger.Log("[GameplayScreen] Invalid room ID", LoggingTarget.Runtime, LogLevel.Error);
-                        return;
-                    }
-
-                    string? password = string.IsNullOrEmpty(passwordTextBox.Text) ? null : passwordTextBox.Text;
-                    multiplayerIpc.Connect(roomId, password).FireAndForget();
-                }
-            }
-
             controlPanel.AddRange(new Drawable[]
             {
                 new ControlPanel.Spacer(),
-                new TournamentSpriteText
-                {
-                    Text = "Multiplayer Room",
-                    Font = OsuFont.GetFont(weight: FontWeight.Bold, size: 16),
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                },
-                roomIdTextBox = new OsuTextBox
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Height = 30,
-                    PlaceholderText = "Room ID",
-                    TabbableContentContainer = controlPanel,
-                },
-                passwordTextBox = new OsuPasswordTextBox
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Height = 30,
-                    PlaceholderText = "Password (optional)",
-                    TabbableContentContainer = controlPanel,
-                },
-                connectButton = new TourneyButton
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Text = "Connect",
-                    Action = performConnectionToggle,
-                },
-                statusText = new TournamentSpriteText
-                {
-                    Text = "Disconnected",
-                    Font = OsuFont.GetFont(size: 12),
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    Colour = OsuColour.Gray(0.6f),
-                },
+                new MultiplayerRoomConnectionControls(multiplayerIpc),
             });
-
-            roomIdTextBox.OnCommit += (_, _) => performConnectionToggle();
-            passwordTextBox.OnCommit += (_, _) => performConnectionToggle();
-
-            multiplayerIpc.IsConnected.BindValueChanged(connected =>
-            {
-                connectButton.Text = connected.NewValue ? "Disconnect" : "Connect";
-                statusText.Text = connected.NewValue
-                    ? $"Connected (Room {multiplayerIpc.ConnectedRoomId.Value})"
-                    : "Disconnected";
-                statusText.Colour = connected.NewValue ? Colour4.LightGreen : OsuColour.Gray(0.6f);
-            }, true);
-
-            multiplayerIpc.ConnectionError.BindValueChanged(error =>
-            {
-                if (error.NewValue != null)
-                {
-                    statusText.Text = error.NewValue;
-                    statusText.Colour = Colour4.OrangeRed;
-                }
-            });
-
-            TextFlowContainer inviteText;
-            TourneyButton acceptButton;
-            TourneyButton dismissButton;
-
-            controlPanel.AddRange(new Drawable[]
-            {
-                inviteText = new TextFlowContainer
-                {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    Colour = Colour4.Orange,
-                    Alpha = 0,
-                },
-                acceptButton = new TourneyButton
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Text = "Accept invite",
-                    Alpha = 0,
-                    Action = multiplayerIpc.AcceptPendingInvite,
-                },
-                dismissButton = new TourneyButton
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Text = "Dismiss",
-                    Alpha = 0,
-                    Action = multiplayerIpc.DismissPendingInvite,
-                },
-            });
-
-            multiplayerIpc.PendingInvite.BindValueChanged(invite =>
-            {
-                if (invite.NewValue != null)
-                {
-                    inviteText.Clear();
-                    inviteText.AddText($"Invite to room {invite.NewValue.RoomId} ({invite.NewValue.InviterName})",
-                        s => s.Font = OsuFont.GetFont(size: 12));
-                    inviteText.FadeIn(200);
-                    acceptButton.FadeIn(200);
-                    dismissButton.FadeIn(200);
-                }
-                else
-                {
-                    inviteText.FadeOut(200);
-                    acceptButton.FadeOut(200);
-                    dismissButton.FadeOut(200);
-                }
-            }, true);
         }
 
         private void addVolumeControls()
