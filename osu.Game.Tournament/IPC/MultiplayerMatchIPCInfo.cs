@@ -44,6 +44,8 @@ namespace osu.Game.Tournament.IPC
 
         private readonly Bindable<long?> connectedRoomId = new Bindable<long?>();
 
+        private string? connectedRoomPassword;
+
         /// <summary>
         /// A user-facing error message from the last failed connection attempt, or null if no error.
         /// </summary>
@@ -227,6 +229,7 @@ namespace osu.Game.Tournament.IPC
                     }
 
                     connectedRoomId.Value = roomId;
+                    connectedRoomPassword = password;
                     isConnected.Value = true;
 
                     Logger.Log($"[MultiplayerMatchIPCInfo] Connected to room {roomId}", LoggingTarget.Network);
@@ -243,6 +246,26 @@ namespace osu.Game.Tournament.IPC
                 Schedule(() => connectionError.Value = errorMessage);
                 await Disconnect().ConfigureAwait(false);
             }
+        }
+
+        /// <summary>
+        /// Disconnects from the current multiplayer room, then reconnects to the same room after a delay.
+        /// </summary>
+        /// <param name="delayMilliseconds">The delay between disconnecting and reconnecting.</param>
+        public async Task Reconnect(int delayMilliseconds = 500)
+        {
+            long? roomId = connectedRoomId.Value;
+            string? password = connectedRoomPassword;
+
+            if (roomId == null)
+            {
+                Schedule(() => connectionError.Value = "No room to reconnect to");
+                return;
+            }
+
+            await Disconnect().ConfigureAwait(false);
+            await Task.Delay(delayMilliseconds).ConfigureAwait(false);
+            await Connect(roomId.Value, password).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -304,6 +327,7 @@ namespace osu.Game.Tournament.IPC
 
                 isConnected.Value = false;
                 connectedRoomId.Value = null;
+                connectedRoomPassword = null;
                 lastBeatmapId = 0;
                 userStates.Clear();
 
