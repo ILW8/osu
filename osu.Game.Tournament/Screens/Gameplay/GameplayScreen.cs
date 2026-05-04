@@ -195,10 +195,29 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private void addMultiplayerControls(MultiplayerMatchIPCInfo multiplayerIpc)
         {
-            OsuTextBox roomIdTextBox;
-            OsuPasswordTextBox passwordTextBox;
+            OsuTextBox roomIdTextBox = null!;
+            OsuPasswordTextBox passwordTextBox = null!;
             TourneyButton connectButton;
             TournamentSpriteText statusText;
+
+            void performConnectionToggle()
+            {
+                if (multiplayerIpc.IsConnected.Value)
+                {
+                    multiplayerIpc.Disconnect().FireAndForget();
+                }
+                else
+                {
+                    if (!long.TryParse(roomIdTextBox.Text, out long roomId))
+                    {
+                        Logger.Log("[GameplayScreen] Invalid room ID", LoggingTarget.Runtime, LogLevel.Error);
+                        return;
+                    }
+
+                    string? password = string.IsNullOrEmpty(passwordTextBox.Text) ? null : passwordTextBox.Text;
+                    multiplayerIpc.Connect(roomId, password).FireAndForget();
+                }
+            }
 
             controlPanel.AddRange(new Drawable[]
             {
@@ -215,35 +234,20 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     RelativeSizeAxes = Axes.X,
                     Height = 30,
                     PlaceholderText = "Room ID",
+                    TabbableContentContainer = controlPanel,
                 },
                 passwordTextBox = new OsuPasswordTextBox
                 {
                     RelativeSizeAxes = Axes.X,
                     Height = 30,
                     PlaceholderText = "Password (optional)",
+                    TabbableContentContainer = controlPanel,
                 },
                 connectButton = new TourneyButton
                 {
                     RelativeSizeAxes = Axes.X,
                     Text = "Connect",
-                    Action = () =>
-                    {
-                        if (multiplayerIpc.IsConnected.Value)
-                        {
-                            multiplayerIpc.Disconnect().FireAndForget();
-                        }
-                        else
-                        {
-                            if (!long.TryParse(roomIdTextBox.Text, out long roomId))
-                            {
-                                Logger.Log("[GameplayScreen] Invalid room ID", LoggingTarget.Runtime, LogLevel.Error);
-                                return;
-                            }
-
-                            string? password = string.IsNullOrEmpty(passwordTextBox.Text) ? null : passwordTextBox.Text;
-                            multiplayerIpc.Connect(roomId, password).FireAndForget();
-                        }
-                    }
+                    Action = performConnectionToggle,
                 },
                 statusText = new TournamentSpriteText
                 {
@@ -254,6 +258,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Colour = OsuColour.Gray(0.6f),
                 },
             });
+
+            roomIdTextBox.OnCommit += (_, _) => performConnectionToggle();
+            passwordTextBox.OnCommit += (_, _) => performConnectionToggle();
 
             multiplayerIpc.IsConnected.BindValueChanged(connected =>
             {
