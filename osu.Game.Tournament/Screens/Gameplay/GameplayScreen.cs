@@ -155,22 +155,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     KeyboardStep = 1,
                 });
 
+                foreach (var child in chroma.Children.OfType<ChromaArea>())
+                    child.Hide();
+
                 multiplayerIpc.IsConnected.BindValueChanged(connected =>
                 {
                     if (connected.NewValue)
-                    {
-                        // Hide chroma key areas, show gameplay display.
-                        foreach (var child in chroma.Children.OfType<ChromaArea>())
-                            child.FadeOut(200);
                         gameplayDisplay.FadeIn(200);
-                    }
                     else
-                    {
-                        // Show chroma key areas, hide gameplay display.
                         gameplayDisplay.FadeOut(200);
-                        foreach (var child in chroma.Children.OfType<ChromaArea>())
-                            child.FadeIn(200);
-                    }
                 }, true);
 
                 // Add volume sliders for multiplayer spectating.
