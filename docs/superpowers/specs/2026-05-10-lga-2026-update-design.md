@@ -359,9 +359,11 @@ Adopt PR #36200's `RoundRow` layout: shrink `# of Bans` from 0.33f width to 0.24
 
 ## 5. Phase 2 — Per-map mod params + per-user mods in IPC + LM/FreeMod display
 
+This phase relies on lazer's existing `ModIcon` infrastructure (`osu.Game/Rulesets/UI/ModIcon.cs`) for all customized-mod rendering — both the DT/HT speed-multiplier display and the "this mod has customized settings" indicator. No bespoke chip rendering, no `FormatModParameter` helper. The spec ships per-map mod *storage* and the round-editor input plus the existing-icon rendering, plus per-user mod plumbing through IPC.
+
 ### 5.1 `RoundBeatmap.ModParameters` — structured per-map mod settings
 
-Extend `RoundBeatmap` with a free-form key/value bag. The map's `Mods` string ("DT", "LM", "OG", etc.) is the bracket; `ModParameters` describes the *settings* of the mods active on this map.
+Extend `RoundBeatmap` with a settings bag aligned to lazer's `APIMod.Settings` shape. The map's `Mods` string ("DT", "LM", "OG", etc.) is the bracket; `ModParameters` describes the *settings* of the mods active on this map.
 
 ```csharp
 public class RoundBeatmap
@@ -371,45 +373,79 @@ public class RoundBeatmap
     public string SlotName = string.Empty;
 
     // NEW. Map of lazer-mod acronym → setting name → value.
-    // Example for a 1.6× DT map:  { "DT": { "speed_change": 1.6 } }
-    // Example for a Deflate(starting size 1.6):  { "DF": { "starting_size": 1.6 } }
-    public Dictionary<string, Dictionary<string, double>> ModParameters
-        = new Dictionary<string, Dictionary<string, double>>();
+    // Mirrors APIMod.Settings (Dictionary<string, object>) so values are interoperable
+    // with lazer's mod-construction path: see Mod.CopyAdjustedSetting / APIMod.ToMod.
+    // Example for a 1.5× DT map:        { "DT": { "speed_change": 1.5 } }
+    // Example for Deflate (start 1.6):  { "DF": { "starting_size": 1.6 } }
+    public Dictionary<string, Dictionary<string, object>> ModParameters
+        = new Dictionary<string, Dictionary<string, object>>();
 
     [JsonProperty("BeatmapInfo")]
     public TournamentBeatmap? Beatmap;
 }
 ```
 
-Why nested dict + `double`:
-- A flat `Dictionary<string, double>` collides on shared setting names (e.g. two mods both having `speed_change`). Nesting by acronym scopes them.
-- All current LGA settings of interest (DT speed, Deflate starting size) are numeric. If a future tournament needs string/bool settings, widen to `object`. **Open consideration:** widen to `object` now to avoid a v2 migration; cost is uglier serialization. Default to `double` for v1; revisit if needed.
+Using `object` (not `double`) keeps the shape interchangeable with `APIMod.Settings`, so the helper that constructs a `Mod` instance with these settings (§5.2) doesn't need a numeric-only path. Newtonsoft round-trips nested `Dictionary<string, object>` natively in `bracket.json`.
 
-`bracket.json` is JSON-serialized via Newtonsoft; the nested dict round-trips natively.
+**Round editor UI** (`RoundEditorScreen.BeatmapRow`): add a small "Mod settings" text field per beatmap row. Format: `acronym.setting=value` per line, e.g.
+```
+DT.speed_change=1.5
+DF.starting_size=1.6
+```
+Values parsed permissively: try `double.TryParse` first, fall back to `bool.TryParse`, fall back to raw string. Free-form is faster to ship than per-mod typed UI; iterate if clunky in practice.
 
-**Round editor UI** (`RoundEditorScreen.BeatmapRow`): add a small text field "Mod settings" per beatmap row. Format: `KEY=VALUE` per line, where `KEY` is `acronym.setting` (e.g. `DT.speed_change=1.6`). On commit, parse into `ModParameters`. Free-form is faster to ship than per-mod typed UI; if it's clunky in practice we can iterate.
+### 5.2 Render via lazer's `ModIcon` — DT rate inline, cog for everything else
 
-### 5.2 Render mod parameters in `SongBar` and `TournamentBeatmapPanel`
+Both rendering surfaces (`SongBar` and `TournamentBeatmapPanel`) use lazer's existing `ModIcon` for any map whose `RoundBeatmap` has `ModParameters` populated. The icon already handles both LGA display requirements out of the box:
 
-**`SongBar.refreshContent()`** — when the active beatmap matches a `RoundBeatmap` with `ModParameters`, append a parameter chip line below the existing mod row. Format: `DT 1.6×`, `Deflate ×1.6`. Implementation: wire `LadderInfo.CurrentMatch` → `Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == beatmap.OnlineID)?.ModParameters`. Render as a horizontal `FillFlowContainer` of small `TournamentSpriteText` chips; one per mod that has parameters.
+- **DT/HT speed multipliers** — `ModRateAdjust.ExtendedIconInformation` returns `"1.5×"` (or whatever the configured rate is). With `ModIcon.ShowExtendedInformation = true`, the icon paints the rate in the attached extender panel to the right of the hex.
+- **Other customized mods** (Deflate-with-non-default-starting-size, future LM mods, etc.) — `Mod.HasNonDefaultSettings` is true → `ModIcon.adjustmentMarker` is shown (cog-in-circle in the icon's top-right corner). No bespoke "Deflate ×1.6" chip; casters explain the specifics on stream.
 
-Format helper (in `SongBar`):
+**Helper** in a new `osu.Game.Tournament/Components/RoundBeatmapModFactory.cs`:
+
 ```csharp
-private static string FormatModParameter(string acronym, KeyValuePair<string, double> param)
+public static class RoundBeatmapModFactory
 {
-    // Known shorthand
-    if (acronym == "DT" && param.Key == "speed_change")
-        return $"{param.Value:0.##}×";
+    /// <summary>
+    /// Construct fully-configured Mod instances for a RoundBeatmap. Returns the parsed mods from
+    /// the bracket string (e.g. "HD"+"DT" → Hidden + DoubleTime) with any per-map
+    /// settings from <see cref="RoundBeatmap.ModParameters"/> applied via APIMod round-trip.
+    /// </summary>
+    public static IReadOnlyList<Mod> ConstructMods(RoundBeatmap rb, Ruleset ruleset)
+    {
+        // 1. Parse the acronym string ("HDDT" / "HD,DT" / "DT" / "" / "FM") to bracket acronyms.
+        //    Keep existing TournamentModIcon parsing logic; centralise it here.
+        var acronyms = ParseModString(rb.Mods);
 
-    if (acronym == "DF" && param.Key == "starting_size")
-        return $"start ×{param.Value:0.##}";
+        var result = new List<Mod>();
 
-    // Generic fallback
-    return $"{param.Key}={param.Value:0.##}";
+        foreach (var acronym in acronyms)
+        {
+            var mod = ruleset.CreateModFromAcronym(acronym);
+            if (mod == null) continue;
+
+            if (rb.ModParameters.TryGetValue(acronym, out var settings) && settings.Count > 0)
+            {
+                // Round-trip via APIMod to apply settings — same path as the multiplayer client uses.
+                var api = new APIMod { Acronym = acronym, Settings = new Dictionary<string, object>(settings) };
+                mod = api.ToMod(ruleset);
+            }
+
+            result.Add(mod);
+        }
+
+        return result;
+    }
 }
 ```
 
-**`TournamentBeatmapPanel`** — same approach in the bottom row; wedge a parameter chip after the existing difficulty text. Use the same helper (extract to a `static` utility on `RoundBeatmap`).
+**`TournamentBeatmapPanel`** — current branch already constructs a `TournamentModIcon` from `RoundBeatmap.Mods` (string acronym). Replace with: when `ModParameters` is populated, construct each `Mod` via `RoundBeatmapModFactory.ConstructMods(...)` and render a horizontal flow of `ModIcon` instances with `ShowExtendedInformation = true`. When `ModParameters` is empty, keep using `TournamentModIcon` (lighter-weight, already styled for the panel).
+
+**`SongBar`** — same swap. The bottom-mods row currently renders a chain of `TournamentModIcon`. Switch to `ModIcon` for the active beatmap when its `RoundBeatmap` has parameters; otherwise keep `TournamentModIcon`. Resolve `LadderInfo.CurrentMatch` and `IBindable<RulesetInfo>` (already resolved on `SongBar`) to look up the active `RoundBeatmap` and construct the mods.
+
+The split (panel: lazer `ModIcon` only when parameters present, otherwise `TournamentModIcon`) is intentional — it's the smallest change to the existing rendering for the parameterless case (NM/HD/HR mappool entries) while picking up lazer's full mod display for the parameterised case (DT/LM in 2026). If down the road we want a single uniform icon style, replace `TournamentModIcon` wholesale; not in scope here.
+
+**Mod settings change tracking:** `ModIcon` constructs a `ModSettingChangeTracker` internally (line 89, line 218–225 of `ModIcon.cs`) and updates the extended-info / cog state on setting change. Since we construct fresh `Mod` instances on each panel rebuild and each rebuild creates new `ModIcon` instances, no extra wiring is needed; existing dispose-on-rebuild handles the lifecycle.
 
 ### 5.3 Per-user mods in `MultiplayerMatchIPCInfo`
 
@@ -513,20 +549,28 @@ internal readonly record struct IPCUserModEntry(
 
 ### 5.5 Per-user mods in the gameplay overlay (`TournamentGameplayDisplay`)
 
-In each `PlayerArea`, render a small horizontal flow of mod-acronym chips next to the player name. Subscribe to `MultiplayerMatchIPCInfo.UserStates[userId].Mods` (via the existing `userStates` access path), update on change. Only render chips for mods whose acronym is in the *room*-wide mod list *or* in the per-user list (so the `LM` bracket's deflate icon shows even when room mods are empty).
+In each `PlayerArea`, render a small horizontal flow of `ModIcon` instances next to the player name — one per `APIMod` in `userStates[userId].Mods`. Subscribe via the existing `userStates` access path; rebuild the flow on changes. Active ruleset is resolved via `IBindable<RulesetInfo>` (already in scope on `TournamentGameplayDisplay`).
 
-Visual: re-use `TournamentModIcon` for each acronym. For chip parameters, render the same `FormatModParameter(acronym, ...)` chip as in §5.2 underneath the icon when the mod has parameters.
+Each `APIMod` is converted to a `Mod` via `apiMod.ToMod(ruleset)` (lazer's existing path) before being passed to `ModIcon` with `ShowExtendedInformation = true`. This produces:
+
+- DT/HT chips with the rate inline (e.g. `1.5×`).
+- Cog corner badge for any other customized mod.
+- Plain icon for parameterless mods (NM, HD, HR, FreeMod combos).
+
+When a player has no mods (NM-only player in FreeMod), the flow is empty — that's the signal "playing NM," consistent with how lazer's `ModDisplay` renders.
 
 ### 5.6 Phase 2 testing
 
 | Test | What it verifies |
 | --- | --- |
-| `TestSceneSongBar.TestModParametersRender` | Songbar shows "DT 1.6×" when active beatmap's `ModParameters["DT"]["speed_change"] = 1.6`. |
-| `TestSceneTournamentBeatmapPanel.TestModParametersRender` | Mappool panel shows the same chip. |
-| `TestSceneRoundEditorScreen.TestModParametersFreeForm` | Editing `DT.speed_change=1.6` populates `ModParameters` correctly. |
+| `TestSceneSongBar.TestModIconRendersDtRate` | Active beatmap with `ModParameters["DT"]["speed_change"] = 1.5` renders a `ModIcon` whose `extendedText.Text == "1.5×"` (delegates to lazer's `Mod.ExtendedIconInformation`). |
+| `TestSceneSongBar.TestModIconRendersCogForCustomized` | Beatmap with a non-rate customized mod (e.g. Deflate `starting_size=1.6`) renders a `ModIcon` with `adjustmentMarker.Alpha == 1`. No bespoke chip. |
+| `TestSceneTournamentBeatmapPanel.TestModIconForParameterised` | Mappool panel uses lazer `ModIcon` when `ModParameters` is non-empty; falls back to `TournamentModIcon` when empty. |
+| `TestSceneRoundEditorScreen.TestModParametersFreeForm` | Editing `DT.speed_change=1.5` populates `ModParameters["DT"]["speed_change"] = 1.5` (numeric); `MOD.flag=true` parses to bool; unknown values pass through as raw string. |
+| `RoundBeatmapModFactoryTest.TestParseAndApply` | `ConstructMods` for `Mods="HDDT"` + `ModParameters={"DT":{"speed_change":1.5}}` yields a `[Hidden, DoubleTime]` list where the DoubleTime instance has `SpeedChange.Value == 1.5`. |
 | `MultiplayerIPCWriterTest.TestPerUserMods` | Snapshot JSON contains `users[].mods` with per-user mod data; round-trips through equality dirty check (writes once when stable). |
-| `TestSceneTournamentGameplayDisplay.TestPerUserModChips` | Two users with different mod sets render distinct chips. |
-| `MultiplayerMatchIPCInfoTest.TestModUpdatePropagatesToUserStates` | When `MultiplayerRoomUser.Mods` changes, the corresponding `userStates[uid].Mods` updates. |
+| `TestSceneTournamentGameplayDisplay.TestPerUserModIcons` | Two users with different mod sets render distinct `ModIcon` instances next to their player names. |
+| `MultiplayerMatchIPCInfoTest.TestModUpdatePropagatesToUserStates` | When `MultiplayerRoomUser.Mods` changes, the corresponding `userStates[uid].Mods` updates on the next `RoomUpdated` tick. |
 
 ## 6. Phase 3 — 1v1 mode + match-complete + score-edit UI
 
