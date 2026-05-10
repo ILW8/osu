@@ -359,7 +359,7 @@ Adopt PR #36200's `RoundRow` layout: shrink `# of Bans` from 0.33f width to 0.24
 
 ## 5. Phase 2 — Per-map mod params + per-user mods in IPC + LM/FreeMod display
 
-This phase relies on lazer's existing `ModIcon` infrastructure (`osu.Game/Rulesets/UI/ModIcon.cs`) for all customized-mod rendering — both the DT/HT speed-multiplier display and the "this mod has customized settings" indicator. No bespoke chip rendering, no `FormatModParameter` helper. The spec ships per-map mod *storage* and the round-editor input plus the existing-icon rendering, plus per-user mod plumbing through IPC.
+This phase extends the existing `TournamentModIcon` to accept a configured `Mod` instance (in addition to the existing acronym-string constructor). `TournamentModIcon` already wraps lazer's `ModIcon` with `ShowExtendedInformation = true` in its fallback path, so the DT/HT rate extender and the cog corner badge for non-default settings light up automatically once we feed it a `Mod` with the right settings. No bespoke chip rendering, no `FormatModParameter` helper, no second icon class — keeps custom-texture branding for parameterless mods (NM/HD/HR) and falls through to the embedded `ModIcon` for any mod with non-default settings. The spec ships per-map mod *storage* + round-editor input, the `TournamentModIcon` constructor extension, plus per-user mod plumbing through IPC.
 
 ### 5.1 `RoundBeatmap.ModParameters` — structured per-map mod settings
 
@@ -394,27 +394,106 @@ DF.starting_size=1.6
 ```
 Values parsed permissively: try `double.TryParse` first, fall back to `bool.TryParse`, fall back to raw string. Free-form is faster to ship than per-mod typed UI; iterate if clunky in practice.
 
-### 5.2 Render via lazer's `ModIcon` — DT rate inline, cog for everything else
+### 5.2 Extend `TournamentModIcon` to accept a configured `Mod`
 
-Both rendering surfaces (`SongBar` and `TournamentBeatmapPanel`) use lazer's existing `ModIcon` for any map whose `RoundBeatmap` has `ModParameters` populated. The icon already handles both LGA display requirements out of the box:
+`TournamentModIcon` today takes only a `string modAcronym`, looks up a custom tournament texture (`textures.Get($"Mods/{acronym}")`) and either renders that sprite or falls back to a vanilla `new ModIcon(mod, false) { Scale = 0.5f }`. Crucially, the embedded `ModIcon` is already constructed with `ShowExtendedInformation = true` (the third `ModIcon` constructor arg defaults to `true`), so the rate extender and cog corner badge are wired in — they just never trigger because `CreateModFromAcronym` produces a default-settings `Mod` instance, and `Mod.ExtendedIconInformation` / `Mod.HasNonDefaultSettings` evaluate to empty/false when settings are at default.
 
-- **DT/HT speed multipliers** — `ModRateAdjust.ExtendedIconInformation` returns `"1.5×"` (or whatever the configured rate is). With `ModIcon.ShowExtendedInformation = true`, the icon paints the rate in the attached extender panel to the right of the hex.
-- **Other customized mods** (Deflate-with-non-default-starting-size, future LM mods, etc.) — `Mod.HasNonDefaultSettings` is true → `ModIcon.adjustmentMarker` is shown (cog-in-circle in the icon's top-right corner). No bespoke "Deflate ×1.6" chip; casters explain the specifics on stream.
+Two changes:
 
-**Helper** in a new `osu.Game.Tournament/Components/RoundBeatmapModFactory.cs`:
+1. Add a `(Mod configuredMod)` constructor.
+2. Gate the custom-texture lookup on `!mod.HasNonDefaultSettings` — a static branded sprite cannot surface a non-default speed change, so when settings are non-default we must fall through to the embedded `ModIcon`.
+
+```csharp
+public partial class TournamentModIcon : CompositeDrawable
+{
+    private readonly string modAcronym;
+    private readonly Mod? configuredMod;
+
+    [Resolved]
+    private IRulesetStore rulesets { get; set; } = null!;
+
+    public TournamentModIcon(string modAcronym)
+    {
+        this.modAcronym = modAcronym;
+    }
+
+    public TournamentModIcon(Mod configuredMod)
+    {
+        this.configuredMod = configuredMod;
+        modAcronym = configuredMod.Acronym;
+    }
+
+    [BackgroundDependencyLoader]
+    private void load(TextureStore textures, LadderInfo ladderInfo)
+    {
+        // Custom branding only applies when the mod is at default settings.
+        // A static sprite cannot surface a non-default speed change / setting,
+        // so non-default mods fall through to the embedded ModIcon (which paints
+        // the extender + cog).
+        bool allowCustomTexture = configuredMod == null || !configuredMod.HasNonDefaultSettings;
+
+        if (allowCustomTexture)
+        {
+            var customTexture = textures.Get($"Mods/{modAcronym}");
+            if (customTexture != null)
+            {
+                AddInternal(new Sprite
+                {
+                    FillMode = FillMode.Fit,
+                    RelativeSizeAxes = Axes.Both,
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                    Texture = customTexture,
+                });
+                return;
+            }
+        }
+
+        var mod = configuredMod
+                  ?? rulesets.GetRuleset(ladderInfo.Ruleset.Value?.OnlineID ?? 0)
+                            ?.CreateInstance().CreateModFromAcronym(modAcronym);
+        if (mod == null) return;
+
+        AddInternal(new ModIcon(mod, false)
+        {
+            Anchor = Anchor.Centre,
+            Origin = Anchor.Centre,
+            Scale = new Vector2(0.5f),
+        });
+    }
+}
+```
+
+Behaviour matrix:
+
+| Mod source | `HasNonDefaultSettings` | Custom-texture lookup | Result |
+| --- | --- | --- | --- |
+| `string acronym` (existing callers) | always false (default settings) | yes | Custom texture if present, else embedded `ModIcon` with empty extender / no cog (today's behaviour, unchanged). |
+| `Mod` with default settings | false | yes | Custom texture if present, else embedded `ModIcon` with empty extender / no cog. |
+| `Mod` with non-default settings (DT 1.6×, Deflate `starting_size=1.6`, etc.) | true | **skipped** | Embedded `ModIcon` paints the extender (rate inline as `1.60x`) and/or cog corner badge. |
+
+The DT / non-default LM display requirements are then satisfied automatically:
+
+- **DT/HT speed multipliers** — `ModRateAdjust.ExtendedIconInformation` returns `"1.60x"` (`FormattableString.Invariant($"{SpeedChange.Value:N2}x")` — ASCII lowercase `x`, two-decimal padding). With `ShowExtendedInformation = true` the embedded `ModIcon` paints the rate in its extender panel.
+- **Other customized mods** (Deflate-with-non-default-starting-size, future LM mods) — `Mod.HasNonDefaultSettings` is true → `ModIcon.adjustmentMarker` is shown (cog-in-circle in the icon's top-right corner). No bespoke "Deflate ×1.6" chip; casters explain the specifics on stream.
+
+#### Helper — `RoundBeatmapModFactory`
+
+A new `osu.Game.Tournament/Components/RoundBeatmapModFactory.cs` parses `RoundBeatmap.Mods` (the bracket-acronym string) and applies any per-map settings via the `APIMod` round-trip. Render sites use this to obtain the configured `Mod` instances they hand to `TournamentModIcon`:
 
 ```csharp
 public static class RoundBeatmapModFactory
 {
     /// <summary>
-    /// Construct fully-configured Mod instances for a RoundBeatmap. Returns the parsed mods from
-    /// the bracket string (e.g. "HD"+"DT" → Hidden + DoubleTime) with any per-map
-    /// settings from <see cref="RoundBeatmap.ModParameters"/> applied via APIMod round-trip.
+    /// Parse the bracket acronym string ("HD" / "DT" / "HDDT" / "FM" / "") into
+    /// configured Mod instances. Per-map <see cref="RoundBeatmap.ModParameters"/> entries
+    /// are applied via APIMod round-trip, so the resulting mods have non-default
+    /// settings where specified — and TournamentModIcon will route them through the
+    /// embedded ModIcon (extender + cog) accordingly.
     /// </summary>
     public static IReadOnlyList<Mod> ConstructMods(RoundBeatmap rb, Ruleset ruleset)
     {
-        // 1. Parse the acronym string ("HDDT" / "HD,DT" / "DT" / "" / "FM") to bracket acronyms.
-        //    Keep existing TournamentModIcon parsing logic; centralise it here.
+        // Centralise the acronym-string parse logic here (lifted from TournamentModIcon).
         var acronyms = ParseModString(rb.Mods);
 
         var result = new List<Mod>();
@@ -426,7 +505,7 @@ public static class RoundBeatmapModFactory
 
             if (rb.ModParameters.TryGetValue(acronym, out var settings) && settings.Count > 0)
             {
-                // Round-trip via APIMod to apply settings — same path as the multiplayer client uses.
+                // Round-trip via APIMod to apply settings — same path the multiplayer client uses.
                 var api = new APIMod { Acronym = acronym, Settings = new Dictionary<string, object>(settings) };
                 mod = api.ToMod(ruleset);
             }
@@ -439,13 +518,25 @@ public static class RoundBeatmapModFactory
 }
 ```
 
-**`TournamentBeatmapPanel`** — current branch already constructs a `TournamentModIcon` from `RoundBeatmap.Mods` (string acronym). Replace with: when `ModParameters` is populated, construct each `Mod` via `RoundBeatmapModFactory.ConstructMods(...)` and render a horizontal flow of `ModIcon` instances with `ShowExtendedInformation = true`. When `ModParameters` is empty, keep using `TournamentModIcon` (lighter-weight, already styled for the panel).
+#### Render-site updates
 
-**`SongBar`** — same swap. The bottom-mods row currently renders a chain of `TournamentModIcon`. Switch to `ModIcon` for the active beatmap when its `RoundBeatmap` has parameters; otherwise keep `TournamentModIcon`. Resolve `LadderInfo.CurrentMatch` and `IBindable<RulesetInfo>` (already resolved on `SongBar`) to look up the active `RoundBeatmap` and construct the mods.
+Both `TournamentBeatmapPanel` and `SongBar` already construct `TournamentModIcon` from `RoundBeatmap.Mods` (string acronym). Update them to construct via the factory and the new `(Mod)` constructor:
 
-The split (panel: lazer `ModIcon` only when parameters present, otherwise `TournamentModIcon`) is intentional — it's the smallest change to the existing rendering for the parameterless case (NM/HD/HR mappool entries) while picking up lazer's full mod display for the parameterised case (DT/LM in 2026). If down the road we want a single uniform icon style, replace `TournamentModIcon` wholesale; not in scope here.
+```csharp
+// Was:  new TournamentModIcon(rb.Mods)
+// Now:
+var ruleset = rulesets.GetRuleset(ladderInfo.Ruleset.Value?.OnlineID ?? 0)?.CreateInstance();
+if (ruleset == null) return;
 
-**Mod settings change tracking:** `ModIcon` constructs a `ModSettingChangeTracker` internally (line 89, line 218–225 of `ModIcon.cs`) and updates the extended-info / cog state on setting change. Since we construct fresh `Mod` instances on each panel rebuild and each rebuild creates new `ModIcon` instances, no extra wiring is needed; existing dispose-on-rebuild handles the lifecycle.
+foreach (var mod in RoundBeatmapModFactory.ConstructMods(rb, ruleset))
+    flow.Add(new TournamentModIcon(mod));
+```
+
+Existing call sites that pass an acronym string directly (legacy, non-`RoundBeatmap`-bound usages) are unaffected — the string constructor is preserved.
+
+`SongBar` already resolves `LadderInfo.CurrentMatch` and `IBindable<RulesetInfo>`, so the lookup is in scope. `TournamentBeatmapPanel` may need a small horizontal flow wrapper if its existing usage rendered a single `TournamentModIcon`; see the panel layout in §4.3.
+
+**Mod settings change tracking:** the embedded `ModIcon` constructs a `ModSettingChangeTracker` internally (`ModIcon.cs:89`, `:218–225`) and updates the extender / cog on setting change. Each panel/songbar rebuild constructs fresh `TournamentModIcon` → fresh `ModIcon` → fresh tracker, so no extra wiring is needed; the existing dispose-on-rebuild handles the lifecycle.
 
 ### 5.3 Per-user mods in `MultiplayerMatchIPCInfo`
 
@@ -549,13 +640,13 @@ internal readonly record struct IPCUserModEntry(
 
 ### 5.5 Per-user mods in the gameplay overlay (`TournamentGameplayDisplay`)
 
-In each `PlayerArea`, render a small horizontal flow of `ModIcon` instances next to the player name — one per `APIMod` in `userStates[userId].Mods`. Subscribe via the existing `userStates` access path; rebuild the flow on changes. Active ruleset is resolved via `IBindable<RulesetInfo>` (already in scope on `TournamentGameplayDisplay`).
+In each `PlayerArea`, render a small horizontal flow of `TournamentModIcon` instances next to the player name — one per `APIMod` in `userStates[userId].Mods`. Subscribe via the existing `userStates` access path; rebuild the flow on changes. Active ruleset is resolved via `IBindable<RulesetInfo>` (already in scope on `TournamentGameplayDisplay`).
 
-Each `APIMod` is converted to a `Mod` via `apiMod.ToMod(ruleset)` (lazer's existing path) before being passed to `ModIcon` with `ShowExtendedInformation = true`. This produces:
+Each `APIMod` is converted to a `Mod` via `apiMod.ToMod(ruleset)` (lazer's existing path) and handed to `TournamentModIcon` via the new `(Mod)` constructor (§5.2). This produces:
 
-- DT/HT chips with the rate inline (e.g. `1.5×`).
-- Cog corner badge for any other customized mod.
-- Plain icon for parameterless mods (NM, HD, HR, FreeMod combos).
+- DT/HT icons with the rate inline (e.g. `1.50x`) via the embedded `ModIcon` extender — the custom-texture lookup is suppressed because `HasNonDefaultSettings` is true on a configured rate-adjust mod.
+- Cog corner badge for any other customized mod (same suppression logic).
+- Custom-texture branding (or plain `ModIcon` if no texture) for parameterless mods like NM, HD, HR — keeping visual consistency with how the same mods render in `SongBar` / `TournamentBeatmapPanel`.
 
 When a player has no mods (NM-only player in FreeMod), the flow is empty — that's the signal "playing NM," consistent with how lazer's `ModDisplay` renders.
 
@@ -563,13 +654,14 @@ When a player has no mods (NM-only player in FreeMod), the flow is empty — tha
 
 | Test | What it verifies |
 | --- | --- |
-| `TestSceneSongBar.TestModIconRendersDtRate` | Active beatmap with `ModParameters["DT"]["speed_change"] = 1.5` renders a `ModIcon` whose `extendedText.Text == "1.5×"` (delegates to lazer's `Mod.ExtendedIconInformation`). |
-| `TestSceneSongBar.TestModIconRendersCogForCustomized` | Beatmap with a non-rate customized mod (e.g. Deflate `starting_size=1.6`) renders a `ModIcon` with `adjustmentMarker.Alpha == 1`. No bespoke chip. |
-| `TestSceneTournamentBeatmapPanel.TestModIconForParameterised` | Mappool panel uses lazer `ModIcon` when `ModParameters` is non-empty; falls back to `TournamentModIcon` when empty. |
+| `TestSceneSongBar.TestTournamentModIconRendersDtRate` | Active beatmap with `ModParameters["DT"]["speed_change"] = 1.5` constructs `TournamentModIcon` via the new `(Mod)` constructor; the embedded `ModIcon`'s `extendedText.Text == "1.50x"` (delegates to lazer's `Mod.ExtendedIconInformation`, which formats `{value:N2}x`). |
+| `TestSceneSongBar.TestTournamentModIconRendersCogForCustomized` | Beatmap with a non-rate customized mod (e.g. Deflate `starting_size=1.6`) renders a `TournamentModIcon` whose embedded `ModIcon` has `adjustmentMarker.Alpha == 1`. No bespoke chip. |
+| `TestSceneTournamentModIcon.TestCustomTextureSuppressedForCustomisedMod` | When constructed with a `Mod` that has `HasNonDefaultSettings == true`, custom-texture lookup is skipped even if a `Mods/{acronym}` texture is registered, and the embedded `ModIcon` is rendered instead. |
+| `TestSceneTournamentModIcon.TestCustomTexturePreservedForDefaultMod` | When constructed with a default-settings `Mod` (or via the legacy acronym-string constructor), custom-texture branding is preserved — the new constructor must not regress the existing path. |
 | `TestSceneRoundEditorScreen.TestModParametersFreeForm` | Editing `DT.speed_change=1.5` populates `ModParameters["DT"]["speed_change"] = 1.5` (numeric); `MOD.flag=true` parses to bool; unknown values pass through as raw string. |
 | `RoundBeatmapModFactoryTest.TestParseAndApply` | `ConstructMods` for `Mods="HDDT"` + `ModParameters={"DT":{"speed_change":1.5}}` yields a `[Hidden, DoubleTime]` list where the DoubleTime instance has `SpeedChange.Value == 1.5`. |
 | `MultiplayerIPCWriterTest.TestPerUserMods` | Snapshot JSON contains `users[].mods` with per-user mod data; round-trips through equality dirty check (writes once when stable). |
-| `TestSceneTournamentGameplayDisplay.TestPerUserModIcons` | Two users with different mod sets render distinct `ModIcon` instances next to their player names. |
+| `TestSceneTournamentGameplayDisplay.TestPerUserModIcons` | Two users with different mod sets render distinct `TournamentModIcon` instances next to their player names. |
 | `MultiplayerMatchIPCInfoTest.TestModUpdatePropagatesToUserStates` | When `MultiplayerRoomUser.Mods` changes, the corresponding `userStates[uid].Mods` updates on the next `RoomUpdated` tick. |
 
 ## 6. Phase 3 — 1v1 mode + match-complete + score-edit UI
@@ -599,7 +691,7 @@ Port the 5 call sites verbatim from the 2025 LGA tag:
 | `Screens/TeamWin/TeamWinScreen.cs` | Same as TeamIntro. |
 | `Screens/TournamentMatchScreen.cs` | `Use1V1Mode.BindValueChanged(_ => CurrentMatch.TriggerChange())` so dependents refresh on toggle. |
 
-Setup screen (`Screens/Setup/SetupScreen.cs`): add a `LabelledSwitchButton` row (or whatever the current setup-screen pattern is — likely an `ActionableInfo` block) labelled "1v1 mode", description "Text elements referring to 'Team's will be updated to 'Player's and team players lists will be hidden", bound to `LadderInfo.Use1V1Mode`.
+Setup screen (`Screens/Setup/SetupScreen.cs`): add a `LabelledSwitchButton` row labelled "1v1 mode", description "Text elements referring to 'Team's will be updated to 'Player's and team players lists will be hidden", bound to `LadderInfo.Use1V1Mode`. Mirrors the existing `LabelledSwitchButton` rows already in `reload()` (`UseMultiplayerSpectating` at line 111, `MuteUISounds` / others at lines 180, 186, 209) — `LabelledSwitchButton` is the established pattern for boolean toggles on this screen; `ActionableInfo` is reserved for buttons-with-side-info (resolution selector, tournament switcher).
 
 For LGA 2026 brackets the operator turns this on at config time; default-off keeps non-LGA setups unaffected.
 
@@ -624,13 +716,20 @@ if (CurrentMatch.Value.Team1Score.Value >= pointsToWin
 
 `PointsToWin` is computed from `Round.BestOf` (existing, line 100 of `TournamentMatch.cs`). For LGA `BestOf = 5` → `PointsToWin = 3`.
 
+**Nullable score values.** `Team1Score` and `Team2Score` are `Bindable<int?>` (`TournamentMatch.cs:39,46`) — the bindables are deliberately nullable so an unstarted match has no displayed score. The `>=` comparison above is safe without an explicit null check: C# nullable comparison evaluates `null >= 3` as `false`, which is exactly the right semantics here (a match that never reached `StartMatch()` cannot auto-complete). The existing `Team1Score.Value++` operates on `int?` and yields `null` for an unstarted score, but the cumulative branch only runs on `TourneyState.Ranking` after a real round of play — where `StartMatch()` has already zeroed both scores.
+
 The existing `matchCompleteOverride` checkbox (line 157 of 2025 LGA `GameplayScreen`) is gone from the current branch; auto-detect plus the existing `match.Completed` bindable (which `TeamWinScreen` already keys off) is sufficient. If a ref needs to manually reset, they edit the score in the score-edit UI (§6.3) and the auto-detect un-flips.
 
 **Edge case — auto-detect should not fire in warmup mode.** Wrap in `if (!warmup.Value)` (or rely on the existing branch which already early-returns from the cumulative block when `warmup.Value` is true at line 294). Cumulative branch already gated, so this is fine.
 
 ### 6.3 Operator score-edit UI
 
-Add to `MapPoolScreen`'s control panel, immediately after the `"Reset"` button:
+The score-edit block has **two sub-sections**, both added to `MapPoolScreen`'s control panel after the `"Reset"` button:
+
+1. **Per-map score editor** — slot dropdown + red/blue score textboxes + Apply, mutates `CurrentMatch.Value.MapScores[slot]`.
+2. **Per-team set-count editor** — two textboxes bound directly to `CurrentMatch.Value.Team1Score` / `Team2Score`.
+
+Both are needed because set-win counters (`Team1Score` / `Team2Score`) are not automatically derived from `MapScores` — `GameplayScreen.updateState` only writes them on the `TourneyState.Ranking` transition. If a ref fixes a wrong per-map score after the fact, the set-panel display refreshes (via the existing `BindCollectionChanged` observers) but the team set count won't move; the ref nudges it directly via section 2.
 
 ```csharp
 new ControlPanel.Spacer(),
@@ -638,7 +737,7 @@ new TournamentSpriteText { Text = "Edit map scores" },
 mapScoreEditDropdown = new SettingsDropdown<string?>
 {
     LabelText = "Slot",
-    Items = …, // dynamically populated from current Round.Beatmaps[].SlotName
+    Items = …, // dynamically populated from current Round.Beatmaps[].SlotName — see re-bind below.
 },
 redScoreTextBox = new SettingsNumberBox
 {
@@ -654,6 +753,18 @@ new TourneyButton
     Text = "Apply",
     Action = applyMapScoreEdit,
 },
+
+new ControlPanel.Spacer(),
+new TournamentSpriteText { Text = "Edit set scores" },
+team1SetScoreTextBox = new SettingsNumberBox
+{
+    LabelText = "Red set score",
+    // Bind directly to match.Team1Score in (re)bind step.
+},
+team2SetScoreTextBox = new SettingsNumberBox
+{
+    LabelText = "Blue set score",
+},
 ```
 
 `applyMapScoreEdit`:
@@ -662,21 +773,55 @@ private void applyMapScoreEdit()
 {
     if (mapScoreEditDropdown.Current.Value is not string slot) return;
     if (CurrentMatch.Value == null) return;
-    if (!long.TryParse(redScoreTextBox.Current.Value, out long red)) return;
-    if (!long.TryParse(blueScoreTextBox.Current.Value, out long blue)) return;
+    if (redScoreTextBox.Current.Value is not int red) return;
+    if (blueScoreTextBox.Current.Value is not int blue) return;
 
+    // MapScores value type is Tuple<long, long>; widening from int → long is implicit and lossless.
+    // int.MaxValue (~2.1B) easily covers any realistic osu! score (lazer max ≈ 3.5M, stable max = 1M).
     CurrentMatch.Value.MapScores[slot] = new Tuple<long, long>(red, blue);
-    // No further action — TournamentSetPanel observes MapScores via BindCollectionChanged.
-    // GameplayScreen.updateState only writes on TourneyState.Ranking, so this manual edit
-    // does not bump the set-win counters.
+    // BindableDictionary fires CollectionChanged → TournamentSetPanel.SetMapResultDisplay.refreshScores
+    // recomputes set winners for display. Match-level Team1Score/Team2Score are ref-edited via
+    // section 2, not auto-derived (see top of §6.3).
 }
 ```
 
-When `MapScores[slot]` is mutated, the existing `BindCollectionChanged` observers (in `TournamentSetPanel.SetMapResultDisplay.refreshScores`) recompute set winners. Set-win counters (`Team1Score`/`Team2Score`) are *not* automatically derived from `MapScores`; if a ref edits a score that flips a set winner, they'd also need to nudge the set-win counter. Document this nuance: the score-edit UI fixes per-map cumulative display; if the set-point totals are wrong, refs edit those separately via the same UI (treat `Team1Score`/`Team2Score` as ref-editable bindables — wire them to a separate small textbox pair).
+`SettingsNumberBox` is declared `SettingsItem<int?>` (`SettingsNumberBox.cs:12`) — its `Current` is a `Bindable<int?>` whose value is `null` when the textbox is empty and `int` otherwise. No string parsing required at the call site.
 
-Alternative recommendation: **also expose** a "Team 1 set score" / "Team 2 set score" pair of textboxes (small, near the existing edit block) that bind to `match.Team1Score` / `match.Team2Score`. Keeps the surface area cohesive.
+**Widget style.** `SettingsDropdown<T>` and `SettingsNumberBox` come from `osu.Game.Overlays.Settings` and are sized for the full-width settings overlay (label-above-input, generous padding); `MapPoolScreen`'s existing `ControlPanel` children are compact (`TournamentSpriteText` / `TourneyButton` / `OsuCheckbox`). Keep `SettingsDropdown` / `SettingsNumberBox` anyway — the visual mismatch is acceptable for an operator-only panel where function trumps polish, and the alternative (wrapping `OsuDropdown<string>` + `OsuNumberBox` in custom labelled containers) is meaningful extra UI work for no functional gain. If the broadcast-graphic styling diverges enough to be visible to viewers, revisit in a follow-up.
 
-`mapScoreEditDropdown.Items` is repopulated when `CurrentMatch.Round` changes; subscribe to `CurrentMatch.Value.Round.ValueChanged` and rebuild from `Round.Value.Beatmaps.Select(b => b.SlotName)`.
+**Re-binding when `CurrentMatch` changes.** Subscribe to `CurrentMatch.BindValueChanged(currentMatchChanged)` (the existing pattern on `TournamentMatchScreen`-derived screens) and inside the handler:
+
+```csharp
+private void currentMatchChanged(ValueChangedEvent<TournamentMatch?> match)
+{
+    // …existing handling…
+
+    // Rebuild dropdown items for the new match's round.
+    var round = match.NewValue?.Round.Value;
+    mapScoreEditDropdown.Items = round?.Beatmaps.Select(b => b.SlotName).ToArray() ?? Array.Empty<string>();
+
+    // Re-bind set-score textboxes to the new match's bindables. SettingsNumberBox.Current is
+    // Bindable<int?> (matches Team1Score/Team2Score exactly); assigning a Bindable to .Current is
+    // the standard IHasCurrentValue pattern — internally it goes through BindableWithCurrent.
+    if (match.NewValue != null)
+    {
+        team1SetScoreTextBox.Current = match.NewValue.Team1Score;
+        team2SetScoreTextBox.Current = match.NewValue.Team2Score;
+    }
+
+    // Also re-bind on round-within-match changes.
+    match.OldValue?.Round.ValueChanged -= roundChanged;
+    if (match.NewValue != null)
+        match.NewValue.Round.ValueChanged += roundChanged;
+}
+
+private void roundChanged(ValueChangedEvent<TournamentRound?> round)
+{
+    mapScoreEditDropdown.Items = round.NewValue?.Beatmaps.Select(b => b.SlotName).ToArray() ?? Array.Empty<string>();
+}
+```
+
+The `ValueChanged` subscription on `Round` is required *in addition to* the `CurrentMatch` rebind — a ref can change a match's round in the editor without switching the current match, and the slot dropdown must follow. Unsubscribe from the old match's `Round.ValueChanged` to avoid leaking the handler when matches switch.
 
 ### 6.4 Phase 3 testing
 
@@ -701,6 +846,10 @@ Replace the two top-level child containers (`mapFlows`, `setsFlow`) with two sib
 ```csharp
 new GridContainer
 {
+    // Y/X/Width values verbatim from 2025.524.2-LGA+2025.424.0-week2 — the asymmetric
+    // Y=90 (Pool) vs Y=170 (Sets) is intentional: 90 puts the Pool heading at the
+    // existing 90–160 band so mapFlows resumes at ~Y=160 (matches the pre-split layout
+    // and keeps updateDisplay's padding logic valid); 170 clears MatchHeader for Sets.
     Y = 90,
     X = 0f,
     Anchor = Anchor.TopLeft,
@@ -708,6 +857,10 @@ new GridContainer
     Width = 0.65f,
     RelativeSizeAxes = Axes.X,
     AutoSizeAxes = Axes.Y,
+    // TODO: verbatim port from 2025 LGA tag — Content has 2 rows (heading + flow) but
+    // RowDimensions has only 1 entry. Verify behaviour at runtime: osu-framework may
+    // pad missing entries with Distributed (which would conflict with AutoSizeAxes.Y),
+    // or it may tolerate the mismatch. If broken, add a second `new Dimension(GridSizeMode.AutoSize)`.
     RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
     Content = new[]
     {
@@ -737,6 +890,7 @@ new GridContainer
 },
 new GridContainer
 {
+    // Y=170 verbatim from 2025 LGA tag (clears MatchHeader for the Sets column).
     Y = 170,
     X = 0.65f,
     Anchor = Anchor.TopLeft,
@@ -744,6 +898,7 @@ new GridContainer
     Width = 0.35f,
     RelativeSizeAxes = Axes.X,
     AutoSizeAxes = Axes.Y,
+    // TODO: same mismatch as Pool grid above — verify osu-framework behaviour at runtime.
     RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
     Content = new[]
     {
@@ -775,15 +930,17 @@ new GridContainer
 
 The `setsFlow` loses the `Padding = new MarginPadding { Horizontal = 100 }` and `Anchor = BottomCentre / Y = -160` from the current stacked layout — those become unnecessary with the right-side column.
 
-`updateDisplay()` keeps its layout-width logic but the threshold for `totalRows > 9 ? 0 : 100` (current padding switch) shrinks because the available width is now ~65% of the screen. Re-tune empirically; not specified here, and there are existing "TestFewMaps / TestJustEnoughMaps / TestManyMaps" cases on PR #36200 that exercise the column-count switching behavior.
+`updateDisplay()` keeps its layout-width logic but the threshold for `totalRows > 9 ? 0 : 100` (current padding switch) needs retuning because the available width drops to ~65% of the screen. Starting estimate: `Horizontal = totalRows > 7 ? 0 : 50` — threshold lowered because columns max out earlier in a narrower box, padding halved because absolute pixel margins should track the available width. Tune empirically from there using the test cases below.
+
+The `TestFewMaps / TestJustEnoughMaps / TestManyMaps` test cases referenced in §7.3 originate from upstream PR ppy/osu#36200 and are ported to this branch as part of Phase 1's protect-icon work. Phase 4 reuses them as-is to verify the column-count threshold under the narrower 65% width — if Phase 1 didn't port them, Phase 4 must add them before retuning the padding switch.
 
 ### 7.3 Phase 4 testing
 
 | Test | What it verifies |
 | --- | --- |
-| `TestSceneMapPoolScreen.TestSplitLayoutPool` | Pool flow occupies left 65% width; "Pool" heading visible. |
-| `TestSceneMapPoolScreen.TestSplitLayoutSets` | Sets flow occupies right 35% width; "Sets" heading visible. |
-| `TestSceneMapPoolScreen.TestFewMaps / TestManyMaps` (existing on PR #36200) | Column count adapts to map count under the narrower 65% width. |
+| `TestSceneMapPoolScreen.TestSplitLayoutPool` | Pool grid's `DrawWidth / mapPoolScreen.DrawWidth ≈ 0.65` (within `Precision.AlmostEquals` tolerance 0.01); a `TournamentSpriteText` with `Text == "Pool"` is present in its descendants. |
+| `TestSceneMapPoolScreen.TestSplitLayoutSets` | Sets grid's `DrawWidth / mapPoolScreen.DrawWidth ≈ 0.35`; a `TournamentSpriteText` with `Text == "Sets"` is present in its descendants. |
+| `TestSceneMapPoolScreen.TestFewMaps / TestJustEnoughMaps / TestManyMaps` (ported from PR #36200 in Phase 1) | Column count adapts to map count under the narrower 65% width — exercises the retuned `totalRows > 7 ? 0 : 50` padding switch. |
 
 ## 8. Cross-cutting concerns
 
