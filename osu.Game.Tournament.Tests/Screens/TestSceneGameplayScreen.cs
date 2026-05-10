@@ -74,6 +74,10 @@ namespace osu.Game.Tournament.Tests.Screens
                 });
             }
 
+            // After playing both maps in the set, cumulative scores: red 619_727 vs blue 676_727 — blue wins set.
+            AddAssert("team1 set wins is 0", () => Ladder.CurrentMatch.Value!.Team1Score.Value, () => Is.EqualTo(0));
+            AddAssert("team2 set wins is 1", () => Ladder.CurrentMatch.Value!.Team2Score.Value, () => Is.EqualTo(1));
+
             AddStep("set state: idle", () => IPCInfo.State.Value = TourneyState.Idle);
             AddStep("switch to map 3", () => IPCInfo.Beatmap.Value = new TournamentBeatmap { OnlineID = 3 });
         }
@@ -114,6 +118,10 @@ namespace osu.Game.Tournament.Tests.Screens
                     IPCInfo.Score2.Value = 0;
                 });
             }
+
+            // Tiebreaker set should not award a point until the third map completes; red score (1000+2000+3000) > blue (1+2+3) so red wins.
+            AddAssert("team1 set wins is 1", () => Ladder.CurrentMatch.Value!.Team1Score.Value, () => Is.EqualTo(1));
+            AddAssert("team2 set wins is 0", () => Ladder.CurrentMatch.Value!.Team2Score.Value, () => Is.EqualTo(0));
         }
 
         [Test]

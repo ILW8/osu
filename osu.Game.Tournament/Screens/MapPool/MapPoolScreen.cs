@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -213,7 +214,59 @@ namespace osu.Game.Tournament.Screens.MapPool
         private void reset()
         {
             CurrentMatch.Value?.PicksBans.Clear();
+            CurrentMatch.Value?.Sets.Clear();
             setNextMode();
+        }
+
+        /// <summary>
+        /// Synchronises <see cref="TournamentMatch.Sets"/> with the picks recorded in <see cref="TournamentMatch.PicksBans"/>.
+        /// Each consecutive pair of picks forms a regular set; once <see cref="TiebreakerSetIndex"/> is reached, additional picks
+        /// are placed onto the slots of that tiebreaker set (which holds up to three maps).
+        /// </summary>
+        private void updateSets()
+        {
+            if (CurrentMatch.Value == null)
+                return;
+
+            var picks = CurrentMatch.Value.PicksBans.Where(pb => pb.Type == ChoiceType.Pick).ToList();
+            var sets = CurrentMatch.Value.Sets;
+
+            for (int pickIndex = 0; pickIndex < picks.Count; pickIndex++)
+            {
+                int setIndex = TiebreakerSetIndex >= 0 ? Math.Min(pickIndex / 2, TiebreakerSetIndex) : pickIndex / 2;
+                int setSlot = pickIndex % 2;
+
+                MatchSet currentSet;
+
+                if (sets.Count - 1 < setIndex)
+                {
+                    sets.Add(currentSet = new MatchSet(TiebreakerSetIndex >= 0 && setIndex == TiebreakerSetIndex));
+                }
+                else
+                {
+                    currentSet = sets[setIndex];
+                }
+
+                BindableLong setSlotBindable = currentSet.IsTiebreaker && pickIndex == (TiebreakerSetIndex + 1) * 2
+                    ? currentSet.Map3Id
+                    : setSlot == 0
+                        ? currentSet.Map1Id
+                        : currentSet.Map2Id;
+
+                if (setSlotBindable.Value != picks[pickIndex].BeatmapID)
+                    setSlotBindable.Value = picks[pickIndex].BeatmapID;
+            }
+
+            // clear stale Map2 slot if the last (non-tiebreaker) set only has one pick.
+            var lastSet = sets.LastOrDefault();
+
+            if (lastSet != null && !lastSet.IsTiebreaker && picks.Count % 2 == 1)
+                lastSet.Map2Id.Value = 0;
+
+            int expectedSets = (picks.Count + 1) / 2;
+
+            while (sets.Count > expectedSets)
+                sets.RemoveAt(sets.Count - 1);
         }
 
         private void addForBeatmap(int beatmapId)
@@ -235,6 +288,8 @@ namespace osu.Game.Tournament.Screens.MapPool
                 Type = pickType,
                 BeatmapID = beatmapId
             });
+
+            updateSets();
 
             setNextMode();
 

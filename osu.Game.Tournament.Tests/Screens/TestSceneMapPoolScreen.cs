@@ -191,6 +191,10 @@ namespace osu.Game.Tournament.Tests.Screens
             AddStep("set red pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Pick").TriggerClick());
             AddStep("pick nm3", () => clickBeatmapPanel(2));
             AddStep("set scores on nm3", () => Ladder.CurrentMatch.Value!.MapScores["NM3"] = new Tuple<long, long>(Random.Shared.Next() % 1_000_000, Random.Shared.Next() % 1_000_000));
+
+            // The first set was created when TiebreakerSetIndex=0 was active, so it must remain marked as a tiebreaker
+            // even after the index was reset. Subsequent picks fall into regular sets.
+            AddAssert("first set is tiebreaker", () => Ladder.CurrentMatch.Value!.Sets[0].IsTiebreaker, () => Is.True);
         }
 
         [Test]
@@ -248,7 +252,15 @@ namespace osu.Game.Tournament.Tests.Screens
 
             AddStep("set blue pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Pick").TriggerClick());
             AddStep("pick nm2", () => clickBeatmapPanel(1));
-            AddStep("set scores on nm2", () => Ladder.CurrentMatch.Value!.MapScores["NM2"] = new Tuple<long, long>(Random.Shared.Next() % 1_000_000, Random.Shared.Next() % 1_000_000));
+            // Hardcode scores so we can assert the winner deterministically: blue takes the set 1.5M to 1.0M cumulative.
+            AddStep("set scores on nm1", () => Ladder.CurrentMatch.Value!.MapScores["NM1"] = new Tuple<long, long>(500_000, 750_000));
+            AddStep("set scores on nm2", () => Ladder.CurrentMatch.Value!.MapScores["NM2"] = new Tuple<long, long>(500_000, 750_000));
+
+            AddAssert("one set tracked", () => Ladder.CurrentMatch.Value!.Sets, () => Has.Count.EqualTo(1));
+            AddAssert("set is not tiebreaker", () => Ladder.CurrentMatch.Value!.Sets[0].IsTiebreaker, () => Is.False);
+            AddAssert("set has both maps populated",
+                () => Ladder.CurrentMatch.Value!.Sets[0].Map1Id.Value != 0 && Ladder.CurrentMatch.Value!.Sets[0].Map2Id.Value != 0,
+                () => Is.True);
         }
 
         [Test]

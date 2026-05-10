@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -292,10 +293,49 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    if (ipc.Score1.Value > ipc.Score2.Value)
-                        CurrentMatch.Value.Team1Score.Value++;
+                    if (LadderInfo.CumulativeScore.Value)
+                    {
+                        int mapId = ipc.Beatmap.Value?.OnlineID ?? 0;
+
+                        if (mapId > 0)
+                        {
+                            var roundMap = CurrentMatch.Value.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == mapId);
+
+                            if (roundMap != null)
+                            {
+                                CurrentMatch.Value.MapScores[roundMap.SlotName] = new Tuple<long, long>(ipc.Score1.Value, ipc.Score2.Value);
+
+                                var currentSet = MatchSet.FindSetByMapId(CurrentMatch.Value, mapId);
+
+                                if (currentSet != null)
+                                {
+                                    bool setComplete = currentSet.IsTiebreaker
+                                        ? mapId == currentSet.Map3Id.Value
+                                        : mapId == currentSet.Map2Id.Value;
+
+                                    if (setComplete)
+                                    {
+                                        var scores = currentSet.GetSetScores(CurrentMatch.Value);
+
+                                        if (scores != null)
+                                        {
+                                            if (scores.Item1 > scores.Item2)
+                                                CurrentMatch.Value.Team1Score.Value++;
+                                            else
+                                                CurrentMatch.Value.Team2Score.Value++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     else
-                        CurrentMatch.Value.Team2Score.Value++;
+                    {
+                        if (ipc.Score1.Value > ipc.Score2.Value)
+                            CurrentMatch.Value.Team1Score.Value++;
+                        else
+                            CurrentMatch.Value.Team2Score.Value++;
+                    }
                 }
 
                 switch (State.Value)
