@@ -195,6 +195,8 @@ namespace osu.Game.Tournament.Tests.Screens
             // The first set was created when TiebreakerSetIndex=0 was active, so it must remain marked as a tiebreaker
             // even after the index was reset. Subsequent picks fall into regular sets.
             AddAssert("first set is tiebreaker", () => Ladder.CurrentMatch.Value!.Sets[0].IsTiebreaker, () => Is.True);
+            AddUntilStep("first set panel is tiebreaker",
+                () => screen.ChildrenOfType<TournamentSetPanel>().FirstOrDefault()?.Model.IsTiebreaker == true);
         }
 
         [Test]
@@ -261,6 +263,10 @@ namespace osu.Game.Tournament.Tests.Screens
             AddAssert("set has both maps populated",
                 () => Ladder.CurrentMatch.Value!.Sets[0].Map1Id.Value != 0 && Ladder.CurrentMatch.Value!.Sets[0].Map2Id.Value != 0,
                 () => Is.True);
+            AddUntilStep("one TournamentSetPanel rendered",
+                () => screen.ChildrenOfType<TournamentSetPanel>().Count() == 1);
+            AddUntilStep("set panel awarded to blue",
+                () => screen.ChildrenOfType<TournamentSetPanel>().FirstOrDefault()?.Winner == TeamColour.Blue);
         }
 
         [Test]

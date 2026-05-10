@@ -26,6 +26,7 @@ namespace osu.Game.Tournament.Screens.MapPool
         public int TiebreakerSetIndex { get; set; } = -1;
 
         private FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>> mapFlows = null!;
+        private FillFlowContainer<TournamentSetPanel> setsFlow = null!;
 
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
@@ -61,6 +62,17 @@ namespace osu.Game.Tournament.Screens.MapPool
                     Direction = FillDirection.Vertical,
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
+                },
+                setsFlow = new FillFlowContainer<TournamentSetPanel>
+                {
+                    Anchor = Anchor.BottomCentre,
+                    Origin = Anchor.BottomCentre,
+                    Y = -160,
+                    Spacing = new Vector2(10, 5),
+                    Direction = FillDirection.Full,
+                    AutoSizeAxes = Axes.Y,
+                    RelativeSizeAxes = Axes.X,
+                    Padding = new MarginPadding { Horizontal = 100 },
                 },
                 new ControlPanel
                 {
@@ -215,7 +227,35 @@ namespace osu.Game.Tournament.Screens.MapPool
         {
             CurrentMatch.Value?.PicksBans.Clear();
             CurrentMatch.Value?.Sets.Clear();
+            updateSetsDisplay();
             setNextMode();
+        }
+
+        private void updateSetsDisplay()
+        {
+            if (CurrentMatch.Value == null)
+            {
+                setsFlow.Clear();
+                return;
+            }
+
+            var sets = CurrentMatch.Value.Sets;
+
+            // sets get rebuilt from scratch on shrinkage; the panels reference specific MatchSet instances
+            // so a full rebuild is the simplest correct approach when count changes.
+            if (setsFlow.Count > sets.Count)
+                setsFlow.Clear();
+
+            while (setsFlow.Count < sets.Count)
+            {
+                var currentSet = sets[setsFlow.Count];
+                setsFlow.Add(new TournamentSetPanel(currentSet)
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Height = currentSet.IsTiebreaker ? 72 : 48,
+                });
+            }
         }
 
         /// <summary>
@@ -290,6 +330,7 @@ namespace osu.Game.Tournament.Screens.MapPool
             });
 
             updateSets();
+            updateSetsDisplay();
 
             setNextMode();
 
@@ -313,6 +354,7 @@ namespace osu.Game.Tournament.Screens.MapPool
         {
             base.CurrentMatchChanged(match);
             updateDisplay();
+            updateSetsDisplay();
         }
 
         private void updateDisplay()
