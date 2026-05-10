@@ -4,6 +4,7 @@
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osuTK;
@@ -12,6 +13,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class MatchHeader : Container
     {
+        public partial class MatchCumulativeScoreDiffCounter : CommaSeparatedScoreCounter
+        {
+        }
+
         private TeamScoreDisplay teamDisplay1 = null!;
         private TeamScoreDisplay teamDisplay2 = null!;
         private DrawableTournamentHeaderLogo logo = null!;

@@ -22,6 +22,8 @@ namespace osu.Game.Tournament.Screens.MapPool
 {
     public partial class MapPoolScreen : TournamentMatchScreen
     {
+        public int TiebreakerSetIndex { get; set; } = -1;
+
         private FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>> mapFlows = null!;
 
         [Resolved]

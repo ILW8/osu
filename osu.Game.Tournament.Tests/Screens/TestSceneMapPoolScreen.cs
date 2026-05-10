@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Linq;
 using NUnit.Framework;
 using osu.Framework.Allocation;
@@ -35,8 +36,9 @@ namespace osu.Game.Tournament.Tests.Screens
             Ladder.SplitMapPoolByMods.Value = true;
 
             Ladder.CurrentMatch.Value = new TournamentMatch();
+            Ladder.Matches.First().PicksBans.Clear();
+            Ladder.Matches.First().Sets.Clear();
             Ladder.CurrentMatch.Value = Ladder.Matches.First();
-            Ladder.CurrentMatch.Value.PicksBans.Clear();
         }
 
         [SetUp]
@@ -147,6 +149,106 @@ namespace osu.Game.Tournament.Tests.Screens
             AddStep("disable splitting map pool by mods", () => Ladder.SplitMapPoolByMods.Value = false);
 
             AddStep("reset state", resetState);
+        }
+
+        [Test]
+        public void TestTiebreakerSetDisplay()
+        {
+            int originalTiebreakerSetIndex = screen.TiebreakerSetIndex;
+
+            AddStep("load first weekend maps", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+
+                for (int i = 0; i < 4; i++)
+                    addBeatmap("NM", $"NM map #{i}");
+
+                resetState();
+            });
+
+            AddStep("disable cumulative score", () => Ladder.CumulativeScore.Value = false);
+            AddStep("enable cumulative score", () => Ladder.CumulativeScore.Value = true);
+
+            AddStep("Set first set to be a tiebreaker set", () => screen.TiebreakerSetIndex = 0);
+
+            AddStep("pick nm1", () =>
+            {
+                screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Pick").TriggerClick();
+                clickBeatmapPanel(0);
+            });
+            AddStep("Reset tiebreaker set index", () => screen.TiebreakerSetIndex = originalTiebreakerSetIndex);
+            AddStep("update current beatmap", () =>
+            {
+                var newTournamentBeatmap = Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.First(b => screen.ChildrenOfType<TournamentBeatmapPanel>().ElementAt(0).Beatmap!.OnlineID == b.Beatmap!.OnlineID).Beatmap;
+                IPCInfo.Beatmap.Value = newTournamentBeatmap;
+            });
+            AddStep("set scores on nm1", () => Ladder.CurrentMatch.Value!.MapScores["NM1"] = new Tuple<long, long>(Random.Shared.Next() % 1_000_000, Random.Shared.Next() % 1_000_000));
+
+            AddStep("set blue pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Pick").TriggerClick());
+            AddStep("pick nm2", () => clickBeatmapPanel(1));
+            AddStep("set scores on nm2", () => Ladder.CurrentMatch.Value!.MapScores["NM2"] = new Tuple<long, long>(Random.Shared.Next() % 1_000_000, Random.Shared.Next() % 1_000_000));
+
+            AddStep("set red pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Pick").TriggerClick());
+            AddStep("pick nm3", () => clickBeatmapPanel(2));
+            AddStep("set scores on nm3", () => Ladder.CurrentMatch.Value!.MapScores["NM3"] = new Tuple<long, long>(Random.Shared.Next() % 1_000_000, Random.Shared.Next() % 1_000_000));
+        }
+
+        [Test]
+        public void TestLgaSetScoring()
+        {
+            AddStep("load first weekend maps", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+
+                for (int i = 0; i < 4; i++)
+                    addBeatmap("NM", $"NM map #{i}");
+                for (int i = 0; i < 2; i++)
+                    addBeatmap("HD", $"HD map #{i}");
+                for (int i = 0; i < 2; i++)
+                    addBeatmap("HR", $"HR map #{i}");
+                for (int i = 0; i < 3; i++)
+                    addBeatmap("DT", $"DT map #{i}");
+
+                resetState();
+            });
+
+            AddStep("disable cumulative score", () => Ladder.CumulativeScore.Value = false);
+            AddStep("enable cumulative score", () => Ladder.CumulativeScore.Value = true);
+
+            // hardcoded bans for now oh well
+            AddStep("ban map 1", () =>
+            {
+                screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Ban").TriggerClick();
+                clickBeatmapPanel(2);
+            });
+            AddStep("ban map 2", () =>
+            {
+                screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Ban").TriggerClick();
+                clickBeatmapPanel(3);
+            });
+            AddStep("ban map 3", () =>
+            {
+                screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Ban").TriggerClick();
+                clickBeatmapPanel(4);
+            });
+            AddStep("ban map 4", () =>
+            {
+                screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Ban").TriggerClick();
+                clickBeatmapPanel(5);
+            });
+
+            AddStep("set red pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Pick").TriggerClick());
+            AddStep("pick nm1", () => clickBeatmapPanel(0));
+            AddStep("update current beatmap", () =>
+            {
+                var newTournamentBeatmap = Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.First(b => screen.ChildrenOfType<TournamentBeatmapPanel>().ElementAt(0).Beatmap!.OnlineID == b.Beatmap!.OnlineID).Beatmap;
+                IPCInfo.Beatmap.Value = newTournamentBeatmap;
+            });
+            AddStep("set scores on nm1", () => Ladder.CurrentMatch.Value!.MapScores["NM1"] = new Tuple<long, long>(Random.Shared.Next() % 1_000_000, Random.Shared.Next() % 1_000_000));
+
+            AddStep("set blue pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Pick").TriggerClick());
+            AddStep("pick nm2", () => clickBeatmapPanel(1));
+            AddStep("set scores on nm2", () => Ladder.CurrentMatch.Value!.MapScores["NM2"] = new Tuple<long, long>(Random.Shared.Next() % 1_000_000, Random.Shared.Next() % 1_000_000));
         }
 
         [Test]
@@ -330,12 +432,18 @@ namespace osu.Game.Tournament.Tests.Screens
                 () => Ladder.CurrentMatch.Value!.PicksBans.Select(pb => (pb.Type, pb.Team)).Last(),
                 () => Is.EqualTo((expectedChoice, expectedColour)));
 
-        private void addBeatmap(string mods = "NM")
+        private void addBeatmap(string mods = "NM", string? titleOverride = null)
         {
+            var newBeatmap = CreateSampleBeatmap(titleOverride);
+
+            int modSlotIndex = Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Count(bm => bm.Mods == mods) + 1;
+
             Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Add(new RoundBeatmap
             {
-                Beatmap = CreateSampleBeatmap(),
-                Mods = mods
+                Beatmap = newBeatmap,
+                ID = newBeatmap.OnlineID,
+                Mods = mods,
+                SlotName = $"{mods}{modSlotIndex}"
             });
         }
 

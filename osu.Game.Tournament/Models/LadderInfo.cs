@@ -45,6 +45,8 @@ namespace osu.Game.Tournament.Models
 
         public Bindable<bool> DisplayTeamSeeds = new BindableBool();
 
+        public Bindable<bool> CumulativeScore = new BindableBool();
+
         /// <summary>
         /// When <c>true</c>, the tournament overlay connects to a multiplayer room via SignalR
         /// for match data instead of using file-based IPC from the stable client.
