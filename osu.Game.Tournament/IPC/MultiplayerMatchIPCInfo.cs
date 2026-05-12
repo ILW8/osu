@@ -373,12 +373,19 @@ namespace osu.Game.Tournament.IPC
                 var header = bundle.Header;
                 double gameplayTime = bundle.Frames.Count > 0 ? bundle.Frames[^1].Time : 0;
 
+                // Preserve any previously-populated mods (sourced from RoomUpdated) — frame
+                // bundles don't carry per-user mods, only score/combo/accuracy/hits.
+                var previousMods = userStates.TryGetValue(userId, out var existing)
+                    ? existing.Mods
+                    : Array.Empty<APIMod>();
+
                 userStates[userId] = new UserGameplayState(
                     Score: header.TotalScore,
                     Combo: header.Combo,
                     Accuracy: header.Accuracy,
                     Hits: new Dictionary<HitResult, int>(header.Statistics),
-                    GameplayTimeMs: gameplayTime);
+                    GameplayTimeMs: gameplayTime,
+                    Mods: previousMods);
 
                 updateTeamScores();
             });
