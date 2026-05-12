@@ -28,7 +28,9 @@ namespace osu.Game.Tournament.Components
 
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
 
+        private Container borderBox = null!;
         private Box flash = null!;
+        private TournamentProtectIcon protectIcon = null!;
 
         public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "")
         {
@@ -45,67 +47,81 @@ namespace osu.Game.Tournament.Components
             currentMatch.BindValueChanged(matchChanged);
             currentMatch.BindTo(ladder.CurrentMatch);
 
-            Masking = true;
-
             AddRangeInternal(new Drawable[]
             {
-                new Box
+                borderBox = new Container
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Colour = Color4.Black,
-                },
-                new NoUnloadBeatmapSetCover
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Colour = OsuColour.Gray(0.5f),
-                    OnlineInfo = (Beatmap as IBeatmapSetOnlineInfo),
-                },
-                new FillFlowContainer
-                {
-                    AutoSizeAxes = Axes.Both,
-                    Anchor = Anchor.CentreLeft,
-                    Origin = Anchor.CentreLeft,
-                    Padding = new MarginPadding(15),
-                    Direction = FillDirection.Vertical,
+                    Masking = true,
                     Children = new Drawable[]
                     {
-                        new TournamentSpriteText
+                        new Box
                         {
-                            Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"unknown",
-                            Font = OsuFont.Torus.With(weight: FontWeight.Bold),
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = Color4.Black,
+                        },
+                        new NoUnloadBeatmapSetCover
+                        {
+                            RelativeSizeAxes = Axes.Both,
+                            Colour = OsuColour.Gray(0.5f),
+                            OnlineInfo = (Beatmap as IBeatmapSetOnlineInfo),
                         },
                         new FillFlowContainer
                         {
                             AutoSizeAxes = Axes.Both,
-                            Direction = FillDirection.Horizontal,
+                            Anchor = Anchor.CentreLeft,
+                            Origin = Anchor.CentreLeft,
+                            Padding = new MarginPadding(15),
+                            Direction = FillDirection.Vertical,
                             Children = new Drawable[]
                             {
                                 new TournamentSpriteText
                                 {
-                                    Text = "mapper",
-                                    Padding = new MarginPadding { Right = 5 },
-                                    Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
+                                    Text = Beatmap?.GetDisplayTitleRomanisable(false, false) ?? (LocalisableString)@"unknown",
+                                    Font = OsuFont.Torus.With(weight: FontWeight.Bold),
                                 },
-                                new TournamentSpriteText
+                                new FillFlowContainer
                                 {
-                                    Text = Beatmap?.Metadata.Author.Username ?? "unknown",
-                                    Padding = new MarginPadding { Right = 20 },
-                                    Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
-                                },
-                                new TournamentSpriteText
-                                {
-                                    Text = "difficulty",
-                                    Padding = new MarginPadding { Right = 5 },
-                                    Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
-                                },
-                                new TournamentSpriteText
-                                {
-                                    Text = Beatmap?.DifficultyName ?? "unknown",
-                                    Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
-                                },
-                            }
-                        }
+                                    AutoSizeAxes = Axes.Both,
+                                    Direction = FillDirection.Horizontal,
+                                    Children = new Drawable[]
+                                    {
+                                        new TournamentSpriteText
+                                        {
+                                            Text = "mapper",
+                                            Padding = new MarginPadding { Right = 5 },
+                                            Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
+                                        },
+                                        new TournamentSpriteText
+                                        {
+                                            Text = Beatmap?.Metadata.Author.Username ?? "unknown",
+                                            Padding = new MarginPadding { Right = 20 },
+                                            Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
+                                        },
+                                        new TournamentSpriteText
+                                        {
+                                            Text = "difficulty",
+                                            Padding = new MarginPadding { Right = 5 },
+                                            Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: 14)
+                                        },
+                                        new TournamentSpriteText
+                                        {
+                                            Text = Beatmap?.DifficultyName ?? "unknown",
+                                            Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 14)
+                                        },
+                                    }
+                                }
+                            },
+                        },
                     },
+                },
+                protectIcon = new TournamentProtectIcon
+                {
+                    Anchor = Anchor.CentreRight,
+                    Origin = Anchor.CentreRight,
+                    RelativeSizeAxes = Axes.Y,
+                    AutoSizeAxes = Axes.None,
+                    Width = HEIGHT,
                 },
                 flash = new Box
                 {
@@ -122,7 +138,7 @@ namespace osu.Game.Tournament.Components
                 {
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
-                    Margin = new MarginPadding(10),
+                    Margin = new MarginPadding { Right = 20 },
                     Width = 60,
                     RelativeSizeAxes = Axes.Y,
                 });
@@ -132,9 +148,15 @@ namespace osu.Game.Tournament.Components
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
             if (match.OldValue != null)
+            {
                 match.OldValue.PicksBans.CollectionChanged -= picksBansOnCollectionChanged;
+                match.OldValue.Protects.CollectionChanged -= picksBansOnCollectionChanged;
+            }
             if (match.NewValue != null)
+            {
                 match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
+                match.NewValue.Protects.CollectionChanged += picksBansOnCollectionChanged;
+            }
 
             Scheduler.AddOnce(updateState);
         }
@@ -151,7 +173,15 @@ namespace osu.Game.Tournament.Components
                 return;
             }
 
-            var newChoice = currentMatch.Value.PicksBans.FirstOrDefault(p => p.BeatmapID == Beatmap?.OnlineID);
+            var protectedChoice = currentMatch.Value.Protects
+                .FirstOrDefault(p => p.BeatmapID == Beatmap?.OnlineID);
+            protectIcon.TeamColour = protectedChoice?.Team;
+
+            // LastOrDefault so that if a map ends up in PicksBans twice (e.g. operator misclick
+            // recovery), the most recent choice is what shows. addForBeatmap (Task 9) only ever
+            // allows one PicksBans entry per beatmap, so in normal flow LastOrDefault == FirstOrDefault.
+            var newChoice = currentMatch.Value.PicksBans
+                .LastOrDefault(p => p.BeatmapID == Beatmap?.OnlineID);
 
             bool shouldFlash = newChoice != choice;
 
@@ -160,28 +190,27 @@ namespace osu.Game.Tournament.Components
                 if (shouldFlash)
                     flash.FadeOutFromOne(500).Loop(0, 10);
 
-                BorderThickness = 6;
-
-                BorderColour = TournamentGame.GetTeamColour(newChoice.Team);
+                borderBox.BorderThickness = 6;
+                borderBox.BorderColour = TournamentGame.GetTeamColour(newChoice.Team);
 
                 switch (newChoice.Type)
                 {
                     case ChoiceType.Pick:
-                        Colour = Color4.White;
-                        Alpha = 1;
+                        borderBox.Colour = Color4.White;
+                        borderBox.Alpha = 1;
                         break;
 
                     case ChoiceType.Ban:
-                        Colour = Color4.Gray;
-                        Alpha = 0.5f;
+                        borderBox.Colour = Color4.Gray;
+                        borderBox.Alpha = 0.5f;
                         break;
                 }
             }
             else
             {
-                Colour = Color4.White;
-                BorderThickness = 0;
-                Alpha = 1;
+                borderBox.Colour = Color4.White;
+                borderBox.BorderThickness = 0;
+                borderBox.Alpha = 1;
             }
 
             choice = newChoice;
