@@ -48,5 +48,34 @@ namespace osu.Game.Tournament.Tests.Screens
             });
             AddAssert("bindable is false", () => !Ladder.Rounds.First().AllowPickingOpponentProtects.Value);
         }
+
+        [Test]
+        public void TestModParametersFreeForm()
+        {
+            var parsed = RoundEditorScreen.RoundRow.RoundBeatmapEditor.RoundBeatmapRow
+                .parseModParameters("DT.speed_change=1.5\nMOD.flag=true\nKey.note=hello");
+
+            Assert.That(parsed["DT"]["speed_change"], Is.EqualTo(1.5));
+            Assert.That(parsed["MOD"]["flag"], Is.EqualTo(true));
+            Assert.That(parsed["Key"]["note"], Is.EqualTo("hello"));
+        }
+
+        [Test]
+        public void TestModParametersEmptyInput()
+        {
+            var parsed = RoundEditorScreen.RoundRow.RoundBeatmapEditor.RoundBeatmapRow
+                .parseModParameters(string.Empty);
+            Assert.That(parsed, Is.Empty);
+        }
+
+        [Test]
+        public void TestModParametersMalformedLinesSkipped()
+        {
+            var parsed = RoundEditorScreen.RoundRow.RoundBeatmapEditor.RoundBeatmapRow
+                .parseModParameters("=1.5\nDT.\nfoo=bar\nDT.x=2.0");
+
+            Assert.That(parsed.Count, Is.EqualTo(1));
+            Assert.That(parsed["DT"]["x"], Is.EqualTo(2.0));
+        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Collections.Generic;
 using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
@@ -175,6 +176,8 @@ namespace osu.Game.Tournament.Screens.Editors
 
                     private readonly Bindable<string> mods = new Bindable<string>(string.Empty);
 
+                    private readonly Bindable<string> modParameters = new Bindable<string>(string.Empty);
+
                     private readonly Container drawableContainer;
 
                     public RoundBeatmapRow(TournamentRound team, RoundBeatmap beatmap)
@@ -218,6 +221,13 @@ namespace osu.Game.Tournament.Screens.Editors
                                         RelativeSizeAxes = Axes.None,
                                         Width = 200,
                                         Current = mods,
+                                    },
+                                    new SettingsTextBox
+                                    {
+                                        LabelText = "Mod settings",
+                                        RelativeSizeAxes = Axes.None,
+                                        Width = 300,
+                                        Current = modParameters,
                                     },
                                     drawableContainer = new Container
                                     {
@@ -276,7 +286,89 @@ namespace osu.Game.Tournament.Screens.Editors
                         }, true);
 
                         mods.Value = Model.Mods;
-                        mods.BindValueChanged(modString => Model.Mods = modString.NewValue);
+                        mods.BindValueChanged(modString =>
+                        {
+                            Model.Mods = modString.NewValue;
+                            updatePanel();
+                        });
+
+                        modParameters.Value = serialiseModParameters(Model.ModParameters);
+                        modParameters.BindValueChanged(text =>
+                        {
+                            Model.ModParameters = parseModParameters(text.NewValue);
+                            updatePanel();
+                        });
+                    }
+
+                    /// <summary>
+                    /// Serialise a <see cref="RoundBeatmap.ModParameters"/> dictionary into the textbox format.
+                    /// One line per setting: <c>ACRONYM.setting=value</c>.
+                    /// </summary>
+                    private static string serialiseModParameters(Dictionary<string, Dictionary<string, object>> parameters)
+                    {
+                        if (parameters.Count == 0)
+                            return string.Empty;
+
+                        var lines = new List<string>();
+                        foreach (var (acronym, settings) in parameters)
+                        {
+                            foreach (var (key, value) in settings)
+                                lines.Add($"{acronym}.{key}={value}");
+                        }
+
+                        return string.Join('\n', lines);
+                    }
+
+                    /// <summary>
+                    /// Parse the textbox content. Each line is <c>ACRONYM.setting=value</c>; the value is
+                    /// tried as <c>double</c>, then <c>bool</c>, then falls through as a raw string.
+                    /// Malformed lines are silently skipped — free-form editor, iterate UI later if clunky.
+                    /// </summary>
+                    internal static Dictionary<string, Dictionary<string, object>> parseModParameters(string text)
+                    {
+                        var result = new Dictionary<string, Dictionary<string, object>>();
+
+                        if (string.IsNullOrWhiteSpace(text))
+                            return result;
+
+                        foreach (string rawLine in text.Split('\n'))
+                        {
+                            string line = rawLine.Trim();
+                            if (line.Length == 0)
+                                continue;
+
+                            int dot = line.IndexOf('.');
+                            int eq = line.IndexOf('=');
+
+                            if (dot <= 0 || eq <= dot + 1)
+                                continue;
+
+                            string acronym = line.Substring(0, dot).Trim();
+                            string key = line.Substring(dot + 1, eq - dot - 1).Trim();
+                            string rawValue = line.Substring(eq + 1).Trim();
+
+                            if (acronym.Length == 0 || key.Length == 0)
+                                continue;
+
+                            object value;
+                            if (double.TryParse(rawValue, System.Globalization.NumberStyles.Float,
+                                    System.Globalization.CultureInfo.InvariantCulture, out double d))
+                                value = d;
+                            else if (bool.TryParse(rawValue, out bool b))
+                                value = b;
+                            else
+                                value = rawValue;
+
+                            if (!result.TryGetValue(acronym, out var settings))
+                            {
+                                settings = new Dictionary<string, object>();
+                                result[acronym] = settings;
+                            }
+
+                            settings[key] = value;
+                        }
+
+                        return result;
                     }
 
                     private void updatePanel() => Schedule(() =>
