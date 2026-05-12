@@ -1,6 +1,6 @@
 # LGA 2026 Phase 2 — Per-map mod parameters + per-user mods in IPC implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Wire structured per-map mod settings into `RoundBeatmap`, render them through an extended `TournamentModIcon` that surfaces lazer's existing extender + cog badge (so a 1.5× DT map shows `1.50x` inline and a Deflate map with non-default `starting_size` shows the cog corner badge), and thread each multiplayer-room user's mod selection through `MultiplayerMatchIPCInfo` → `IPCSnapshot.users[].mods` so external overlays + the gameplay overlay can render per-user mods (covers FreeMod / LM bracket needs).
 
@@ -51,7 +51,7 @@ No changes to `LadderInfo`, `TournamentMatch`, the protect plumbing, `Multiplaye
 **Files:**
 - Modify: `osu.Game.Tournament/Models/RoundBeatmap.cs`
 
-- [ ] **Step 1: Add the `ModParameters` field**
+- [x] **Step 1: Add the `ModParameters` field**
 
 Edit `osu.Game.Tournament/Models/RoundBeatmap.cs`. Replace the entire file with:
 
@@ -87,7 +87,7 @@ namespace osu.Game.Tournament.Models
 }
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run:
 ```
@@ -95,7 +95,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```
 git add osu.Game.Tournament/Models/RoundBeatmap.cs
@@ -114,7 +114,7 @@ APIMod.ToMod to apply non-default mod settings — e.g. DT 1.5x rate."
 - Create: `osu.Game.Tournament/Components/RoundBeatmapModFactory.cs`
 - Create: `osu.Game.Tournament.Tests/NonVisual/RoundBeatmapModFactoryTest.cs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `osu.Game.Tournament.Tests/NonVisual/RoundBeatmapModFactoryTest.cs`:
 
@@ -187,7 +187,7 @@ namespace osu.Game.Tournament.Tests.NonVisual
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run:
 ```
@@ -195,7 +195,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: BUILD FAILED — `RoundBeatmapModFactory` not defined.
 
-- [ ] **Step 3: Implement the factory**
+- [x] **Step 3: Implement the factory**
 
 Create `osu.Game.Tournament/Components/RoundBeatmapModFactory.cs`:
 
@@ -263,7 +263,7 @@ namespace osu.Game.Tournament.Components
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run:
 ```
@@ -271,7 +271,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS (4/4).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 git add osu.Game.Tournament/Components/RoundBeatmapModFactory.cs osu.Game.Tournament.Tests/NonVisual/RoundBeatmapModFactoryTest.cs
@@ -292,7 +292,7 @@ badge."
 - Modify: `osu.Game.Tournament/Components/TournamentModIcon.cs`
 - Create: `osu.Game.Tournament.Tests/Components/TestSceneTournamentModIcon.cs`
 
-- [ ] **Step 1: Write the failing test scene**
+- [x] **Step 1: Write the failing test scene**
 
 Create `osu.Game.Tournament.Tests/Components/TestSceneTournamentModIcon.cs`:
 
@@ -388,7 +388,7 @@ namespace osu.Game.Tournament.Tests.Components
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run:
 ```
@@ -396,7 +396,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: BUILD FAILED — no `TournamentModIcon(Mod)` constructor.
 
-- [ ] **Step 3: Add the `(Mod)` constructor + gating**
+- [x] **Step 3: Add the `(Mod)` constructor + gating**
 
 Replace `osu.Game.Tournament/Components/TournamentModIcon.cs` with:
 
@@ -492,7 +492,7 @@ namespace osu.Game.Tournament.Components
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run:
 ```
@@ -500,7 +500,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS (3/3).
 
-- [ ] **Step 5: Build everything to confirm no regressions**
+- [x] **Step 5: Build everything to confirm no regressions**
 
 Run:
 ```
@@ -508,7 +508,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```
 git add osu.Game.Tournament/Components/TournamentModIcon.cs osu.Game.Tournament.Tests/Components/TestSceneTournamentModIcon.cs
@@ -528,7 +528,7 @@ keep getting default-settings rendering."
 **Files:**
 - Modify: `osu.Game.Tournament/Components/TournamentBeatmapPanel.cs`
 
-- [ ] **Step 1: Add a `RoundBeatmap`-aware overload + flow rendering**
+- [x] **Step 1: Add a `RoundBeatmap`-aware overload + flow rendering**
 
 Edit `osu.Game.Tournament/Components/TournamentBeatmapPanel.cs`. Find the existing constructor + the mod-icon block in `load`:
 
@@ -650,7 +650,7 @@ private IRulesetStore rulesets { get; set; } = null!;
 
 The `ladder` reference inside the new flow block uses the `ladder` *method parameter* on the existing `[BackgroundDependencyLoader] private void load(LadderInfo ladder)` signature — no extra field capture needed (the entire mod-flow construction happens inside `load`).
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run:
 ```
@@ -658,7 +658,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```
 git add osu.Game.Tournament/Components/TournamentBeatmapPanel.cs
@@ -678,7 +678,7 @@ overload is preserved for SeedingEditorScreen and TestSceneTournamentModDisplay
 - Modify: `osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs:553`
 - Modify: `osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs:288`
 
-- [ ] **Step 1: Update `MapPoolScreen`**
+- [x] **Step 1: Update `MapPoolScreen`**
 
 Edit `osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs`. Find (around line 553):
 
@@ -702,7 +702,7 @@ currentFlow.Add(new TournamentBeatmapPanel(b)
 });
 ```
 
-- [ ] **Step 2: Update `RoundEditorScreen`**
+- [x] **Step 2: Update `RoundEditorScreen`**
 
 Edit `osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs`. Find `updatePanel` (around line 288):
 
@@ -726,7 +726,7 @@ drawableContainer.Child = new TournamentBeatmapPanel(Model)
 };
 ```
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run:
 ```
@@ -734,7 +734,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 4: Run the existing visual tests to confirm no regression**
+- [x] **Step 4: Run the existing visual tests to confirm no regression**
 
 Run:
 ```
@@ -742,7 +742,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS (existing tests; the panel still renders with no mod when `b.Mods == ""`).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 git add osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs
@@ -760,7 +760,7 @@ mod-display test scene still use the (beatmap, string) overload unchanged."
 **Files:**
 - Modify: `osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs`
 
-- [ ] **Step 1: Add the textbox + parse logic**
+- [x] **Step 1: Add the textbox + parse logic**
 
 Edit `osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs`. Add `using System.Collections.Generic;` and `using System.Linq;` at the top if not already present.
 
@@ -921,7 +921,7 @@ internal static Dictionary<string, Dictionary<string, object>> parseModParameter
 }
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run:
 ```
@@ -929,7 +929,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 3: Add a unit test for the parse path**
+- [x] **Step 3: Add a unit test for the parse path**
 
 Edit `osu.Game.Tournament.Tests/Screens/TestSceneRoundEditorScreen.cs`. If the file does not yet exist, create it with:
 
@@ -981,7 +981,7 @@ If the file already exists, append the three test methods inside the existing cl
 
 > If `InternalsVisibleTo` is not in place, add `[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("osu.Game.Tournament.Tests")]` to `osu.Game.Tournament/Properties/AssemblyInfo.cs` (create the file with `// Copyright` header if missing).
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run:
 ```
@@ -989,7 +989,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS (3/3).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 git add osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs osu.Game.Tournament.Tests/Screens/TestSceneRoundEditorScreen.cs
@@ -1008,7 +1008,7 @@ directly. Round-trips into bracket.json via the new RoundBeatmap.ModParameters."
 **Files:**
 - Modify: `osu.Game.Tournament/IPC/UserGameplayState.cs`
 
-- [ ] **Step 1: Add the `Mods` field**
+- [x] **Step 1: Add the `Mods` field**
 
 Replace `osu.Game.Tournament/IPC/UserGameplayState.cs` with:
 
@@ -1046,7 +1046,7 @@ namespace osu.Game.Tournament.IPC
 }
 ```
 
-- [ ] **Step 2: Update callers — `MultiplayerMatchIPCInfo.onNewFrames`**
+- [x] **Step 2: Update callers — `MultiplayerMatchIPCInfo.onNewFrames`**
 
 Edit `osu.Game.Tournament/IPC/MultiplayerMatchIPCInfo.cs`. Find `onNewFrames`:
 
@@ -1079,7 +1079,7 @@ userStates[userId] = new UserGameplayState(
 
 Add `using osu.Game.Online.API;` and `using System;` at the top of the file if not already present.
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run:
 ```
@@ -1087,7 +1087,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```
 git add osu.Game.Tournament/IPC/UserGameplayState.cs osu.Game.Tournament/IPC/MultiplayerMatchIPCInfo.cs
@@ -1105,7 +1105,7 @@ score frame arriving between RoomUpdated ticks doesn't blank out the mods."
 **Files:**
 - Modify: `osu.Game.Tournament/IPC/MultiplayerMatchIPCInfo.cs`
 
-- [ ] **Step 1: Add `updateUserModsFromRoom` and wire it into `onRoomUpdated`**
+- [x] **Step 1: Add `updateUserModsFromRoom` and wire it into `onRoomUpdated`**
 
 Edit `osu.Game.Tournament/IPC/MultiplayerMatchIPCInfo.cs`. Find `onRoomUpdated`:
 
@@ -1171,7 +1171,7 @@ private void updateUserModsFromRoom()
 
 `ToList()` materialises the incoming `IEnumerable<APIMod>` (which can be a deferred LINQ chain) into a stable snapshot.
 
-- [ ] **Step 2: Update `onLoadRequested` to preserve mods on round-reset**
+- [x] **Step 2: Update `onLoadRequested` to preserve mods on round-reset**
 
 Find `onLoadRequested`:
 
@@ -1193,7 +1193,7 @@ foreach (int userId in userStates.Keys.ToArray())
 }
 ```
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run:
 ```
@@ -1201,7 +1201,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 4: Run the existing IPC writer tests to confirm no regressions**
+- [x] **Step 4: Run the existing IPC writer tests to confirm no regressions**
 
 Run:
 ```
@@ -1209,7 +1209,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS (existing tests; they instantiate `UserGameplayState.Empty` and don't touch `Mods`, so they survive the field addition).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 git add osu.Game.Tournament/IPC/MultiplayerMatchIPCInfo.cs
@@ -1229,7 +1229,7 @@ a brief empty window before the next RoomUpdated tick repopulates them."
 **Files:**
 - Modify: `osu.Game.Tournament/IPC/IPCSnapshot.cs`
 
-- [ ] **Step 1: Add `IPCUserModEntry` + `Mods` field + JSON emission**
+- [x] **Step 1: Add `IPCUserModEntry` + `Mods` field + JSON emission**
 
 Edit `osu.Game.Tournament/IPC/IPCSnapshot.cs`. Find the `IPCUserSnapshot` record:
 
@@ -1333,7 +1333,7 @@ foreach (var u in snap.Users)
 }
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run:
 ```
@@ -1341,7 +1341,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD FAILED — `MultiplayerIPCWriter.BuildUserSnapshots` constructs `IPCUserSnapshot` without `Mods`. Fixed in Task 10.
 
-- [ ] **Step 3: Commit (deferred)**
+- [x] **Step 3: Commit (deferred)**
 
 Hold the commit until Task 10 lands — both files together form one buildable unit.
 
@@ -1352,7 +1352,7 @@ Hold the commit until Task 10 lands — both files together form one buildable u
 **Files:**
 - Modify: `osu.Game.Tournament/IPC/MultiplayerIPCWriter.cs`
 
-- [ ] **Step 1: Project `state.Mods` into `IPCUserModEntry`**
+- [x] **Step 1: Project `state.Mods` into `IPCUserModEntry`**
 
 Edit `osu.Game.Tournament/IPC/MultiplayerIPCWriter.cs`. Find the existing `IPCUserSnapshot` construction in `BuildUserSnapshots`:
 
@@ -1405,7 +1405,7 @@ users.Add(new IPCUserSnapshot(
     Mods: modsBuilder.ToImmutable()));
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run:
 ```
@@ -1413,7 +1413,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 3: Add a unit test for the per-user-mod projection**
+- [x] **Step 3: Add a unit test for the per-user-mod projection**
 
 Edit `osu.Game.Tournament.Tests/NonVisual/MultiplayerIPCWriterBuildUserSnapshotsTest.cs`. Append inside the `[TestFixture]` class:
 
@@ -1469,7 +1469,7 @@ Update the existing `IncludesUsersWithoutMatchState` / `ProjectsStateAndRoleFrom
 
 Add `using System;` to the test file's `using` block if not already present.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run:
 ```
@@ -1477,7 +1477,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS (all updated cases + the new one — 6 tests total).
 
-- [ ] **Step 5: Update the two existing `IPCUserSnapshot` constructions in `IPCSnapshotTest.cs`**
+- [x] **Step 5: Update the two existing `IPCUserSnapshot` constructions in `IPCSnapshotTest.cs`**
 
 Edit `osu.Game.Tournament.Tests/NonVisual/IPCSnapshotTest.cs`. Two existing tests construct `IPCUserSnapshot` positionally and will fail to compile against the new required `Mods` field:
 
@@ -1555,7 +1555,7 @@ Assert.That(u0["mods"]!.HasValues, Is.False);
 
 No other `IPCUserSnapshot` constructions exist in the file (the `ComputeOutput` tests use `ImmutableArray<IPCUserSnapshot>.Empty`, which is unaffected).
 
-- [ ] **Step 6: Add a JSON-shape test**
+- [x] **Step 6: Add a JSON-shape test**
 
 Edit `osu.Game.Tournament.Tests/NonVisual/IPCSnapshotTest.cs`. Append a test that round-trips a snapshot with mods through `SerializeToJson`:
 
@@ -1607,7 +1607,7 @@ using osu.Game.Tournament.Models;
 
 The file already contains a `[TestFixture] public class IPCSnapshotTest` — append this method inside it.
 
-- [ ] **Step 7: Run all `IPCSnapshotTest` cases**
+- [x] **Step 7: Run all `IPCSnapshotTest` cases**
 
 Run:
 ```
@@ -1615,7 +1615,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS (all existing cases survive the `Mods` field addition + the new one).
 
-- [ ] **Step 8: Commit (covering both Task 9 + Task 10 changes)**
+- [x] **Step 8: Commit (covering both Task 9 + Task 10 changes)**
 
 ```
 git add osu.Game.Tournament/IPC/IPCSnapshot.cs osu.Game.Tournament/IPC/MultiplayerIPCWriter.cs osu.Game.Tournament.Tests/NonVisual/MultiplayerIPCWriterBuildUserSnapshotsTest.cs osu.Game.Tournament.Tests/NonVisual/IPCSnapshotTest.cs
@@ -1635,7 +1635,7 @@ BuildUserSnapshots and the resulting JSON shape."
 **Files:**
 - Modify: `osu.Game.Tournament/Components/TournamentGameplayDisplay.cs`
 
-- [ ] **Step 1: Wrap each `PlayerArea` in a container with a mod-icon strip**
+- [x] **Step 1: Wrap each `PlayerArea` in a container with a mod-icon strip**
 
 Edit `osu.Game.Tournament/Components/TournamentGameplayDisplay.cs`. Add `using osu.Framework.Graphics.Containers;` and `using osu.Game.Rulesets.Mods;` to the `using` block if not already present.
 
@@ -1714,7 +1714,7 @@ Add `using osuTK;` if not already present (for `Vector2`).
 
 The `Mod` instances come from `gameplayState.Score.ScoreInfo.Mods`, which is populated at construction time in `tryStartGameplay` from `spectatorState.Mods.Select(m => m.ToMod(resolvedRuleset))`. So the overlay reflects the mods the spectated user is playing with.
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run:
 ```
@@ -1722,7 +1722,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 3: Run the tournament test suite to confirm no regressions**
+- [x] **Step 3: Run the tournament test suite to confirm no regressions**
 
 Run:
 ```
@@ -1730,7 +1730,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS (the existing `TournamentGameplayDisplayBuildSnapshottedSlotsTest` does not touch the slot-container wrapping, so it stays green).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```
 git add osu.Game.Tournament/Components/TournamentGameplayDisplay.cs
@@ -1749,7 +1749,7 @@ mods show the cog corner badge."
 
 **Files:** none — verification only.
 
-- [ ] **Step 1: Full build**
+- [x] **Step 1: Full build**
 
 Run:
 ```
@@ -1757,7 +1757,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 2: Full tournament test suite**
+- [x] **Step 2: Full tournament test suite**
 
 Run:
 ```
@@ -1765,7 +1765,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj
 ```
 Expected: all tests pass. There should be at least 4 new `RoundBeatmapModFactoryTest` cases, 3 new `TestSceneTournamentModIcon` cases, 3 new `TestSceneRoundEditorScreen` cases (parse paths), 1 new `MultiplayerIPCWriterBuildUserSnapshotsTest` case (per-user mods), and 1 new `IPCSnapshotTest` case (per-user-mod JSON shape).
 
-- [ ] **Step 3: Manual visual check (DT 1.5× rendering)**
+- [x] **Step 3: Manual visual check (DT 1.5× rendering)**
 
 Open the tournament tools client (`dotnet run --project osu.Desktop -- --tournament`). In Round Editor, add a beatmap with `Mods = "DT"` and `Mod settings = "DT.speed_change=1.5"`. Open MapPool; the panel for that beatmap should show the DT icon with `1.50x` inline (via the embedded `ModIcon`'s extender). Switching `Mod settings` to empty (or removing the `speed_change` line) should restore the plain DT icon (custom-texture path if `Mods/DT` is registered, embedded `ModIcon` otherwise).
 
@@ -1774,11 +1774,11 @@ If 1.50x does not appear:
 - Confirm `ModParameters["DT"]["speed_change"]` deserialises as `double` (not `long` 1 or `string` "1.5") — Newtonsoft picks `double` when the JSON literal has a decimal point; the parse helper writes `double` for any numeric input.
 - If the panel still shows no rate, confirm `Mod.HasNonDefaultSettings` is `true` on the constructed mod by setting a breakpoint in `RoundBeatmapModFactory.ConstructMods` after the `api.ToMod(ruleset)` call.
 
-- [ ] **Step 4: Update project memory**
+- [x] **Step 4: Update project memory**
 
 Edit `C:/Users/daohe/.claude/projects/C--Users-daohe-RiderProjects-osu/memory/project_lga2025_to_lga2026.md` and tick Phase 2 off the status table at the end of the file. Reference the resulting commits.
 
-- [ ] **Step 5: No commit needed for Step 1–3; commit memory edit**
+- [x] **Step 5: No commit needed for Step 1–3; commit memory edit**
 
 ```
 git add C:/Users/daohe/.claude/projects/C--Users-daohe-RiderProjects-osu/memory/project_lga2025_to_lga2026.md
