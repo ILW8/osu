@@ -7,6 +7,8 @@ using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Testing;
+using osu.Framework.Utils;
+using osu.Game.Tournament;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.MapPool;
@@ -418,6 +420,55 @@ namespace osu.Game.Tournament.Tests.Screens
             AddStep("blue tries to protect already-protected map 0", () => clickBeatmapPanel(0));
             AddAssert("still 1 protect (no opponent re-protect)", () => Ladder.CurrentMatch.Value!.Protects, () => Has.Count.EqualTo(1));
         }
+
+        [Test]
+        public void TestSplitLayoutPool()
+        {
+            AddStep("load a few maps", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+                for (int i = 0; i < 4; i++)
+                    addBeatmap();
+                resetState();
+            });
+
+            AddAssert("pool grid ≈ 65% of screen width", () =>
+            {
+                var poolGrid = findGridContaining("Pool");
+                return poolGrid != null
+                       && Precision.AlmostEquals(poolGrid.DrawWidth / screen.DrawWidth, 0.65f, 0.01f);
+            });
+            AddAssert("pool heading present", () =>
+                findGridContaining("Pool")?.ChildrenOfType<TournamentSpriteText>()
+                    .Any(t => t.Text.ToString() == "Pool") == true);
+        }
+
+        [Test]
+        public void TestSplitLayoutSets()
+        {
+            AddStep("load a few maps", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+                for (int i = 0; i < 4; i++)
+                    addBeatmap();
+                resetState();
+            });
+
+            AddAssert("sets grid ≈ 35% of screen width", () =>
+            {
+                var setsGrid = findGridContaining("Sets");
+                return setsGrid != null
+                       && Precision.AlmostEquals(setsGrid.DrawWidth / screen.DrawWidth, 0.35f, 0.01f);
+            });
+            AddAssert("sets heading present", () =>
+                findGridContaining("Sets")?.ChildrenOfType<TournamentSpriteText>()
+                    .Any(t => t.Text.ToString() == "Sets") == true);
+        }
+
+        private GridContainer? findGridContaining(string headingText) =>
+            screen.ChildrenOfType<GridContainer>()
+                  .FirstOrDefault(g => g.ChildrenOfType<TournamentSpriteText>()
+                                        .Any(t => t.Text.ToString() == headingText));
 
         [Test]
         public void TestRemoveProtect()

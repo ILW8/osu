@@ -9,6 +9,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
 using osu.Framework.Threading;
+using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
@@ -57,24 +58,87 @@ namespace osu.Game.Tournament.Screens.MapPool
                 {
                     ShowScores = true,
                 },
-                mapFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
+                new GridContainer
                 {
-                    Y = 160,
-                    Spacing = new Vector2(10, 10),
-                    Direction = FillDirection.Vertical,
+                    // Y/X/Width values verbatim from 2025.524.2-LGA+2025.424.0-week2 — the asymmetric
+                    // Y=90 (Pool) vs Y=170 (Sets) is intentional: 90 puts the Pool heading at the
+                    // existing 90–160 band so mapFlows resumes at ~Y=160 (matches the pre-split layout
+                    // and keeps updateDisplay's padding logic valid); 170 clears MatchHeader for Sets.
+                    Y = 90,
+                    X = 0f,
+                    Anchor = Anchor.TopLeft,
+                    RelativePositionAxes = Axes.X,
+                    Width = 0.65f,
                     RelativeSizeAxes = Axes.X,
                     AutoSizeAxes = Axes.Y,
+                    // TODO: verbatim port from 2025 LGA tag — Content has 2 rows (heading + flow) but
+                    // RowDimensions has only 1 entry. Verify behaviour at runtime: osu-framework may
+                    // pad missing entries with Distributed (which would conflict with AutoSizeAxes.Y),
+                    // or it may tolerate the mismatch. If broken, add a second `new Dimension(GridSizeMode.AutoSize)`.
+                    RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
+                    Content = new[]
+                    {
+                        new Drawable[]
+                        {
+                            new TournamentSpriteText
+                            {
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Padding = new MarginPadding { Vertical = 4 },
+                                Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 18),
+                                Text = "Pool",
+                            },
+                        },
+                        new Drawable[]
+                        {
+                            mapFlows = new FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>>
+                            {
+                                Anchor = Anchor.TopLeft,
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Spacing = new Vector2(10, 10),
+                                Direction = FillDirection.Vertical,
+                            },
+                        },
+                    },
                 },
-                setsFlow = new FillFlowContainer<TournamentSetPanel>
+                new GridContainer
                 {
-                    Anchor = Anchor.BottomCentre,
-                    Origin = Anchor.BottomCentre,
-                    Y = -160,
-                    Spacing = new Vector2(10, 5),
-                    Direction = FillDirection.Full,
-                    AutoSizeAxes = Axes.Y,
+                    // Y=170 verbatim from 2025 LGA tag (clears MatchHeader for the Sets column).
+                    Y = 170,
+                    X = 0.65f,
+                    Anchor = Anchor.TopLeft,
+                    RelativePositionAxes = Axes.X,
+                    Width = 0.35f,
                     RelativeSizeAxes = Axes.X,
-                    Padding = new MarginPadding { Horizontal = 100 },
+                    AutoSizeAxes = Axes.Y,
+                    // TODO: same mismatch as Pool grid above — verify osu-framework behaviour at runtime.
+                    RowDimensions = new[] { new Dimension(GridSizeMode.AutoSize) },
+                    Content = new[]
+                    {
+                        new Drawable[]
+                        {
+                            new TournamentSpriteText
+                            {
+                                Anchor = Anchor.TopCentre,
+                                Origin = Anchor.TopCentre,
+                                Padding = new MarginPadding { Vertical = 4 },
+                                Font = OsuFont.Torus.With(weight: FontWeight.Bold, size: 18),
+                                Text = "Sets",
+                            },
+                        },
+                        new Drawable[]
+                        {
+                            setsFlow = new FillFlowContainer<TournamentSetPanel>
+                            {
+                                Anchor = Anchor.TopLeft,
+                                RelativeSizeAxes = Axes.X,
+                                AutoSizeAxes = Axes.Y,
+                                Spacing = new Vector2(10, 5),
+                                Direction = FillDirection.Full,
+                            },
+                        },
+                    },
                 },
                 new ControlPanel
                 {
@@ -497,8 +561,10 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             mapFlows.Padding = new MarginPadding(5)
             {
-                // remove horizontal padding to increase flow width to 3 panels
-                Horizontal = totalRows > 9 ? 0 : 100
+                // Padding halved (was 100) to track the narrower 65% Pool column; row-count boundary
+                // kept at `> 9` so TestJustEnoughMaps/TestJustEnoughMods (the empirical anchors) still
+                // describe the 2-wide → 3-wide flip. Spec §7.2 proposed `> 7` as a starting estimate.
+                Horizontal = totalRows > 9 ? 0 : 50
             };
         }
     }
