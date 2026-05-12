@@ -19,11 +19,13 @@ using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
 using osu.Game.Replays;
 using osu.Game.Rulesets;
+using osu.Game.Rulesets.Mods;
 using osu.Game.Scoring;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
 using osu.Game.Screens.Play;
 using osu.Game.Screens.Spectate;
 using osu.Game.Tournament.IPC;
+using osuTK;
 using Realms;
 
 namespace osu.Game.Tournament.Components
@@ -298,12 +300,55 @@ namespace osu.Game.Tournament.Components
             };
 
             playerAreas[userId] = playerArea;
-            playerAreasContainer.Add(playerArea, slotIndex);
+
+            var slotContainer = new Container
+            {
+                RelativeSizeAxes = Axes.Both,
+                Children = new Drawable[]
+                {
+                    playerArea,
+                    buildModFlow(gameplayState.Score.ScoreInfo.Mods),
+                },
+            };
+
+            playerAreasContainer.Add(slotContainer, slotIndex);
             playerArea.LoadScore(gameplayState.Score);
 
             // Bind audio adjustments from the first loaded player to keep the master clock in sync.
             if (boundAdjustments == null)
                 bindAudioAdjustments(playerArea);
+        }
+
+        /// <summary>
+        /// Build a small mod-icon overlay anchored top-right within the slot, painting one
+        /// <see cref="TournamentModIcon"/> per <see cref="Mod"/> in <paramref name="mods"/>.
+        /// Empty mods → empty flow (consistent with how lazer's ModDisplay renders no-mod runs).
+        /// </summary>
+        private static Drawable buildModFlow(IReadOnlyList<Mod> mods)
+        {
+            var flow = new FillFlowContainer
+            {
+                Anchor = Anchor.TopRight,
+                Origin = Anchor.TopRight,
+                AutoSizeAxes = Axes.X,
+                Height = 28,
+                Direction = FillDirection.Horizontal,
+                Spacing = new Vector2(2, 0),
+                Margin = new MarginPadding(6),
+            };
+
+            foreach (var mod in mods)
+            {
+                flow.Add(new TournamentModIcon(mod)
+                {
+                    Anchor = Anchor.Centre,
+                    Origin = Anchor.Centre,
+                    RelativeSizeAxes = Axes.Y,
+                    Width = 28,
+                });
+            }
+
+            return flow;
         }
 
         private void setupGameplayInfrastructure(WorkingBeatmap workingBeatmap)
