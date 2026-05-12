@@ -374,6 +374,12 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             if (alreadyHandled)
             {
+                // Re-protecting an already-protected map is a no-op (covers operator misclicks during
+                // live ops; the LGA draft order normally advances past Protect mode after 2 protects,
+                // but the Protect buttons remain clickable).
+                if (existingProtect != null && pickType == ChoiceType.Protect)
+                    return;
+
                 // Map already in some state. The only legal follow-up is a pick of a protected map —
                 // and that pick may be by either team or only by the protector, depending on
                 // AllowPickingOpponentProtects.

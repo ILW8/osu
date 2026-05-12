@@ -393,6 +393,33 @@ namespace osu.Game.Tournament.Tests.Screens
         }
 
         [Test]
+        public void TestDuplicateProtectRejected()
+        {
+            AddStep("load 4-map pool", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+                for (int i = 0; i < 4; i++)
+                    addBeatmap();
+                resetState();
+            });
+
+            AddStep("force Red Protect mode", () =>
+                screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Protect").TriggerClick());
+            AddStep("red protects map 0", () => clickBeatmapPanel(0));
+            AddAssert("1 protect", () => Ladder.CurrentMatch.Value!.Protects, () => Has.Count.EqualTo(1));
+
+            AddStep("force Red Protect mode again", () =>
+                screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Protect").TriggerClick());
+            AddStep("red tries to re-protect map 0", () => clickBeatmapPanel(0));
+            AddAssert("still 1 protect (no duplicate)", () => Ladder.CurrentMatch.Value!.Protects, () => Has.Count.EqualTo(1));
+
+            AddStep("force Blue Protect mode", () =>
+                screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Protect").TriggerClick());
+            AddStep("blue tries to protect already-protected map 0", () => clickBeatmapPanel(0));
+            AddAssert("still 1 protect (no opponent re-protect)", () => Ladder.CurrentMatch.Value!.Protects, () => Has.Count.EqualTo(1));
+        }
+
+        [Test]
         public void TestRemoveProtect()
         {
             AddStep("load 4-map pool", () =>
