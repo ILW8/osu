@@ -234,16 +234,34 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (map != null)
             {
                 if (e.Button == MouseButton.Left && map.Beatmap?.OnlineID > 0)
+                {
                     addForBeatmap(map.Beatmap.OnlineID);
+                }
                 else
                 {
-                    var existing = CurrentMatch.Value?.PicksBans.FirstOrDefault(p => p.BeatmapID == map.Beatmap?.OnlineID);
+                    // Two-stage removal: prefer removing a Pick or Ban first; if none, fall back to removing a Protect.
+                    var existing = CurrentMatch.Value?.PicksBans
+                        .FirstOrDefault(p => p.BeatmapID == map.Beatmap?.OnlineID
+                                             && (p.Type == ChoiceType.Pick || p.Type == ChoiceType.Ban));
 
                     if (existing != null)
                     {
                         CurrentMatch.Value?.PicksBans.Remove(existing);
-                        setNextMode();
                     }
+                    else
+                    {
+                        var existingProtect = CurrentMatch.Value?.Protects
+                            .FirstOrDefault(p => p.BeatmapID == map.Beatmap?.OnlineID);
+
+                        if (existingProtect == null)
+                            return true;
+
+                        CurrentMatch.Value?.Protects.Remove(existingProtect);
+                    }
+
+                    updateSets();
+                    updateSetsDisplay();
+                    setNextMode();
                 }
 
                 return true;

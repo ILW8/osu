@@ -37,6 +37,7 @@ namespace osu.Game.Tournament.Tests.Screens
 
             Ladder.CurrentMatch.Value = new TournamentMatch();
             Ladder.Matches.First().PicksBans.Clear();
+            Ladder.Matches.First().Protects.Clear();
             Ladder.Matches.First().Sets.Clear();
             Ladder.CurrentMatch.Value = Ladder.Matches.First();
         }
@@ -391,6 +392,44 @@ namespace osu.Game.Tournament.Tests.Screens
                     == Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps[0].Beatmap!.OnlineID) == 1);
         }
 
+        [Test]
+        public void TestRemoveProtect()
+        {
+            AddStep("load 4-map pool", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+                for (int i = 0; i < 4; i++)
+                    addBeatmap();
+                resetState();
+            });
+
+            AddStep("red protects map 0", () =>
+            {
+                Ladder.CurrentMatch.Value!.Protects.Add(new BeatmapChoice
+                {
+                    Team = TeamColour.Red,
+                    Type = ChoiceType.Protect,
+                    BeatmapID = Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps[0].Beatmap!.OnlineID,
+                });
+            });
+            AddStep("blue picks map 0", () =>
+            {
+                Ladder.CurrentMatch.Value!.PicksBans.Add(new BeatmapChoice
+                {
+                    Team = TeamColour.Blue,
+                    Type = ChoiceType.Pick,
+                    BeatmapID = Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps[0].Beatmap!.OnlineID,
+                });
+            });
+
+            AddStep("right-click map 0", () => rightClickBeatmapPanel(0));
+            AddAssert("pick removed", () => Ladder.CurrentMatch.Value!.PicksBans, () => Has.Count.EqualTo(0));
+            AddAssert("protect still present", () => Ladder.CurrentMatch.Value!.Protects, () => Has.Count.EqualTo(1));
+
+            AddStep("right-click map 0 again", () => rightClickBeatmapPanel(0));
+            AddAssert("protect removed", () => Ladder.CurrentMatch.Value!.Protects, () => Has.Count.EqualTo(0));
+        }
+
         private void addBeatmap(string mods = "NM", string? titleOverride = null)
         {
             var newBeatmap = CreateSampleBeatmap(titleOverride);
@@ -410,6 +449,12 @@ namespace osu.Game.Tournament.Tests.Screens
         {
             InputManager.MoveMouseTo(screen.ChildrenOfType<TournamentBeatmapPanel>().ElementAt(index));
             InputManager.Click(MouseButton.Left);
+        }
+
+        private void rightClickBeatmapPanel(int index)
+        {
+            InputManager.MoveMouseTo(screen.ChildrenOfType<TournamentBeatmapPanel>().ElementAt(index));
+            InputManager.Click(MouseButton.Right);
         }
 
         private partial class TestMapPoolScreen : MapPoolScreen
