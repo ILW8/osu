@@ -38,12 +38,18 @@ namespace osu.Game.Tournament.Tests.Components
         [Test]
         public void TestCustomTextureSuppressedForCustomisedMod()
         {
+            OsuModDoubleTime dt = null!;
             TournamentModIcon icon = null!;
             AddStep("add DT-1.6 icon", () =>
             {
-                var dt = new OsuModDoubleTime { SpeedChange = { Value = 1.6 } };
+                dt = new OsuModDoubleTime { SpeedChange = { Value = 1.6 } };
                 flow.Add(icon = new TournamentModIcon(dt) { Size = new Vector2(60) });
             });
+
+            // Documents the gating precondition: the gate only flips to "skip custom texture"
+            // when this property is true. If a future change to HasNonDefaultSettings semantics
+            // makes it return false for SpeedChange != default, the gate stops protecting users.
+            AddAssert("configured mod has non-default settings", () => ((IMod)dt).HasNonDefaultSettings);
 
             AddUntilStep("icon loaded", () => icon.IsLoaded);
 
@@ -55,23 +61,24 @@ namespace osu.Game.Tournament.Tests.Components
         [Test]
         public void TestCustomTexturePreservedForDefaultMod()
         {
-            // No custom Mods/HD texture is registered in tests — but the embedded ModIcon
-            // path is what we get either way, with HasNonDefaultSettings == false letting
-            // the texture lookup proceed (it just misses harmlessly).
+            Mod hd = null!;
             TournamentModIcon icon = null!;
             AddStep("add default HD icon", () =>
             {
-                Mod hd = new OsuModHidden();
+                hd = new OsuModHidden();
                 flow.Add(icon = new TournamentModIcon(hd) { Size = new Vector2(60) });
             });
 
+            // Documents the gating precondition: when this is false, the gate lets the
+            // Mods/{acronym} custom-texture lookup run (it just misses harmlessly in tests
+            // because no fake texture is registered, so we still fall through to the embedded
+            // ModIcon — but in production with branded textures the Sprite would render).
+            AddAssert("default mod reports HasNonDefaultSettings false", () => !((IMod)hd).HasNonDefaultSettings);
+
             AddUntilStep("icon loaded", () => icon.IsLoaded);
 
-            AddAssert("HasNonDefaultSettings false", () =>
-            {
-                var modIcon = icon.ChildrenOfType<ModIcon>().FirstOrDefault();
-                return modIcon != null;
-            });
+            AddAssert("renders an embedded ModIcon (texture lookup missed, fallthrough fired)",
+                () => icon.ChildrenOfType<ModIcon>().Any());
         }
 
         [Test]
