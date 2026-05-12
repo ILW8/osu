@@ -135,6 +135,42 @@ namespace osu.Game.Tournament.Tests.NonVisual
         }
 
         [Test]
+        public void IncludesPerUserMods()
+        {
+            var roomUsers = new[]
+            {
+                new MultiplayerRoomUser(userId: 7) { State = MultiplayerUserState.Playing },
+            };
+
+            var states = new Dictionary<int, UserGameplayState>
+            {
+                [7] = new UserGameplayState(
+                    Score: 0,
+                    Combo: 0,
+                    Accuracy: 0,
+                    Hits: new Dictionary<HitResult, int>(),
+                    GameplayTimeMs: 0,
+                    Mods: new[]
+                    {
+                        new osu.Game.Online.API.APIMod { Acronym = "HD" },
+                        new osu.Game.Online.API.APIMod
+                        {
+                            Acronym = "DT",
+                            Settings = new Dictionary<string, object> { ["speed_change"] = 1.5 },
+                        },
+                    }),
+            };
+
+            var result = MultiplayerIPCWriter.BuildUserSnapshots(roomUsers, states);
+
+            Assert.That(result, Has.Length.EqualTo(1));
+            Assert.That(result[0].Mods.Length, Is.EqualTo(2));
+            Assert.That(result[0].Mods[0].Acronym, Is.EqualTo("HD"));
+            Assert.That(result[0].Mods[1].Acronym, Is.EqualTo("DT"));
+            Assert.That(result[0].Mods[1].Settings["speed_change"], Is.EqualTo(1.5));
+        }
+
+        [Test]
         public void MixedRoomPreservesTeamIdsAndNoTeamSentinel()
         {
             // If a room somehow holds both TeamVs and non-TeamVs users, each is projected per its own state.

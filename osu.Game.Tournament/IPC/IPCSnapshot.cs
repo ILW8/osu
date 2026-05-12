@@ -45,6 +45,20 @@ namespace osu.Game.Tournament.IPC
                 foreach (var (key, count) in u.Hits)
                     hits[key] = count;
 
+                var mods = new JArray();
+                foreach (var m in u.Mods)
+                {
+                    var settings = new JObject();
+                    foreach (var (key, value) in m.Settings)
+                        settings[key] = JToken.FromObject(value);
+
+                    mods.Add(new JObject
+                    {
+                        ["acronym"] = m.Acronym,
+                        ["settings"] = settings,
+                    });
+                }
+
                 users.Add(new JObject
                 {
                     ["userId"] = u.UserId,
@@ -56,6 +70,7 @@ namespace osu.Game.Tournament.IPC
                     ["accuracy"] = u.Accuracy,
                     ["hits"] = hits,
                     ["gameplayTimeMs"] = u.GameplayTimeMs,
+                    ["mods"] = mods,
                 });
             }
 
@@ -134,5 +149,14 @@ namespace osu.Game.Tournament.IPC
         int Combo,
         double Accuracy,
         ImmutableDictionary<string, int> Hits,
-        double GameplayTimeMs);
+        double GameplayTimeMs,
+        ImmutableArray<IPCUserModEntry> Mods);
+
+    /// <summary>
+    /// Per-user mod entry within <see cref="IPCUserSnapshot.Mods"/>. Wire shape mirrors
+    /// <see cref="osu.Game.Online.API.APIMod"/>: an acronym plus a snake_case settings dict.
+    /// </summary>
+    internal readonly record struct IPCUserModEntry(
+        string Acronym,
+        ImmutableDictionary<string, object> Settings);
 }

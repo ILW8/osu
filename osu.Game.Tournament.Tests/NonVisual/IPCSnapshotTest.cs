@@ -40,7 +40,8 @@ namespace osu.Game.Tournament.Tests.NonVisual
                 Combo: 10,
                 Accuracy: 0.95,
                 Hits: ImmutableDictionary<string, int>.Empty.Add("great", 5),
-                GameplayTimeMs: 1234));
+                GameplayTimeMs: 1234,
+                Mods: ImmutableArray<IPCUserModEntry>.Empty));
 
             var a = new IPCSnapshot(true, 1, 2, TourneyState.Playing, 1000, 0, users);
             var b = new IPCSnapshot(true, 1, 2, TourneyState.Playing, 1000, 0, users);
@@ -89,7 +90,8 @@ namespace osu.Game.Tournament.Tests.NonVisual
                     .Add("ok", 7)
                     .Add("meh", 1)
                     .Add("miss", 2),
-                GameplayTimeMs: 47320);
+                GameplayTimeMs: 47320,
+                Mods: ImmutableArray<IPCUserModEntry>.Empty);
 
             var snap = new IPCSnapshot(true, 12345, 87654, TourneyState.WaitingForClients, 1234567, 1200000, ImmutableArray.Create(user));
             string json = IPCSnapshot.SerializeToJson(snap);
@@ -115,6 +117,43 @@ namespace osu.Game.Tournament.Tests.NonVisual
             Assert.That(u0["hits"]!["great"]!.Value<int>(), Is.EqualTo(456));
             Assert.That(u0["hits"]!["miss"]!.Value<int>(), Is.EqualTo(2));
             Assert.That(u0["gameplayTimeMs"]!.Value<double>(), Is.EqualTo(47320).Within(1e-9));
+            Assert.That(u0["mods"]!.Type, Is.EqualTo(JTokenType.Array));
+            Assert.That(u0["mods"]!.HasValues, Is.False);
+        }
+
+        [Test]
+        public void SerializesPerUserMods()
+        {
+            var users = ImmutableArray.Create(new IPCUserSnapshot(
+                UserId: 1,
+                TeamId: 1,
+                State: MultiplayerUserState.Playing,
+                Role: MultiplayerRoomUserRole.Player,
+                Score: 0,
+                Combo: 0,
+                Accuracy: 0,
+                Hits: ImmutableDictionary<string, int>.Empty,
+                GameplayTimeMs: 0,
+                Mods: ImmutableArray.Create(
+                    new IPCUserModEntry("HD", ImmutableDictionary<string, object>.Empty),
+                    new IPCUserModEntry("DT", ImmutableDictionary<string, object>.Empty.Add("speed_change", 1.5)))));
+
+            var snap = new IPCSnapshot(
+                Connected: true,
+                RoomId: 1,
+                BeatmapId: null,
+                State: TourneyState.Playing,
+                Team1Score: 0,
+                Team2Score: 0,
+                Users: users);
+
+            string json = IPCSnapshot.SerializeToJson(snap);
+            var parsed = JObject.Parse(json);
+
+            var modsArray = (JArray)parsed["users"]![0]!["mods"]!;
+            Assert.That((string?)modsArray[0]!["acronym"], Is.EqualTo("HD"));
+            Assert.That((string?)modsArray[1]!["acronym"], Is.EqualTo("DT"));
+            Assert.That((double?)modsArray[1]!["settings"]!["speed_change"], Is.EqualTo(1.5));
         }
 
         [Test]

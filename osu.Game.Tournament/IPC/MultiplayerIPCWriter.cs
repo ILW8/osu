@@ -183,6 +183,18 @@ namespace osu.Game.Tournament.IPC
                 foreach (var (result, count) in state.Hits)
                     hitsBuilder[result.ToString().ToLowerInvariant()] = count;
 
+                var modsBuilder = ImmutableArray.CreateBuilder<IPCUserModEntry>(state.Mods.Count);
+                foreach (var apiMod in state.Mods)
+                {
+                    var settings = ImmutableDictionary.CreateBuilder<string, object>();
+                    foreach (var (key, value) in apiMod.Settings)
+                        settings[key] = value;
+
+                    modsBuilder.Add(new IPCUserModEntry(
+                        Acronym: apiMod.Acronym,
+                        Settings: settings.ToImmutable()));
+                }
+
                 users.Add(new IPCUserSnapshot(
                     UserId: roomUser.UserID,
                     TeamId: teamId,
@@ -192,7 +204,8 @@ namespace osu.Game.Tournament.IPC
                     Combo: state.Combo,
                     Accuracy: state.Accuracy,
                     Hits: hitsBuilder.ToImmutable(),
-                    GameplayTimeMs: state.GameplayTimeMs));
+                    GameplayTimeMs: state.GameplayTimeMs,
+                    Mods: modsBuilder.ToImmutable()));
             }
 
             return users.ToImmutable();
