@@ -401,6 +401,7 @@ namespace osu.Game.Tournament.IPC
             {
                 updateBeatmapFromRoom();
                 updateModsFromRoom();
+                updateUserModsFromRoom();
                 updateChatChannelFromRoom();
             });
         }
@@ -413,7 +414,13 @@ namespace osu.Game.Tournament.IPC
 
                 // Reset per-user state for the new round. Users are re-populated on next frame.
                 foreach (int userId in userStates.Keys.ToArray())
-                    userStates[userId] = UserGameplayState.Empty;
+                {
+                    // Preserve mods across the load reset — they don't change between rounds.
+                    // The next RoomUpdated tick refreshes them anyway, but this avoids a brief
+                    // window where the overlay reads back empty mod lists.
+                    var preservedMods = userStates[userId].Mods;
+                    userStates[userId] = UserGameplayState.Empty with { Mods = preservedMods };
+                }
 
                 Score1.Value = 0;
                 Score2.Value = 0;
@@ -606,6 +613,35 @@ namespace osu.Game.Tournament.IPC
             var ruleset = rulesetInfo.CreateInstance();
             var mods = currentItem.RequiredMods.Select(m => m.ToMod(ruleset)).ToArray();
             Mods.Value = ruleset.ConvertToLegacyMods(mods);
+        }
+
+        /// <summary>
+        /// Refresh per-user mods on every <see cref="MultiplayerClient.RoomUpdated"/> tick.
+        /// MultiplayerRoomUser.Mods is an IEnumerable&lt;APIMod&gt; on the room user; we copy it
+        /// into the matching <see cref="UserGameplayState"/> so the IPC writer (and the
+        /// gameplay overlay) can surface FreeMod / per-user LM choices.
+        ///
+        /// Skipped if the user is not currently tracked in <see cref="userStates"/>; tracking
+        /// is driven by <see cref="startWatchingUser"/> on participating users.
+        /// </summary>
+        private void updateUserModsFromRoom()
+        {
+            if (multiplayerClient.Room == null)
+                return;
+
+            foreach (var user in multiplayerClient.Room.Users)
+            {
+                if (!userStates.TryGetValue(user.UserID, out var existing))
+                    continue;
+
+                // Cheap reference-equality skip: MultiplayerRoomUser.Mods is reassigned
+                // (not mutated in place) on each server push, so reference equality is
+                // a sound proxy for "mod selection has not changed".
+                if (ReferenceEquals(existing.Mods, user.Mods))
+                    continue;
+
+                userStates[user.UserID] = existing with { Mods = user.Mods.ToList() };
+            }
         }
 
         private void updateChatChannelFromRoom()
