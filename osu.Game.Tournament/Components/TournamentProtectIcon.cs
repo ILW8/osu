@@ -1,76 +1,96 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using osu.Framework.Allocation;
+using osu.Framework.Extensions.Color4Extensions;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Graphics.Sprites;
-using osu.Game.Graphics;
 using osu.Game.Tournament.Models;
-using osuTK;
+using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
 {
-    /// <summary>
-    /// Corner-badge protect indicator used on <see cref="TournamentBeatmapPanel"/>.
-    /// Renders as a 45°-rotated coloured wedge anchored top-right, with a shield icon
-    /// inset slightly toward the centre. Tint follows the protecting team.
-    /// </summary>
     public partial class TournamentProtectIcon : Container
     {
-        private readonly Box backgroundWedge;
-        private readonly SpriteIcon shield;
+        private SpriteIcon protectIcon = null!;
+        private Box background = null!;
+
+        private Color4 backgroundColour;
 
         private TeamColour? teamColour;
 
-        /// <summary>
-        /// The team protecting this beatmap. Setting to <c>null</c> hides the icon
-        /// (the corner badge fades out); setting to a team colour reveals + tints.
-        /// </summary>
         public TeamColour? TeamColour
         {
             get => teamColour;
             set
             {
+                if (value == teamColour)
+                    return;
+
                 teamColour = value;
 
-                if (value == null)
-                {
-                    Alpha = 0;
-                    return;
-                }
-
-                Alpha = 1;
-                backgroundWedge.Colour = TournamentGame.GetTeamColour(value.Value);
+                if (IsLoaded)
+                    updateColour();
             }
         }
 
-        public TournamentProtectIcon()
+        [BackgroundDependencyLoader]
+        private void load()
         {
-            Alpha = 0;
-            Masking = false;
-
-            Children = new Drawable[]
+            InternalChild = new Container
             {
-                backgroundWedge = new Box
+                RelativeSizeAxes = Axes.Both,
+                Anchor = Anchor.CentreRight,
+                Origin = Anchor.CentreRight,
+                Name = "main content",
+                Masking = true,
+                Children = new Drawable[]
                 {
-                    Anchor = Anchor.TopRight,
-                    Origin = Anchor.Centre,
-                    RelativeSizeAxes = Axes.Both,
-                    Rotation = 45f,
-                },
-                shield = new SpriteIcon
-                {
-                    Anchor = Anchor.TopRight,
-                    Origin = Anchor.Centre,
-                    RelativePositionAxes = Axes.Both,
-                    Position = new Vector2(-0.14f, 0.14f),
-                    Size = new Vector2(0.4f, 0.4f),
-                    RelativeSizeAxes = Axes.Both,
-                    Icon = FontAwesome.Solid.ShieldAlt,
-                    Colour = TournamentGame.ELEMENT_BACKGROUND_COLOUR,
-                },
+                    background = new Box
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        Anchor = Anchor.TopRight,
+                        Origin = Anchor.Centre,
+                        Rotation = 45,
+                    },
+                    protectIcon = new SpriteIcon
+                    {
+                        RelativeSizeAxes = Axes.Both,
+                        RelativePositionAxes = Axes.Both,
+                        Origin = Anchor.BottomLeft,
+                        Anchor = Anchor.Centre,
+                        Width = 0.3f,
+                        Height = 0.3f,
+                        X = 0.14f,
+                        Y = -0.14f,
+                        Icon = FontAwesome.Solid.ShieldAlt,
+                    },
+                }
             };
+        }
+
+        protected override void LoadComplete()
+        {
+            base.LoadComplete();
+
+            updateColour();
+        }
+
+        private void updateColour()
+        {
+            if (TeamColour == null)
+            {
+                Alpha = 0;
+                return;
+            }
+
+            backgroundColour = TournamentGame.GetTeamColour(TeamColour.Value);
+
+            protectIcon.Colour = backgroundColour.Darken(2f);
+            background.Colour = backgroundColour;
+            Alpha = 1;
         }
     }
 }

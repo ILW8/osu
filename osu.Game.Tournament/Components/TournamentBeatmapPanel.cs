@@ -47,6 +47,8 @@ namespace osu.Game.Tournament.Components
             currentMatch.BindValueChanged(matchChanged);
             currentMatch.BindTo(ladder.CurrentMatch);
 
+            Masking = true;
+
             AddRangeInternal(new Drawable[]
             {
                 borderBox = new Container
@@ -119,9 +121,9 @@ namespace osu.Game.Tournament.Components
                 {
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
-                    RelativeSizeAxes = Axes.Y,
-                    AutoSizeAxes = Axes.None,
-                    Width = HEIGHT,
+                    Alpha = 1,
+                    Width = Height,
+                    Height = Height,
                 },
                 flash = new Box
                 {
@@ -139,8 +141,6 @@ namespace osu.Game.Tournament.Components
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
                     Margin = new MarginPadding { Right = 20 },
-                    Width = 60,
-                    RelativeSizeAxes = Axes.Y,
                 });
             }
         }
