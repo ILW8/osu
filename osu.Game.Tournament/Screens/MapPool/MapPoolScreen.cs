@@ -273,6 +273,7 @@ namespace osu.Game.Tournament.Screens.MapPool
         private void reset()
         {
             CurrentMatch.Value?.PicksBans.Clear();
+            CurrentMatch.Value?.Protects.Clear();
             CurrentMatch.Value?.Sets.Clear();
             updateSetsDisplay();
             setNextMode();
