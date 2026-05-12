@@ -155,12 +155,13 @@ namespace osu.Game.Tournament.Screens.MapPool
             if (CurrentMatch.Value?.Round.Value == null)
                 return;
 
-            int totalBansRequired = CurrentMatch.Value.Round.Value.BanCount.Value * 2;
+            int draftIndex = CurrentMatch.Value.PicksBans.Count + CurrentMatch.Value.Protects.Count;
 
-            if (CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) < totalBansRequired)
+            // Auto-add on beatmap-change only kicks in once the draft has reached the pick phase
+            // (LGA: index ≥ 6, i.e. all 4 bans + 2 protects placed).
+            if (draftIndex < 6)
                 return;
 
-            // if bans have already been placed, beatmap changes result in a selection being made automatically
             if (beatmap.NewValue?.OnlineID > 0)
                 addForBeatmap(beatmap.NewValue.OnlineID);
         }
@@ -180,37 +181,49 @@ namespace osu.Game.Tournament.Screens.MapPool
             static Color4 setColour(bool active) => active ? Color4.White : Color4.Gray;
         }
 
+        // LGA 2026 §3.4–§3.5 draft order: 2 bans (LS, HS), 2 protects (LS, HS), 2 bans (LS, HS),
+        // then 10 ABBA picks across 5 sets × 2 maps starting with HS (where A=High Seed=Red, B=Low Seed=Blue).
+        // Team mapping (see room-name parser, commit 5e2a7cbb): Team1 = Red = High Seed (HS),
+        // Team2 = Blue = Low Seed (LS).
+        //
+        // These arrays are size 16 (6 bans+protects + 10 picks). If a non-LGA round on this branch
+        // has BestOf or pool size that would extend the draft beyond 16, setNextMode no-ops past
+        // index 16 — acceptable since the branch ships LGA only.
+        private static readonly ChoiceType[] map_operation_order =
+        {
+            ChoiceType.Ban, ChoiceType.Ban,
+            ChoiceType.Protect, ChoiceType.Protect,
+            ChoiceType.Ban, ChoiceType.Ban,
+            ChoiceType.Pick, ChoiceType.Pick,
+            ChoiceType.Pick, ChoiceType.Pick,
+            ChoiceType.Pick, ChoiceType.Pick,
+            ChoiceType.Pick, ChoiceType.Pick,
+            ChoiceType.Pick, ChoiceType.Pick,
+        };
+
+        private static readonly TeamColour[] team_colour_order =
+        {
+            TeamColour.Blue, TeamColour.Red, // ban
+            TeamColour.Blue, TeamColour.Red, // protect
+            TeamColour.Blue, TeamColour.Red, // ban
+            TeamColour.Red,  TeamColour.Blue,
+            TeamColour.Blue, TeamColour.Red,
+            TeamColour.Red,  TeamColour.Blue,
+            TeamColour.Blue, TeamColour.Red,
+            TeamColour.Red,  TeamColour.Blue,
+        };
+
         private void setNextMode()
         {
-            if (CurrentMatch.Value?.Round.Value == null)
+            if (CurrentMatch.Value == null)
                 return;
 
-            int totalBansRequired = CurrentMatch.Value.Round.Value.BanCount.Value * 2;
+            int index = CurrentMatch.Value.PicksBans.Count + CurrentMatch.Value.Protects.Count;
 
-            TeamColour lastPickColour = CurrentMatch.Value.PicksBans.LastOrDefault()?.Team ?? TeamColour.Red;
+            if (index >= map_operation_order.Length)
+                return; // draft is over — leave mode at last value
 
-            TeamColour nextColour;
-
-            bool hasAllBans = CurrentMatch.Value.PicksBans.Count(p => p.Type == ChoiceType.Ban) >= totalBansRequired;
-
-            if (!hasAllBans)
-            {
-                // Ban phase: switch teams every second ban.
-                nextColour = CurrentMatch.Value.PicksBans.Count % 2 == 1
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
-            }
-            else
-            {
-                // Pick phase : switch teams every pick, except for the first pick which generally goes to the team that placed the last ban.
-                nextColour = pickType == ChoiceType.Pick
-                    ? getOppositeTeamColour(lastPickColour)
-                    : lastPickColour;
-            }
-
-            setMode(nextColour, hasAllBans ? ChoiceType.Pick : ChoiceType.Ban);
-
-            TeamColour getOppositeTeamColour(TeamColour colour) => colour == TeamColour.Red ? TeamColour.Blue : TeamColour.Red;
+            setMode(team_colour_order[index], map_operation_order[index]);
         }
 
         protected override bool OnMouseDown(MouseDownEvent e)
