@@ -837,7 +837,9 @@ The `ValueChanged` subscription on `Round` is required *in addition to* the `Cur
 
 ### 7.1 Motivation
 
-The current branch's MapPool screen stacks the map pool flow on top and the sets flow at bottom-centre, both spanning the full width. The 2025 LGA broadcast used a 65/35 split with a "Pool" heading on the left (containing the map flow) and a "Sets" heading on the right (containing the set-panels stack). The split is preferred for the broadcast graphic; refs report the stacked view occasionally clashes with the in-client songbar.
+The current branch's MapPool screen stacks the map pool flow on top and the sets flow at bottom-centre, both spanning the full width. The 2025 LGA broadcast used a 65/35 split with a "Pool" heading on the left (containing the map flow) and a "Sets" heading on the right (containing the set-panels stack). **The split is required for the 2026 broadcast graphic and must ship before weekend 1**; refs report the stacked view clashes with the in-client songbar and the broadcast template assumes the column layout.
+
+The "Phase 4" label is retained for continuity with the phase scoping table (§2) but the ship order is no longer last — see the rollout table (§8.3) for the updated deadline.
 
 ### 7.2 Layout changes (`MapPoolScreen.cs`)
 
@@ -972,13 +974,13 @@ Tests removed: the pre-LGA `TestPickBanOrder` / `TestBanOrderMultipleBans` / `Te
 | Phase 1 (pick/ban + Protect) | by 2026-05-15 (day before bracket stage) | **Yes.** Refs cannot run an LGA bracket draft without Protect. |
 | Phase 2 (mod params + per-user mods) | by 2026-05-15 | **Yes** for DT bracket display; **soft yes** for FreeMod OG (only relevant if bracket reaches set 5 → tiebreaker). |
 | Phase 3 (1v1 mode + match complete + score edit) | by 2026-05-22 (between weekends) | **Yes** for 1v1 mode (cosmetic but visible on every screen); **yes** for match-complete (operator quality of life); **yes** for score-edit (ref recovery tooling). |
-| Phase 4 (MapPool 65/35 layout) | by 2026-05-22 | **No** — broadcast preference, can ship after weekend 1 if needed. |
+| Phase 4 (MapPool 65/35 layout) | by 2026-05-15 (day before bracket stage) | **Yes** — broadcast graphic depends on the column layout; must ship before weekend 1. |
 
-If schedule slips, the order of fall-through is Phase 4 → Phase 3 (subitems individually) → Phase 2 sub-items individually. Phase 1 is non-negotiable for the bracket draft.
+If schedule slips, the order of fall-through is Phase 3 sub-items individually → Phase 2 sub-items individually. Phase 1 and Phase 4 are both non-negotiable for the bracket draft (Phase 1 for ref draft mechanics, Phase 4 for broadcast).
 
 ### 8.4 Implementation plan
 
-Each phase becomes its own implementation plan, written by the `superpowers:writing-plans` skill, executed independently. Phase 1 should be the first plan. Phases 2 and 3 may be planned in parallel after Phase 1 lands (no shared file collisions). Phase 4 is purely visual and can be planned last.
+Each phase becomes its own implementation plan, written by the `superpowers:writing-plans` skill, executed independently. Phase 1 should be the first plan; **Phase 4 should be the second plan** (now that it is a weekend-1 hard requirement — see §8.3). Phases 2 and 3 may be planned in parallel after Phase 1 + Phase 4 land (no shared file collisions between any of the four). Phase 4 touches only `MapPoolScreen.cs` layout code and is functionally orthogonal to the protect mechanic, so it can ship as its own PR without coordinating with Phases 2-3.
 
 ### 8.5 Out-of-scope items revisited (decision log)
 
