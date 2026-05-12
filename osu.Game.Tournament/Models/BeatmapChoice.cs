@@ -32,7 +32,8 @@ namespace osu.Game.Tournament.Models
     [JsonConverter(typeof(StringEnumConverter))]
     public enum ChoiceType
     {
-        Pick,
-        Ban,
+        Pick,    // 0 — preserved
+        Ban,     // 1 — preserved
+        Protect, // 2 — new (LGA 2026)
     }
 }
