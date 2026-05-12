@@ -351,6 +351,46 @@ namespace osu.Game.Tournament.Tests.Screens
                 Ladder.CurrentMatch.Value!.Protects, () => Has.Count.EqualTo(2));
         }
 
+        [Test]
+        public void TestDisallowPickOpponentProtect()
+        {
+            AddStep("load pool + disable opponent picks of protect", () =>
+            {
+                Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+
+                for (int i = 0; i < 6; i++)
+                    addBeatmap();
+
+                Ladder.CurrentMatch.Value!.Round.Value!.AllowPickingOpponentProtects.Value = false;
+                resetState();
+            });
+
+            AddStep("red protects map 0", () =>
+            {
+                Ladder.CurrentMatch.Value!.Protects.Clear();
+                Ladder.CurrentMatch.Value!.Protects.Add(new BeatmapChoice
+                {
+                    Team = TeamColour.Red,
+                    Type = ChoiceType.Protect,
+                    BeatmapID = Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps[0].Beatmap!.OnlineID,
+                });
+            });
+
+            AddStep("force Blue Pick mode", () =>
+                screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Pick").TriggerClick());
+            AddStep("blue tries to pick red-protected map 0", () => clickBeatmapPanel(0));
+            AddAssert("blue pick was rejected — no PicksBans entry", () =>
+                Ladder.CurrentMatch.Value!.PicksBans.All(pb => pb.BeatmapID
+                    != Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps[0].Beatmap!.OnlineID));
+
+            AddStep("force Red Pick mode", () =>
+                screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Pick").TriggerClick());
+            AddStep("red picks red-protected map 0", () => clickBeatmapPanel(0));
+            AddAssert("red pick succeeded — exactly 1 PicksBans entry", () =>
+                Ladder.CurrentMatch.Value!.PicksBans.Count(pb => pb.BeatmapID
+                    == Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps[0].Beatmap!.OnlineID) == 1);
+        }
+
         private void addBeatmap(string mods = "NM", string? titleOverride = null)
         {
             var newBeatmap = CreateSampleBeatmap(titleOverride);

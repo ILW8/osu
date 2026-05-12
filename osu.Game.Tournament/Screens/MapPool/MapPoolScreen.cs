@@ -347,16 +347,52 @@ namespace osu.Game.Tournament.Screens.MapPool
                 // don't attempt to add if the beatmap isn't in our pool
                 return;
 
-            if (CurrentMatch.Value.PicksBans.Any(p => p.BeatmapID == beatmapId))
-                // don't attempt to add if already exists.
-                return;
+            var existingProtect = CurrentMatch.Value.Protects
+                .FirstOrDefault(p => p.BeatmapID == beatmapId);
 
-            CurrentMatch.Value.PicksBans.Add(new BeatmapChoice
+            bool alreadyHandled = existingProtect != null
+                                  || CurrentMatch.Value.PicksBans.Any(p => p.BeatmapID == beatmapId);
+
+            if (alreadyHandled)
             {
-                Team = pickColour,
-                Type = pickType,
-                BeatmapID = beatmapId
-            });
+                // Map already in some state. The only legal follow-up is a pick of a protected map —
+                // and that pick may be by either team or only by the protector, depending on
+                // AllowPickingOpponentProtects.
+                bool allowPick = existingProtect != null;
+
+                if (!CurrentMatch.Value.Round.Value.AllowPickingOpponentProtects.Value)
+                {
+                    if (pickType != ChoiceType.Pick || pickColour != existingProtect?.Team)
+                        allowPick = false;
+                }
+
+                // Already picked after protect → reject (one pick per map, even protected ones).
+                if (CurrentMatch.Value.PicksBans.Any(p => p.BeatmapID == beatmapId
+                                                          && p.Type == ChoiceType.Pick))
+                    allowPick = false;
+
+                if (!allowPick)
+                    return;
+            }
+
+            if (pickType == ChoiceType.Protect)
+            {
+                CurrentMatch.Value.Protects.Add(new BeatmapChoice
+                {
+                    Team = pickColour,
+                    Type = pickType,
+                    BeatmapID = beatmapId,
+                });
+            }
+            else
+            {
+                CurrentMatch.Value.PicksBans.Add(new BeatmapChoice
+                {
+                    Team = pickColour,
+                    Type = pickType,
+                    BeatmapID = beatmapId,
+                });
+            }
 
             updateSets();
             updateSetsDisplay();
