@@ -16,12 +16,16 @@ namespace osu.Game.Tournament.Models
         /// Per-map mod settings, keyed by mod acronym then by snake_case setting name.
         /// Value type is <c>object</c> to mirror <see cref="osu.Game.Online.API.APIMod.Settings"/>
         /// so the factory can route entries through <c>APIMod.ToMod</c> without a numeric-only
-        /// path. Newtonsoft round-trips nested <c>Dictionary&lt;string, object&gt;</c> natively in
-        /// <c>bracket.json</c>. Default-empty so older bracket files load unchanged.
+        /// path. Newtonsoft round-trips scalar entries in <c>bracket.json</c> (decimal numbers as
+        /// <c>double</c>, integer numbers as <c>long</c>, bool/string as themselves). Downstream
+        /// <c>APIMod.ToMod</c> routes through <c>Mod.CopyAdjustedSetting</c> which coerces numeric
+        /// types as needed. Default-empty so older bracket files load unchanged.
         /// Example for a 1.5× DT map: <c>{ "DT": { "speed_change": 1.5 } }</c>.
         /// </summary>
         public Dictionary<string, Dictionary<string, object>> ModParameters
             = new Dictionary<string, Dictionary<string, object>>();
+
+        public bool ShouldSerializeModParameters() => ModParameters.Count > 0;
 
         [JsonProperty("BeatmapInfo")]
         public TournamentBeatmap? Beatmap;
