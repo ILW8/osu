@@ -84,18 +84,30 @@ namespace osu.Game.Tournament.Screens.Editors
                             new SettingsSlider<int>
                             {
                                 LabelText = "# of Bans",
-                                Width = 0.33f,
+                                Width = 0.24f,
                                 Current = Model.BanCount
                             },
                             new SettingsSlider<int>
                             {
+                                LabelText = "# of Protects",
+                                Width = 0.24f,
+                                Current = Model.ProtectCount
+                            },
+                            new SettingsCheckbox
+                            {
+                                LabelText = "Allow picking opponent's protects",
+                                Width = 0.24f,
+                                Current = Model.AllowPickingOpponentProtects
+                            },
+                            new SettingsSlider<int>
+                            {
                                 LabelText = "Best of",
-                                Width = 0.33f,
+                                Width = 0.24f,
                                 Current = Model.BestOf
                             },
                             new SettingsButton
                             {
-                                Width = 0.2f,
+                                RelativeSizeAxes = Axes.X,
                                 Margin = new MarginPadding(10),
                                 Text = "Add beatmap",
                                 Action = beatmapEditor.CreateNew
