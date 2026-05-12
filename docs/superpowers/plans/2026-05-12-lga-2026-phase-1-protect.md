@@ -43,7 +43,7 @@ No changes to `LadderInfo`, IPC code (`MultiplayerMatchIPCInfo`, `MultiplayerIPC
 **Files:**
 - Modify: `osu.Game.Tournament/Models/BeatmapChoice.cs:33-37`
 
-- [ ] **Step 1: Add `Protect` to the enum**
+- [x] **Step 1: Add `Protect` to the enum**
 
 Edit `osu.Game.Tournament/Models/BeatmapChoice.cs`. Replace the `ChoiceType` enum body so the existing numeric ordering of `Pick = 0` / `Ban = 1` is preserved and `Protect = 2` is appended:
 
@@ -59,7 +59,7 @@ public enum ChoiceType
 
 The `[JsonConverter(typeof(StringEnumConverter))]` already on the enum means new bracket files serialize `"Protect"` as a string; older bracket files only contain `"Pick"` / `"Ban"` and deserialize unchanged. New files with `"Protect"` cannot be opened by older binaries — acceptable since this branch is LGA-only.
 
-- [ ] **Step 2: Build to confirm no callers broke**
+- [x] **Step 2: Build to confirm no callers broke**
 
 Run:
 ```
@@ -67,7 +67,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED. (No `switch (newChoice.Type)` exhaustiveness warnings — C# treats missing enum cases as a warning only when there's an explicit `default` requirement, which there isn't here. The `switch` in `TournamentBeatmapPanel.updateState` doesn't list a default; we'll add handling for `Protect` in Task 6 once `borderBox` exists.)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```
 git add osu.Game.Tournament/Models/BeatmapChoice.cs
@@ -85,7 +85,7 @@ mechanic per spec §4.1."
 **Files:**
 - Modify: `osu.Game.Tournament/Models/TournamentMatch.cs:52-54`, `:126-133`
 
-- [ ] **Step 1: Add the `Protects` collection**
+- [x] **Step 1: Add the `Protects` collection**
 
 Edit `osu.Game.Tournament/Models/TournamentMatch.cs`. After the existing `PicksBans` declaration (currently line 52), insert a new `Protects` collection so the two stay adjacent in the class:
 
@@ -105,7 +105,7 @@ public readonly ObservableCollection<BeatmapChoice> Protects = new ObservableCol
 public readonly ObservableCollection<MatchSet> Sets = new ObservableCollection<MatchSet>();
 ```
 
-- [ ] **Step 2: Update `Reset()` to clear `Protects`, `Sets`, `MapScores`**
+- [x] **Step 2: Update `Reset()` to clear `Protects`, `Sets`, `MapScores`**
 
 Find (current lines 126-133):
 ```csharp
@@ -136,7 +136,7 @@ public void Reset()
 
 The added `Sets.Clear()` / `MapScores.Clear()` lines fix a latent bug in passing (spec §4.1: "current `Reset()` misses both"). The only caller of `Reset()` is `LadderEditorScreen.cs:112` ("Reset teams" context menu — wipes per-match state for every match), where clearing sets and map-scores alongside is unambiguously correct.
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run:
 ```
@@ -144,7 +144,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```
 git add osu.Game.Tournament/Models/TournamentMatch.cs
@@ -163,7 +163,7 @@ have leaked stale state into a re-initialised match."
 **Files:**
 - Modify: `osu.Game.Tournament/Models/TournamentRound.cs:20-21`
 
-- [ ] **Step 1: Add the two new bindables**
+- [x] **Step 1: Add the two new bindables**
 
 Edit `osu.Game.Tournament/Models/TournamentRound.cs`. Find (current lines 20-21):
 ```csharp
@@ -190,7 +190,7 @@ Defaults preserve `bracket.json` round-trip when older files are loaded (Newtons
 
 `ProtectCount` is *inert at draft time* on this branch: the LGA `setNextMode` (Task 8) reads from hardcoded arrays, not from this count. The field exists for two reasons: (1) `bracket.json` round-trip with files authored under upstream PR #36200's data shape, (2) so a future "non-LGA" round on this branch could use the upstream-style count-driven `setNextMode` if reintroduced. `AllowPickingOpponentProtects` is *active*, consulted by `addForBeatmap` in Task 9.
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run:
 ```
@@ -198,7 +198,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```
 git add osu.Game.Tournament/Models/TournamentRound.cs
@@ -217,7 +217,7 @@ picked by the protector' under LGA rules."
 **Files:**
 - Modify: `osu.Game.Tournament/TournamentGame.cs:26`
 
-- [ ] **Step 1: Verify all callers will continue to compile**
+- [x] **Step 1: Verify all callers will continue to compile**
 
 Run:
 ```
@@ -231,7 +231,7 @@ Expected: BUILD SUCCEEDED (baseline). Then inspect each call site:
 
 No caller assigns the result to a `ColourInfo` local or passes it to a `ColourInfo`-typed parameter, so the narrowing is source-compatible.
 
-- [ ] **Step 2: Narrow the return type**
+- [x] **Step 2: Narrow the return type**
 
 Edit `osu.Game.Tournament/TournamentGame.cs:26`. Replace:
 ```csharp
@@ -245,7 +245,7 @@ public static Color4 GetTeamColour(TeamColour teamColour) => teamColour == TeamC
 
 Note: `using osu.Framework.Graphics.Colour;` (which brings in `ColourInfo`) is still used by the surrounding class for other declarations and stays. `Color4` is already imported via `using osuTK.Graphics;` at the top of the file.
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run:
 ```
@@ -253,7 +253,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED. If any call site fails, the spec assumption "no callers rely on the wider `ColourInfo` form" is wrong and the new caller needs to be inspected — but the Step 1 grep covered all four call sites.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```
 git add osu.Game.Tournament/TournamentGame.cs
@@ -272,7 +272,7 @@ conversion keeps them compiling unchanged. The new TournamentProtectIcon
 **Files:**
 - Create: `osu.Game.Tournament/Components/TournamentProtectIcon.cs`
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 Create `osu.Game.Tournament/Components/TournamentProtectIcon.cs`:
 
@@ -360,7 +360,7 @@ Notes on the layout:
 - The shield is positioned at fractional `(-0.14, 0.14)` from the top-right anchor — i.e. inset toward the centre by 14% of the icon's width / height. Spec §4.2 quotes `(0.14, -0.14)`; the sign flip here is because spec's reading uses bottom-left positive Y and the framework uses top-left positive Y. The visual outcome (shield centred on the visible part of the wedge) matches PR #36200.
 - Shield colour uses `TournamentGame.ELEMENT_BACKGROUND_COLOUR` (`#fff`) so it reads against the red/blue wedge.
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run:
 ```
@@ -368,7 +368,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```
 git add osu.Game.Tournament/Components/TournamentProtectIcon.cs
@@ -388,7 +388,7 @@ adopted by upstream PR ppy/osu#36200."
 **Files:**
 - Modify: `osu.Game.Tournament/Components/TournamentBeatmapPanel.cs` (full rewrite of `load` + `updateState` + `matchChanged` + private field set)
 
-- [ ] **Step 1: Write the failing visual test**
+- [x] **Step 1: Write the failing visual test**
 
 Open `osu.Game.Tournament.Tests/Components/TestSceneTournamentBeatmapPanel.cs`. Replace the existing file content with this expanded version:
 
@@ -496,7 +496,7 @@ namespace osu.Game.Tournament.Tests.Components
 
 Required `TournamentTestScene` access to `Ladder` is already provided by the test base (look at how `TestSceneMapPoolScreen` uses `Ladder.CurrentMatch.Value`).
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [x] **Step 2: Run the test and verify it fails**
 
 Run:
 ```
@@ -504,7 +504,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: FAIL — no `TournamentProtectIcon` is currently a child of the panel, so the visibility assertions never become true (the `AddUntilStep` will time out).
 
-- [ ] **Step 3: Restructure `TournamentBeatmapPanel.load` + add `borderBox` + `protectIcon`**
+- [x] **Step 3: Restructure `TournamentBeatmapPanel.load` + add `borderBox` + `protectIcon`**
 
 Open `osu.Game.Tournament/Components/TournamentBeatmapPanel.cs`. Replace the entire file content with:
 
@@ -748,7 +748,7 @@ Key changes vs. the original:
 - `updateState` consults both collections; `protectIcon.TeamColour` is set every refresh (it self-hides when `null` per Task 5).
 - `Protect` is intentionally not handled in the `switch (newChoice.Type)` block — protect status is rendered exclusively via `protectIcon`, not by tinting/dimming the panel. (If a protected map gets banned or picked, the corresponding case fires.)
 
-- [ ] **Step 4: Run the test and verify it passes**
+- [x] **Step 4: Run the test and verify it passes**
 
 Run:
 ```
@@ -756,7 +756,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: `TestProtectIconRender` PASSES.
 
-- [ ] **Step 5: Run the full TournamentBeatmapPanel test scene to confirm no regression**
+- [x] **Step 5: Run the full TournamentBeatmapPanel test scene to confirm no regression**
 
 Run:
 ```
@@ -764,7 +764,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: all tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```
 git add osu.Game.Tournament/Components/TournamentBeatmapPanel.cs osu.Game.Tournament.Tests/Components/TestSceneTournamentBeatmapPanel.cs
@@ -785,7 +785,7 @@ either collection changes."
 **Files:**
 - Modify: `osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs` (field declarations, control-panel children, `setMode`)
 
-- [ ] **Step 1: Add field declarations for the two new buttons**
+- [x] **Step 1: Add field declarations for the two new buttons**
 
 Find (current lines 37-40):
 ```csharp
@@ -805,7 +805,7 @@ private OsuButton buttonRedProtect = null!;
 private OsuButton buttonBlueProtect = null!;
 ```
 
-- [ ] **Step 2: Add the two new buttons after `buttonBluePick`**
+- [x] **Step 2: Add the two new buttons after `buttonBluePick`**
 
 Find (current lines 103-108):
 ```csharp
@@ -841,7 +841,7 @@ buttonBlueProtect = new TourneyButton
 new ControlPanel.Spacer(),
 ```
 
-- [ ] **Step 3: Extend `setMode` to colour the new buttons**
+- [x] **Step 3: Extend `setMode` to colour the new buttons**
 
 Find (current lines 154-165):
 ```csharp
@@ -877,7 +877,7 @@ private void setMode(TeamColour colour, ChoiceType choiceType)
 }
 ```
 
-- [ ] **Step 4: Build**
+- [x] **Step 4: Build**
 
 Run:
 ```
@@ -885,7 +885,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 git add osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs
@@ -904,7 +904,7 @@ ChoiceType.Protect, which is then consumed by addForBeatmap (follow-up)."
 - Modify: `osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs:167-198`
 - Modify: `osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs` (delete 3 tests, add 1)
 
-- [ ] **Step 1: Write the new failing test `TestProtectBanPickOrder`**
+- [x] **Step 1: Write the new failing test `TestProtectBanPickOrder`**
 
 In `osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs`, delete the entire bodies of `TestPickBanOrder` (currently lines 311-353), `TestBanOrderMultipleBans` (currently lines 273-308), and `TestMultipleTeamBans` (currently lines 356-444) — the three methods and their `[Test]` attributes. The two helper methods at the bottom of the class — `checkTotalPickBans` (line 446) and `checkLastPick` (line 448-451) — go with them; the new test inlines its assertions and `addBeatmap` + `clickBeatmapPanel` remain in use by other tests.
 
@@ -1010,7 +1010,7 @@ public void TestProtectBanPickOrder()
 }
 ```
 
-- [ ] **Step 2: Run the new test and verify it fails**
+- [x] **Step 2: Run the new test and verify it fails**
 
 Run:
 ```
@@ -1020,7 +1020,7 @@ Expected: FAIL. Symptoms depend on the failure mode but should include either:
 - `1 protect` assertion fails (because the old `setNextMode` never enters protect mode, so clicking the panel still adds a Ban to `PicksBans`), or
 - `protect by blue` assertion fails (the protect-buttons exist from Task 7 but `setNextMode` does not yet auto-advance to protect mode at click 3).
 
-- [ ] **Step 3: Replace `setNextMode` with hardcoded LGA order arrays**
+- [x] **Step 3: Replace `setNextMode` with hardcoded LGA order arrays**
 
 In `osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs`, locate the existing `setNextMode` method (currently lines 167-198) and replace it, also adding two new static read-only arrays just above the method:
 
@@ -1108,7 +1108,7 @@ private void setNextMode()
 }
 ```
 
-- [ ] **Step 4: Update `beatmapChanged` to use both collection counts**
+- [x] **Step 4: Update `beatmapChanged` to use both collection counts**
 
 The existing `beatmapChanged` (lines 139-152) gates the "auto-add on beatmap change" feature on `BanCount * 2` bans being placed. Under LGA hardcoded order, bans are at indices 0,1,4,5 — the gate should fire once index ≥ 6 (i.e. all 4 bans + 2 protects done, picks have started). Replace the guard:
 
@@ -1149,7 +1149,7 @@ private void beatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)
 }
 ```
 
-- [ ] **Step 5: Build**
+- [x] **Step 5: Build**
 
 Run:
 ```
@@ -1157,7 +1157,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 6: Run the new test and verify it passes**
+- [x] **Step 6: Run the new test and verify it passes**
 
 Run:
 ```
@@ -1165,7 +1165,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS. (The test exercises 6 bans/protects + 9 picks = 15 clicks. The 10th pick of a protected map is covered by Task 9's dedicated test.)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```
 git add osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs
@@ -1190,7 +1190,7 @@ TestProtectBanPickOrder, which exercises the full 16-click LGA sequence."
 - Modify: `osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs:312-345`
 - Modify: `osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs` (add new test)
 
-- [ ] **Step 1: Add the failing test**
+- [x] **Step 1: Add the failing test**
 
 Add this test method to `TestSceneMapPoolScreen.cs` (next to `TestProtectBanPickOrder`):
 
@@ -1238,7 +1238,7 @@ public void TestDisallowPickOpponentProtect()
 
 This test bypasses the auto-advancing `setNextMode` by manually clicking the Red/Blue Pick buttons, so it exercises `addForBeatmap` decisions directly.
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [x] **Step 2: Run the test and verify it fails**
 
 Run:
 ```
@@ -1246,7 +1246,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: FAIL. The current `addForBeatmap` doesn't know about `Protects`; it rejects clicks on beatmaps already present in `PicksBans` but not those already in `Protects` — so depending on which assertion fires first, the test fails on either the "blue pick rejected" or the "red pick succeeded" branch.
 
-- [ ] **Step 3: Rewrite `addForBeatmap`**
+- [x] **Step 3: Rewrite `addForBeatmap`**
 
 In `MapPoolScreen.cs`, find the existing `addForBeatmap` (currently lines 312-345):
 
@@ -1361,7 +1361,7 @@ private void addForBeatmap(int beatmapId)
 }
 ```
 
-- [ ] **Step 4: Run the test and verify it passes**
+- [x] **Step 4: Run the test and verify it passes**
 
 Run:
 ```
@@ -1369,7 +1369,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 git add osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs
@@ -1389,7 +1389,7 @@ protected map that has already been picked rejects further state changes."
 - Modify: `osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs:200-224`
 - Modify: `osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs` (add new test)
 
-- [ ] **Step 1: Add the failing test**
+- [x] **Step 1: Add the failing test**
 
 Add this test method to `TestSceneMapPoolScreen.cs`:
 
@@ -1445,7 +1445,7 @@ private void rightClickBeatmapPanel(int index)
 }
 ```
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [x] **Step 2: Run the test and verify it fails**
 
 Run:
 ```
@@ -1453,7 +1453,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: FAIL on the "protect removed" assertion — the existing right-click branch only knows how to remove from `PicksBans`, so the second right-click does nothing.
 
-- [ ] **Step 3: Rewrite the right-click branch in `OnMouseDown`**
+- [x] **Step 3: Rewrite the right-click branch in `OnMouseDown`**
 
 Find (current lines 200-224):
 ```csharp
@@ -1533,7 +1533,7 @@ protected override bool OnMouseDown(MouseDownEvent e)
 
 The added `updateSets()` / `updateSetsDisplay()` calls match `addForBeatmap` — set state can change after a pick removal, so the set panels need to refresh too. (The pre-LGA code skipped these, which is another latent bug fixed in passing.)
 
-- [ ] **Step 4: Run the test and verify it passes**
+- [x] **Step 4: Run the test and verify it passes**
 
 Run:
 ```
@@ -1541,7 +1541,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 git add osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs
@@ -1561,7 +1561,7 @@ removal."
 **Files:**
 - Modify: `osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs:226-232`
 
-- [ ] **Step 1: Update `reset()`**
+- [x] **Step 1: Update `reset()`**
 
 Find (current lines 226-232):
 ```csharp
@@ -1586,7 +1586,7 @@ private void reset()
 }
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run:
 ```
@@ -1594,7 +1594,7 @@ dotnet build osu.sln
 ```
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```
 git add osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs
@@ -1613,7 +1613,7 @@ cleanly."
 - Modify: `osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs:84-103`
 - Modify: `osu.Game.Tournament.Tests/Screens/TestSceneRoundEditorScreen.cs` (add new test)
 
-- [ ] **Step 1: Add the failing test**
+- [x] **Step 1: Add the failing test**
 
 Replace the existing `osu.Game.Tournament.Tests/Screens/TestSceneRoundEditorScreen.cs` content:
 
@@ -1672,7 +1672,7 @@ namespace osu.Game.Tournament.Tests.Screens
 }
 ```
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [x] **Step 2: Run the test and verify it fails**
 
 Run:
 ```
@@ -1680,7 +1680,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: FAIL — the `# of Protects` / `Allow picking opponent's protects` widgets don't yet exist.
 
-- [ ] **Step 3: Reflow `RoundRow` to 0.24f columns and add the two new widgets**
+- [x] **Step 3: Reflow `RoundRow` to 0.24f columns and add the two new widgets**
 
 In `osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs`, find the existing `Children` block inside the `FillFlowContainer` (currently lines 64-105). Replace the children array:
 
@@ -1792,7 +1792,7 @@ Layout notes:
 
 `SettingsCheckbox` lives in `osu.Game.Overlays.Settings` — `RoundEditorScreen.cs` already `using`s that namespace (line 15), so no new import is needed.
 
-- [ ] **Step 4: Run the test and verify it passes**
+- [x] **Step 4: Run the test and verify it passes**
 
 Run:
 ```
@@ -1800,7 +1800,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 git add osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs osu.Game.Tournament.Tests/Screens/TestSceneRoundEditorScreen.cs
@@ -1817,7 +1817,7 @@ ppy/osu#36200's RoundRow layout."
 
 **Files:** none modified.
 
-- [ ] **Step 1: Run all tournament tests**
+- [x] **Step 1: Run all tournament tests**
 
 Run:
 ```
@@ -1830,7 +1830,7 @@ Expected: all tests PASS. Pay attention to:
 
 If any test fails, root-cause and fix; do not skip or `[Ignore]` failing tests.
 
-- [ ] **Step 2: Launch the tournament client and visually smoke-test**
+- [x] **Step 2: Launch the tournament client and visually smoke-test**
 
 Run:
 ```
@@ -1848,13 +1848,13 @@ Manually verify (each step ~30s):
    - Right-clicking a picked-and-protected map removes pick first, then protect on second right-click.
 4. **Gameplay screen** (during a live spectated match) renders normally — no regressions in unaffected screens.
 
-- [ ] **Step 3: Note any visual issues for follow-up**
+- [x] **Step 3: Note any visual issues for follow-up**
 
 If anything looks off (e.g. corner-badge clipping wrong, mod icon overlap with protect icon), capture the symptom and decide:
 - Tweak inline (minor padding / size adjustment).
 - File as known-issue in spec §9 "Open questions" and defer to Phase 1 polish PR.
 
-- [ ] **Step 4: Commit any final tweaks (if needed)**
+- [x] **Step 4: Commit any final tweaks (if needed)**
 
 ```
 git add <files>
