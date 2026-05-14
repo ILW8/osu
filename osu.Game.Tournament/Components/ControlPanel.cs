@@ -45,11 +45,12 @@ namespace osu.Game.Tournament.Components
                 // ScrollContainer wraps the button flow so panels with many entries (LGA 2026
                 // MapPoolScreen score-edit, GameplayScreen multiplayer controls) stay reachable
                 // when their auto-sized total exceeds the screen height. Padding.Top clears the
-                // 22pt "Control Panel" title.
+                // 22pt "Control Panel" title; Padding.Bottom clears the floating Save Changes
+                // button overlay (140x50 + 10 margin + 5 offset = ~75pt from screen bottom).
                 new OsuScrollContainer
                 {
                     RelativeSizeAxes = Axes.Both,
-                    Padding = new MarginPadding { Top = 35f },
+                    Padding = new MarginPadding { Top = 35f, Bottom = 80f },
                     Child = buttons = new FillFlowContainer
                     {
                         RelativeSizeAxes = Axes.X,
