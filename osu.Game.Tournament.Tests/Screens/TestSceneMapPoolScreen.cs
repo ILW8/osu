@@ -543,6 +543,27 @@ namespace osu.Game.Tournament.Tests.Screens
             });
         }
 
+        [Test]
+        public void TestScoreEditTeamSetCounters()
+        {
+            AddStep("zero set counts", () =>
+            {
+                Ladder.CurrentMatch.Value!.Team1Score.Value = 0;
+                Ladder.CurrentMatch.Value!.Team2Score.Value = 0;
+            });
+
+            AddStep("type red 2, blue 1 into set-count boxes", () =>
+            {
+                var numberBoxes = screen.ChildrenOfType<SettingsNumberBox>().ToList();
+                // Order in the control panel (from Tasks 10 + 11): red-map, blue-map, red-set, blue-set.
+                numberBoxes[2].Current.Value = 2;
+                numberBoxes[3].Current.Value = 1;
+            });
+
+            AddAssert("Team1Score is 2", () => Ladder.CurrentMatch.Value!.Team1Score.Value, () => Is.EqualTo(2));
+            AddAssert("Team2Score is 1", () => Ladder.CurrentMatch.Value!.Team2Score.Value, () => Is.EqualTo(1));
+        }
+
         private void addBeatmap(string mods = "NM", string? titleOverride = null)
         {
             var newBeatmap = CreateSampleBeatmap(titleOverride);

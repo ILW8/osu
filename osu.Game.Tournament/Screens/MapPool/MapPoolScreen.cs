@@ -46,6 +46,8 @@ namespace osu.Game.Tournament.Screens.MapPool
         private SettingsDropdown<string?> mapScoreEditDropdown = null!;
         private SettingsNumberBox redScoreTextBox = null!;
         private SettingsNumberBox blueScoreTextBox = null!;
+        private SettingsNumberBox team1SetScoreTextBox = null!;
+        private SettingsNumberBox team2SetScoreTextBox = null!;
 
         private ScheduledDelegate? scheduledScreenChange;
 
@@ -225,6 +227,19 @@ namespace osu.Game.Tournament.Screens.MapPool
                             RelativeSizeAxes = Axes.X,
                             Text = "Apply map score",
                             Action = applyMapScoreEdit,
+                        },
+                        new ControlPanel.Spacer(),
+                        new TournamentSpriteText
+                        {
+                            Text = "Edit set scores",
+                        },
+                        team1SetScoreTextBox = new SettingsNumberBox
+                        {
+                            LabelText = "Red set score",
+                        },
+                        team2SetScoreTextBox = new SettingsNumberBox
+                        {
+                            LabelText = "Blue set score",
                         },
                     },
                 }
@@ -558,6 +573,12 @@ namespace osu.Game.Tournament.Screens.MapPool
                 match.NewValue.Round.ValueChanged += onRoundBindableChanged;
 
             refreshSlotItems();
+
+            if (match.NewValue != null)
+            {
+                team1SetScoreTextBox.Current = match.NewValue.Team1Score;
+                team2SetScoreTextBox.Current = match.NewValue.Team2Score;
+            }
         }
 
         private void onRoundBindableChanged(ValueChangedEvent<TournamentRound?> _) => refreshSlotItems();
