@@ -39,6 +39,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private TeamScoreDisplay teamDisplay1 = null!;
         private TeamScoreDisplay teamDisplay2 = null!;
         private DrawableTournamentHeaderLogo logo = null!;
+        private MatchRoundDisplay roundDisplay = null!;
         private MatchCumulativeScoreDiffCounter cumulativeScoreDiffCounter = null!;
         private FillFlowContainer cumulativeScoreDiffCounterContainer = null!;
         private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
@@ -81,6 +82,28 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             }
         }
 
+        private bool showMatchRound = true;
+
+        /// <summary>
+        /// Whether to render the round-name caption (e.g. "Quarterfinals") above the
+        /// cumulative-score counter. LGA 2025 hides this on the gameplay overlay and the
+        /// map-pool screen — the round name is already conveyed by team intro / setup.
+        /// </summary>
+        public bool ShowMatchRound
+        {
+            get => showMatchRound;
+            set
+            {
+                if (value == showMatchRound)
+                    return;
+
+                showMatchRound = value;
+
+                if (IsLoaded)
+                    updateDisplay();
+            }
+        }
+
         [BackgroundDependencyLoader]
         private void load()
         {
@@ -110,7 +133,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
                         },
-                        new MatchRoundDisplay
+                        roundDisplay = new MatchRoundDisplay
                         {
                             Anchor = Anchor.TopCentre,
                             Origin = Anchor.TopCentre,
@@ -225,6 +248,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             cumulativeScoreDiffCounterContainer.FadeTo(showScores && useCumulativeScore.Value ? 1 : 0, 200);
 
             logo.Alpha = showLogo ? 1 : 0;
+            roundDisplay.Alpha = showMatchRound ? 1 : 0;
         }
     }
 }

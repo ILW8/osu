@@ -64,6 +64,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                 new MatchHeader
                 {
                     ShowScores = true,
+                    ShowMatchRound = false,
                 },
                 new GridContainer
                 {
