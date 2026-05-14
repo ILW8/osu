@@ -1,6 +1,6 @@
 # LGA 2026 Phase 3 — 1v1 mode + match-complete + score-edit Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Port LGA 2025's `Use1V1Mode` (player-vs-player labelling) verbatim to the current branch, auto-flip `TournamentMatch.Completed` when a team reaches `PointsToWin`, and add operator score-edit UI (per-map slot scores + per-team set counters) to `MapPoolScreen`.
 
@@ -51,7 +51,7 @@
 **Files:**
 - Modify: `osu.Game.Tournament/Models/LadderInfo.cs:54`
 
-- [ ] **Step 1: Add the bindable**
+- [x] **Step 1: Add the bindable**
 
 Open `osu.Game.Tournament/Models/LadderInfo.cs`. After `Bindable<bool> UseMultiplayerSpectating` (around line 54), insert:
 
@@ -64,12 +64,12 @@ Open `osu.Game.Tournament/Models/LadderInfo.cs`. After `Bindable<bool> UseMultip
 public Bindable<bool> Use1V1Mode = new Bindable<bool>(false);
 ```
 
-- [ ] **Step 2: Verify compile**
+- [x] **Step 2: Verify compile**
 
 Run: `dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj`
 Expected: build succeeds.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add osu.Game.Tournament/Models/LadderInfo.cs
@@ -84,7 +84,7 @@ git commit -m "add LadderInfo.Use1V1Mode bindable for 1v1 mode toggle"
 - Modify: `osu.Game.Tournament/Screens/Setup/SetupScreen.cs:111-117` (after "Use multiplayer spectating", before `restartButton`)
 - Test: `osu.Game.Tournament.Tests/Screens/TestSceneSetupScreen.cs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Replace the entire body of `osu.Game.Tournament.Tests/Screens/TestSceneSetupScreen.cs` with:
 
@@ -135,12 +135,12 @@ namespace osu.Game.Tournament.Tests.Screens
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneSetupScreen.TestUse1V1Toggle"`
 Expected: FAIL — `First` throws because no `LabelledSwitchButton` has `Label == "1v1 mode"`.
 
-- [ ] **Step 3: Add the toggle row**
+- [x] **Step 3: Add the toggle row**
 
 In `osu.Game.Tournament/Screens/Setup/SetupScreen.cs`, inside `reload()` at line 109, insert a new entry into the `children` list immediately after the existing "Use multiplayer spectating" row (line 111-116). Change:
 
@@ -178,12 +178,12 @@ To:
             };
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneSetupScreen.TestUse1V1Toggle"`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add osu.Game.Tournament/Screens/Setup/SetupScreen.cs osu.Game.Tournament.Tests/Screens/TestSceneSetupScreen.cs
@@ -199,7 +199,7 @@ git commit -m "add 1v1 mode toggle to SetupScreen with passing test"
 
 Background: TeamIntroScreen, TeamWinScreen, SeedingScreen all derive from `TournamentMatchScreen` and rebuild their UI in `CurrentMatchChanged`. Toggling `Use1V1Mode` must force them to re-evaluate. This mirrors the LGA 2025 tag verbatim.
 
-- [ ] **Step 1: Add the binding in `LoadComplete`**
+- [x] **Step 1: Add the binding in `LoadComplete`**
 
 Edit `osu.Game.Tournament/Screens/TournamentMatchScreen.cs`. In `LoadComplete()` (line 14), after the existing two-line `CurrentMatch.BindTo(...)` / `CurrentMatch.BindValueChanged(...)` block, append:
 
@@ -221,12 +221,12 @@ So the final method body is:
         }
 ```
 
-- [ ] **Step 2: Verify compile**
+- [x] **Step 2: Verify compile**
 
 Run: `dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj`
 Expected: build succeeds.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add osu.Game.Tournament/Screens/TournamentMatchScreen.cs
@@ -240,7 +240,7 @@ git commit -m "trigger CurrentMatch refresh when Use1V1Mode toggles"
 **Files:**
 - Modify: `osu.Game.Tournament/Components/DrawableTeamHeader.cs`
 
-- [ ] **Step 1: Replace the file body**
+- [x] **Step 1: Replace the file body**
 
 Open `osu.Game.Tournament/Components/DrawableTeamHeader.cs` and replace its full content with:
 
@@ -283,12 +283,12 @@ namespace osu.Game.Tournament.Components
 }
 ```
 
-- [ ] **Step 2: Verify compile**
+- [x] **Step 2: Verify compile**
 
 Run: `dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj`
 Expected: build succeeds.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add osu.Game.Tournament/Components/DrawableTeamHeader.cs
@@ -304,7 +304,7 @@ git commit -m "swap DrawableTeamHeader text between Team {colour} and {colour} p
 
 Background: LGA 2025 tag widens the ladder match tile from 150×40 (default) to 260×40 (1v1) to give a single-player name room to breathe. The constructor today sets `Size = new Vector2(150, 40)` (line 64). Port LGA's resize block verbatim.
 
-- [ ] **Step 1: Add the binding inside `load`**
+- [x] **Step 1: Add the binding inside `load`**
 
 In `osu.Game.Tournament/Screens/Ladder/Components/DrawableMatchTeam.cs`, locate the `load` method (line 80-137). Right after the `colourWinner = …` initialisation (line 87) and before the `InternalChildren = …` assignment (line 89), insert the `Use1V1Mode` size binding from the LGA tag. Also make `ladderInfo` accessible inside `load`. The full modified `load` body becomes:
 
@@ -333,12 +333,12 @@ In `osu.Game.Tournament/Screens/Ladder/Components/DrawableMatchTeam.cs`, locate 
 
 Leave the rest of `load` untouched. Note that the constructor's `Size = new Vector2(150, 40)` (line 64) becomes effectively dead code (the binding fires immediately on `LoadComplete`, replacing it with 180×40 or 260×40 — matching the LGA tag's "180" default). Do NOT remove the constructor line — the LGA tag kept it as the pre-LoadComplete sizing.
 
-- [ ] **Step 2: Verify compile**
+- [x] **Step 2: Verify compile**
 
 Run: `dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj`
 Expected: build succeeds.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add osu.Game.Tournament/Screens/Ladder/Components/DrawableMatchTeam.cs
@@ -352,7 +352,7 @@ git commit -m "widen DrawableMatchTeam tile in 1v1 mode (180->260)"
 **Files:**
 - Modify: `osu.Game.Tournament/Screens/TeamIntro/SeedingScreen.cs:112` (caller) and `osu.Game.Tournament/Screens/TeamIntro/SeedingScreen.cs:255-285` (LeftInfo ctor)
 
-- [ ] **Step 1: Update the caller**
+- [x] **Step 1: Update the caller**
 
 Change line 112 from:
 
@@ -366,7 +366,7 @@ To:
                 new LeftInfo(currentTeam.Value, LadderInfo.Use1V1Mode.Value) { Position = new Vector2(55, 150), },
 ```
 
-- [ ] **Step 2: Extend the `LeftInfo` constructor**
+- [x] **Step 2: Extend the `LeftInfo` constructor**
 
 In the same file, locate `LeftInfo` (line 255). Change the constructor signature and body. Replace the existing `LeftInfo` constructor body (lines 257-285) with:
 
@@ -407,7 +407,7 @@ In the same file, locate `LeftInfo` (line 255). Change the constructor signature
 
 (Differences from current: ctor gains `bool use1V1Mode`; "Average Rank:" → "Rank:" when 1v1; early-return before the `foreach (var p in team.Players)` so per-player rows are skipped in 1v1.)
 
-- [ ] **Step 3: Add the `Use1V1Mode` refresh subscription**
+- [x] **Step 3: Add the `Use1V1Mode` refresh subscription**
 
 Still in `SeedingScreen.cs`, locate the line `currentTeam.BindValueChanged(teamChanged, true);` (currently line 71). Append immediately after it:
 
@@ -415,12 +415,12 @@ Still in `SeedingScreen.cs`, locate the line `currentTeam.BindValueChanged(teamC
             LadderInfo.Use1V1Mode.BindValueChanged(_ => updateTeamDisplay());
 ```
 
-- [ ] **Step 4: Verify compile**
+- [x] **Step 4: Verify compile**
 
 Run: `dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj`
 Expected: build succeeds.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add osu.Game.Tournament/Screens/TeamIntro/SeedingScreen.cs
@@ -435,7 +435,7 @@ git commit -m "SeedingScreen LeftInfo gains 1v1 flag — Rank label and skip pla
 - Modify: `osu.Game.Tournament/Screens/TeamIntro/TeamIntroScreen.cs:37-73`
 - Test: `osu.Game.Tournament.Tests/Screens/TestSceneTeamIntroScreen.cs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Replace the body of `osu.Game.Tournament.Tests/Screens/TestSceneTeamIntroScreen.cs` with:
 
@@ -494,12 +494,12 @@ namespace osu.Game.Tournament.Tests.Screens
 
 Note: the original test scene constructed a separate `[Cached] LadderInfo`. We must rely on `TournamentScreenTestScene.Ladder` (the cached scene-base `LadderInfo`) instead, otherwise the new toggle binding fires against a different instance and `TournamentMatchScreen.LoadComplete` won't see the trigger. The existing test fixture was wired this way before set-cumulative changes landed; this update aligns it with the active pattern.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneTeamIntroScreen.TestUse1V1Display"`
 Expected: FAIL — the second "renders DrawableTeamTitleWithHeader" assertion fails because the screen still renders `DrawableTeamWithPlayers` unconditionally.
 
-- [ ] **Step 3: Update `TeamIntroScreen.CurrentMatchChanged`**
+- [x] **Step 3: Update `TeamIntroScreen.CurrentMatchChanged`**
 
 In `osu.Game.Tournament/Screens/TeamIntro/TeamIntroScreen.cs`, add a `[Resolved]` field at the top of the class (before `mainContainer`):
 
@@ -556,12 +556,12 @@ Then replace the entire `CurrentMatchChanged` method body (lines 37-73) with:
         }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneTeamIntroScreen.TestUse1V1Display"`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add osu.Game.Tournament/Screens/TeamIntro/TeamIntroScreen.cs osu.Game.Tournament.Tests/Screens/TestSceneTeamIntroScreen.cs
@@ -575,7 +575,7 @@ git commit -m "swap TeamIntroScreen team displays for DrawableTeamTitleWithHeade
 **Files:**
 - Modify: `osu.Game.Tournament/Screens/TeamWin/TeamWinScreen.cs:67-123` (in `update()`)
 
-- [ ] **Step 1: Swap the winner display**
+- [x] **Step 1: Swap the winner display**
 
 `TeamWinScreen` derives from `TournamentScreen`, which already exposes `protected LadderInfo LadderInfo { get; }` — use that inherited property directly, do NOT add a shadowing `[Resolved] private LadderInfo ladderInfo` field.
 
@@ -624,17 +624,17 @@ Replace the `mainContainer.Children = new Drawable[]` block (lines 89-120) with:
             mainContainer.Delay(2000).FadeIn(1600, Easing.OutQuint);
 ```
 
-- [ ] **Step 2: Verify compile**
+- [x] **Step 2: Verify compile**
 
 Run: `dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj`
 Expected: build succeeds.
 
-- [ ] **Step 3: Run tournament test suite**
+- [x] **Step 3: Run tournament test suite**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj`
 Expected: all tests pass except the pre-existing `TestProtectIconRender` (which needs a logged-in osu API and fails locally — see project memory `project_lga2025_to_lga2026.md`).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add osu.Game.Tournament/Screens/TeamWin/TeamWinScreen.cs
@@ -651,7 +651,7 @@ git commit -m "swap TeamWinScreen winner display for DrawableTeamTitleWithHeader
 
 Spec ref: §6.2. Wraps `match.Completed.Value = true` inside the existing cumulative branch so warmup auto-bypass is already covered (the cumulative branch already early-returns when `warmup.Value` is true, line 294).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append the following test methods to `osu.Game.Tournament.Tests/Screens/TestSceneGameplayScreen.cs`, after the existing `TestScoreCumulativeDelta` test (around line 150):
 
@@ -709,12 +709,12 @@ Append the following test methods to `osu.Game.Tournament.Tests/Screens/TestScen
         }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneGameplayScreen.TestMatchAutoCompleteAtPointsToWin"`
 Expected: FAIL on the final `Completed is true` assert — team1 reaches 3 set wins but `Completed` stays false.
 
-- [ ] **Step 3: Add the auto-complete flip**
+- [x] **Step 3: Add the auto-complete flip**
 
 In `osu.Game.Tournament/Screens/Gameplay/GameplayScreen.cs`, locate the cumulative-scoring `setComplete` block (lines 316-328). Replace:
 
@@ -759,17 +759,17 @@ With:
                                     }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneGameplayScreen.TestMatchAutoCompleteAtPointsToWin"`
 Expected: PASS.
 
-- [ ] **Step 5: Re-run prior cumulative tests to ensure no regression**
+- [x] **Step 5: Re-run prior cumulative tests to ensure no regression**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneGameplayScreen"`
 Expected: all `TestSceneGameplayScreen` tests pass (`TestWarmup`, `TestScoreAddCumulative`, `TestScoreAddCumulativeTiebreaker`, `TestScoreCumulativeDelta`, `TestStartupState`, `TestStartupStateNoCurrentMatch`, plus the new `TestMatchAutoCompleteAtPointsToWin`).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add osu.Game.Tournament/Screens/Gameplay/GameplayScreen.cs osu.Game.Tournament.Tests/Screens/TestSceneGameplayScreen.cs
@@ -786,7 +786,7 @@ git commit -m "auto-flip TournamentMatch.Completed when set wins reach PointsToW
 
 Spec ref: §6.3. This task adds **only** the per-map block (slot dropdown + red/blue + Apply). Task 11 adds the per-team set-count block.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs`, after the existing tests:
 
@@ -832,12 +832,12 @@ Also add these `using` directives to the top of `TestSceneMapPoolScreen.cs` if n
 using osu.Game.Overlays.Settings;
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneMapPoolScreen.TestScoreEditApply"`
 Expected: FAIL — `First()` on the `SettingsDropdown<string?>` collection throws because no such control exists yet.
 
-- [ ] **Step 3: Add the per-map score-edit block to `MapPoolScreen`**
+- [x] **Step 3: Add the per-map score-edit block to `MapPoolScreen`**
 
 At the top of `osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs`, add the using if missing:
 
@@ -935,12 +935,12 @@ With:
         }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneMapPoolScreen.TestScoreEditApply"`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs
@@ -957,7 +957,7 @@ git commit -m "add per-map score editor to MapPoolScreen control panel"
 
 Spec ref: §6.3 (per-team sub-section). Refs need this because `Team{1,2}Score` is only auto-incremented by `GameplayScreen`; if a ref fixes a per-map score after the fact, the set count won't move automatically.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs`:
 
@@ -984,12 +984,12 @@ Append to `osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs`:
         }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneMapPoolScreen.TestScoreEditTeamSetCounters"`
 Expected: FAIL — `numberBoxes[2]` is out of range (only red+blue map-score boxes exist).
 
-- [ ] **Step 3: Add the per-team block**
+- [x] **Step 3: Add the per-team block**
 
 In `MapPoolScreen.cs`, add two new fields next to the others:
 
@@ -1041,17 +1041,17 @@ In `CurrentMatchChanged`, after the `refreshSlotItems()` call added in Task 10, 
 
 `SettingsNumberBox.Current` is `Bindable<int?>` — same type as `Team1Score`/`Team2Score` — so the `IHasCurrentValue<int?>.Current` setter routes through `BindableWithCurrent` and the textbox value tracks the match field both ways.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneMapPoolScreen.TestScoreEditTeamSetCounters"`
 Expected: PASS.
 
-- [ ] **Step 5: Re-run prior MapPool tests to ensure no regression**
+- [x] **Step 5: Re-run prior MapPool tests to ensure no regression**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~TestSceneMapPoolScreen"`
 Expected: all `TestSceneMapPoolScreen` tests pass except the pre-existing `TestProtectIconRender` (logged-in-API-required, unchanged).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs osu.Game.Tournament.Tests/Screens/TestSceneMapPoolScreen.cs
@@ -1065,22 +1065,22 @@ git commit -m "add per-team set-count editor textboxes to MapPoolScreen"
 **Files:**
 - Modify: `docs/superpowers/plans/2026-05-14-lga-2026-phase-3-1v1-and-score-edit.md` (this file — tick boxes)
 
-- [ ] **Step 1: Run the full tournament test suite**
+- [x] **Step 1: Run the full tournament test suite**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj`
 Expected: 144/145 (or similar) tests pass. The single failure should still be the pre-existing `TestProtectIconRender` (logged-in osu API required — see `project_lga2025_to_lga2026.md`). If any other test fails, diagnose before proceeding.
 
-- [ ] **Step 2: Update the LGA project memory**
+- [x] **Step 2: Update the LGA project memory**
 
 In `C:\Users\daohe\.claude\projects\C--Users-daohe-RiderProjects-osu\memory\project_lga2025_to_lga2026.md`, update the phase status table — change Phase 3's `Plan` cell from "Not written" to `docs/superpowers/plans/2026-05-14-lga-2026-phase-3-1v1-and-score-edit.md` and its `Code` cell to "Done — commits {RANGE}".
 
 Add a "Phase 3 — DONE" subsection in the same style as the existing Phase 2 subsection, summarising: `Use1V1Mode` bindable + 6 call-site ports, `GameplayScreen` auto-complete at `PointsToWin`, `MapPoolScreen` two-section score-edit UI (per-map + per-team), `boundRound.Round.ValueChanged` re-bind for slot dropdown.
 
-- [ ] **Step 3: Tick all `- [ ]` checkboxes in this plan file**
+- [x] **Step 3: Tick all `- [x]` checkboxes in this plan file**
 
-Use Edit/replace to swap every `- [ ]` to `- [x]` in `docs/superpowers/plans/2026-05-14-lga-2026-phase-3-1v1-and-score-edit.md`. Per `[[feedback-plan-progression]]`: keep plan checkbox state in sync with commit reality.
+Use Edit/replace to swap every `- [x]` to `- [x]` in `docs/superpowers/plans/2026-05-14-lga-2026-phase-3-1v1-and-score-edit.md`. Per `[[feedback-plan-progression]]`: keep plan checkbox state in sync with commit reality.
 
-- [ ] **Step 4: Final commit**
+- [x] **Step 4: Final commit**
 
 ```bash
 git add docs/superpowers/plans/2026-05-14-lga-2026-phase-3-1v1-and-score-edit.md
