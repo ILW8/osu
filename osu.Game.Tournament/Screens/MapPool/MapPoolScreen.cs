@@ -579,9 +579,40 @@ namespace osu.Game.Tournament.Screens.MapPool
                 team1SetScoreTextBox.Current = match.NewValue.Team1Score;
                 team2SetScoreTextBox.Current = match.NewValue.Team2Score;
             }
+
+            // Spec §6.2: keep Completed flag in sync with set-score totals so a manual decrement
+            // via the set-score SettingsNumberBoxes un-flips Completed when the score drops back
+            // below PointsToWin. The recompute is bi-directional: it also handles the auto-complete
+            // path from GameplayScreen (which itself still writes Completed.Value = true; this is
+            // idempotent because recomputeCompletion only writes when the value would change).
+            if (match.OldValue != null)
+            {
+                match.OldValue.Team1Score.ValueChanged -= onScoreChanged;
+                match.OldValue.Team2Score.ValueChanged -= onScoreChanged;
+            }
+            if (match.NewValue != null)
+            {
+                match.NewValue.Team1Score.ValueChanged += onScoreChanged;
+                match.NewValue.Team2Score.ValueChanged += onScoreChanged;
+            }
         }
 
         private void onRoundBindableChanged(ValueChangedEvent<TournamentRound?> _) => refreshSlotItems();
+
+        private void onScoreChanged(ValueChangedEvent<int?> _) => recomputeCompletion();
+
+        private void recomputeCompletion()
+        {
+            if (CurrentMatch.Value == null) return;
+            if (CurrentMatch.Value.Round.Value == null) return;
+
+            int pointsToWin = CurrentMatch.Value.PointsToWin;
+            bool shouldBeCompleted = CurrentMatch.Value.Team1Score.Value >= pointsToWin
+                                     || CurrentMatch.Value.Team2Score.Value >= pointsToWin;
+
+            if (CurrentMatch.Value.Completed.Value != shouldBeCompleted)
+                CurrentMatch.Value.Completed.Value = shouldBeCompleted;
+        }
 
         private void refreshSlotItems()
         {
