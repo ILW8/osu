@@ -564,6 +564,34 @@ namespace osu.Game.Tournament.Tests.Screens
             AddAssert("Team2Score is 1", () => Ladder.CurrentMatch.Value!.Team2Score.Value, () => Is.EqualTo(1));
         }
 
+        [Test]
+        public void TestScoreEditDropdownHandlesDuplicateAndEmptySlotNames()
+        {
+            AddStep("swap to match with empty + duplicate slots", () =>
+            {
+                // Mirrors a real bracket where RoundBeatmap.SlotName entries are unset (defaults to
+                // empty) or duplicated. osu-framework Dropdown<T> throws on duplicate items, so
+                // refreshSlotItems must filter empty and Distinct() before assigning Items.
+                var badRound = new TournamentRound();
+                badRound.Beatmaps.Add(new RoundBeatmap { ID = 201, Beatmap = new TournamentBeatmap { OnlineID = 201 }, Mods = "NM" });
+                badRound.Beatmaps.Add(new RoundBeatmap { ID = 202, Beatmap = new TournamentBeatmap { OnlineID = 202 }, Mods = "NM" });
+                badRound.Beatmaps.Add(new RoundBeatmap { ID = 203, Beatmap = new TournamentBeatmap { OnlineID = 203 }, SlotName = "DT1", Mods = "DT" });
+                badRound.Beatmaps.Add(new RoundBeatmap { ID = 204, Beatmap = new TournamentBeatmap { OnlineID = 204 }, SlotName = "DT1", Mods = "DT" });
+                badRound.Beatmaps.Add(new RoundBeatmap { ID = 205, Beatmap = new TournamentBeatmap { OnlineID = 205 }, SlotName = "HR1", Mods = "HR" });
+
+                var badMatch = new TournamentMatch();
+                badMatch.Round.Value = badRound;
+                Ladder.CurrentMatch.Value = badMatch;
+            });
+
+            AddAssert("dropdown items are unique non-empty slots", () =>
+            {
+                var dropdown = screen.ChildrenOfType<SettingsDropdown<string?>>().First();
+                var items = dropdown.Items.ToList();
+                return items.Count == 2 && items.Contains("DT1") && items.Contains("HR1");
+            });
+        }
+
         private void addBeatmap(string mods = "NM", string? titleOverride = null)
         {
             var newBeatmap = CreateSampleBeatmap(titleOverride);

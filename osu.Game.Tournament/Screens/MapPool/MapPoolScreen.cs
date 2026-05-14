@@ -617,7 +617,17 @@ namespace osu.Game.Tournament.Screens.MapPool
         private void refreshSlotItems()
         {
             var round = CurrentMatch.Value?.Round.Value;
-            mapScoreEditDropdown.Items = round?.Beatmaps.Select(b => b.SlotName).Cast<string?>().ToArray() ?? Array.Empty<string?>();
+
+            // Filter out empty SlotNames (defaulted on RoundBeatmap when the round-editor
+            // field is unset — not a meaningful score-edit target) and Distinct() to tolerate
+            // operator data-entry duplicates. osu-framework Dropdown<T> throws on duplicate items.
+            mapScoreEditDropdown.Items = round?.Beatmaps
+                                              .Select(b => b.SlotName)
+                                              .Where(s => !string.IsNullOrEmpty(s))
+                                              .Distinct()
+                                              .Cast<string?>()
+                                              .ToArray()
+                                         ?? Array.Empty<string?>();
         }
 
         private void updateDisplay()
