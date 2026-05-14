@@ -69,6 +69,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
             };
 
             currentTeam.BindValueChanged(teamChanged, true);
+            LadderInfo.Use1V1Mode.BindValueChanged(_ => updateTeamDisplay());
         }
 
         private void teamChanged(ValueChangedEvent<TournamentTeam?> team) => updateTeamDisplay();
@@ -109,7 +110,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
             mainContainer.Children = new Drawable[]
             {
-                new LeftInfo(currentTeam.Value) { Position = new Vector2(55, 150), },
+                new LeftInfo(currentTeam.Value, LadderInfo.Use1V1Mode.Value) { Position = new Vector2(55, 150), },
                 new RightInfo(currentTeam.Value) { Position = new Vector2(500, 150), },
             };
         });
@@ -254,7 +255,7 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
         private partial class LeftInfo : CompositeDrawable
         {
-            public LeftInfo(TournamentTeam? team)
+            public LeftInfo(TournamentTeam? team, bool use1V1Mode)
             {
                 FillFlowContainer fill;
 
@@ -272,13 +273,16 @@ namespace osu.Game.Tournament.Screens.TeamIntro
                         Children = new Drawable[]
                         {
                             new TeamDisplay(team) { Margin = new MarginPadding { Bottom = 30 } },
-                            new RowDisplay("Average Rank:", $"#{team.AverageRank:#,0}"),
+                            new RowDisplay(use1V1Mode ? "Rank:" : "Average Rank:", $"#{team.AverageRank:#,0}"),
                             new RowDisplay("Seed:", team.Seed.Value),
                             new RowDisplay("Last year's placing:", team.LastYearPlacing.Value),
                             new Container { Margin = new MarginPadding { Bottom = 30 } },
                         }
                     },
                 };
+
+                if (use1V1Mode)
+                    return;
 
                 foreach (var p in team.Players)
                     fill.Add(new RowDisplay(p.Username, p.Rank?.ToString("\\##,0") ?? "-"));
