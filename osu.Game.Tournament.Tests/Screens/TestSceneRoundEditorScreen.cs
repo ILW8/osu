@@ -50,10 +50,10 @@ namespace osu.Game.Tournament.Tests.Screens
         }
 
         [Test]
-        public void TestModParametersFreeForm()
+        public void TestModParametersJsonRoundTrip()
         {
             var parsed = RoundEditorScreen.RoundRow.RoundBeatmapEditor.RoundBeatmapRow
-                .parseModParameters("DT.speed_change=1.5\nMOD.flag=true\nKey.note=hello");
+                .parseModParameters("{\"DT\":{\"speed_change\":1.5},\"MOD\":{\"flag\":true},\"Key\":{\"note\":\"hello\"}}");
 
             Assert.That(parsed["DT"]["speed_change"], Is.EqualTo(1.5));
             Assert.That(parsed["MOD"]["flag"], Is.EqualTo(true));
@@ -69,13 +69,11 @@ namespace osu.Game.Tournament.Tests.Screens
         }
 
         [Test]
-        public void TestModParametersMalformedLinesSkipped()
+        public void TestModParametersMalformedJsonReturnsEmpty()
         {
             var parsed = RoundEditorScreen.RoundRow.RoundBeatmapEditor.RoundBeatmapRow
-                .parseModParameters("=1.5\nDT.\nfoo=bar\nDT.x=2.0");
-
-            Assert.That(parsed.Count, Is.EqualTo(1));
-            Assert.That(parsed["DT"]["x"], Is.EqualTo(2.0));
+                .parseModParameters("{not valid json");
+            Assert.That(parsed, Is.Empty);
         }
     }
 }

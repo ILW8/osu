@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -212,14 +213,14 @@ namespace osu.Game.Tournament.Screens.Editors
                                     {
                                         LabelText = "Beatmap ID",
                                         RelativeSizeAxes = Axes.None,
-                                        Width = 200,
+                                        Width = 180,
                                         Current = beatmapId,
                                     },
                                     new SettingsTextBox
                                     {
                                         LabelText = "Mods",
                                         RelativeSizeAxes = Axes.None,
-                                        Width = 200,
+                                        Width = 160,
                                         Current = mods,
                                     },
                                     new SettingsTextBox
@@ -301,74 +302,40 @@ namespace osu.Game.Tournament.Screens.Editors
                     }
 
                     /// <summary>
-                    /// Serialise a <see cref="RoundBeatmap.ModParameters"/> dictionary into the textbox format.
-                    /// One line per setting: <c>ACRONYM.setting=value</c>.
+                    /// Serialise <see cref="RoundBeatmap.ModParameters"/> into compact JSON
+                    /// (e.g. <c>{"DT":{"speed_change":1.5}}</c>). Matches the on-disk shape in
+                    /// <c>bracket.json</c>, so the textbox doubles as a copy/paste sink for that file.
                     /// </summary>
                     private static string serialiseModParameters(Dictionary<string, Dictionary<string, object>> parameters)
                     {
                         if (parameters.Count == 0)
                             return string.Empty;
 
-                        var lines = new List<string>();
-                        foreach (var (acronym, settings) in parameters)
-                        {
-                            foreach (var (key, value) in settings)
-                                lines.Add($"{acronym}.{key}={value}");
-                        }
-
-                        return string.Join('\n', lines);
+                        return JsonConvert.SerializeObject(parameters);
                     }
 
                     /// <summary>
-                    /// Parse the textbox content. Each line is <c>ACRONYM.setting=value</c>; the value is
-                    /// tried as <c>double</c>, then <c>bool</c>, then falls through as a raw string.
-                    /// Malformed lines are silently skipped — free-form editor, iterate UI later if clunky.
+                    /// Parse the textbox content as a JSON object of <c>{acronym: {setting: value}}</c>.
+                    /// Newtonsoft lands numeric values as <c>long</c>/<c>double</c>, booleans as
+                    /// <c>bool</c>, strings as strings — all coerced downstream by
+                    /// <see cref="osu.Game.Rulesets.Mods.Mod.CopyAdjustedSetting"/>. Invalid JSON
+                    /// returns an empty dictionary so a typo doesn't blow up the editor; the user
+                    /// fixes the JSON and the next commit re-renders the panel.
                     /// </summary>
                     internal static Dictionary<string, Dictionary<string, object>> parseModParameters(string text)
                     {
-                        var result = new Dictionary<string, Dictionary<string, object>>();
-
                         if (string.IsNullOrWhiteSpace(text))
-                            return result;
+                            return new Dictionary<string, Dictionary<string, object>>();
 
-                        foreach (string rawLine in text.Split('\n'))
+                        try
                         {
-                            string line = rawLine.Trim();
-                            if (line.Length == 0)
-                                continue;
-
-                            int dot = line.IndexOf('.');
-                            int eq = line.IndexOf('=');
-
-                            if (dot <= 0 || eq <= dot + 1)
-                                continue;
-
-                            string acronym = line.Substring(0, dot).Trim();
-                            string key = line.Substring(dot + 1, eq - dot - 1).Trim();
-                            string rawValue = line.Substring(eq + 1).Trim();
-
-                            if (acronym.Length == 0 || key.Length == 0)
-                                continue;
-
-                            object value;
-                            if (double.TryParse(rawValue, System.Globalization.NumberStyles.Float,
-                                    System.Globalization.CultureInfo.InvariantCulture, out double d))
-                                value = d;
-                            else if (bool.TryParse(rawValue, out bool b))
-                                value = b;
-                            else
-                                value = rawValue;
-
-                            if (!result.TryGetValue(acronym, out var settings))
-                            {
-                                settings = new Dictionary<string, object>();
-                                result[acronym] = settings;
-                            }
-
-                            settings[key] = value;
+                            return JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, object>>>(text)
+                                   ?? new Dictionary<string, Dictionary<string, object>>();
                         }
-
-                        return result;
+                        catch (JsonException)
+                        {
+                            return new Dictionary<string, Dictionary<string, object>>();
+                        }
                     }
 
                     private void updatePanel() => Schedule(() =>

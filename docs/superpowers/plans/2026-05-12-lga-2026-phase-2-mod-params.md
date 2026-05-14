@@ -30,7 +30,7 @@
 | `osu.Game.Tournament/Components/TournamentModIcon.cs` | Modify. Add `(Mod configuredMod)` constructor; gate the `Mods/{acronym}` custom-texture lookup on `!HasNonDefaultSettings`; use `configuredMod` for the embedded `ModIcon` fallback when supplied. |
 | `osu.Game.Tournament/Components/TournamentBeatmapPanel.cs` | Modify. Add `(IBeatmapInfo?, RoundBeatmap?)` overload; render a horizontal `FillFlowContainer<TournamentModIcon>` from `RoundBeatmapModFactory.ConstructMods`; keep the existing `(IBeatmapInfo?, string)` overload for non-RoundBeatmap callers (seeding editor). |
 | `osu.Game.Tournament/Screens/MapPool/MapPoolScreen.cs` | Modify. Update line 553 `TournamentBeatmapPanel` construction to pass `b` (the `RoundBeatmap`). |
-| `osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs` | Modify. Update `updatePanel` to pass the `RoundBeatmap`; add a "Mod settings" free-form `SettingsTextBox` on each `RoundBeatmapRow` that round-trips `ModParameters` through a `acronym.setting=value`-per-line text format. |
+| `osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs` | Modify. Update `updatePanel` to pass the `RoundBeatmap`; add a "Mod settings" `SettingsTextBox` on each `RoundBeatmapRow` that round-trips `ModParameters` through compact JSON (e.g. `{"DT":{"speed_change":1.5}}`) via `JsonConvert`. |
 | `osu.Game.Tournament/IPC/UserGameplayState.cs` | Modify. Add `Mods : IReadOnlyList<APIMod>` to the record struct and to `Empty`. |
 | `osu.Game.Tournament/IPC/MultiplayerMatchIPCInfo.cs` | Modify. Add `updateUserModsFromRoom()` helper; call from `onRoomUpdated` next to existing `updateBeatmapFromRoom / updateModsFromRoom / updateChatChannelFromRoom`. Preserve the existing `onLoadRequested` reset behaviour (mods get repopulated on the next `RoomUpdated` tick). |
 | `osu.Game.Tournament/IPC/IPCSnapshot.cs` | Modify. Add `IPCUserModEntry` record struct; add `Mods : ImmutableArray<IPCUserModEntry>` to `IPCUserSnapshot`; emit `"mods": [...]` in `SerializeToJson`. |
@@ -38,7 +38,7 @@
 | `osu.Game.Tournament/Components/TournamentGameplayDisplay.cs` | Modify. In `loadUserIntoPlayerArea`, wrap each `PlayerArea` in a container whose top-anchored `FillFlowContainer<TournamentModIcon>` is populated from `gameplayState.Score.ScoreInfo.Mods`. |
 | `osu.Game.Tournament.Tests/NonVisual/RoundBeatmapModFactoryTest.cs` | New. NUnit fixture covering parse + settings round-trip. |
 | `osu.Game.Tournament.Tests/Components/TestSceneTournamentModIcon.cs` | New. Test scene + assertion-based tests for the texture-gating behaviour of the new `(Mod)` constructor. |
-| `osu.Game.Tournament.Tests/Screens/TestSceneRoundEditorScreen.cs` | Modify. Add `TestModParametersFreeForm` covering the new "Mod settings" textbox parse paths (double / bool / string). |
+| `osu.Game.Tournament.Tests/Screens/TestSceneRoundEditorScreen.cs` | Modify. Add `TestModParametersJsonRoundTrip` covering the new "Mod settings" textbox JSON parse paths (number / bool / string) plus empty / malformed-JSON cases. |
 | `osu.Game.Tournament.Tests/NonVisual/MultiplayerIPCWriterBuildUserSnapshotsTest.cs` | Modify. Add `IncludesPerUserMods` covering mod-array round-trip through `BuildUserSnapshots`. |
 | `osu.Game.Tournament.Tests/NonVisual/IPCSnapshotTest.cs` | Modify. Add `SerializesPerUserMods` covering the JSON shape `users[].mods = [{acronym, settings}, ...]`. |
 
@@ -762,7 +762,7 @@ mod-display test scene still use the (beatmap, string) overload unchanged."
 
 - [x] **Step 1: Add the textbox + parse logic**
 
-Edit `osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs`. Add `using System.Collections.Generic;` and `using System.Linq;` at the top if not already present.
+Edit `osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs`. Add `using System.Collections.Generic;`, `using System.Linq;`, and `using Newtonsoft.Json;` at the top if not already present.
 
 In `RoundBeatmapRow`, find:
 
@@ -850,76 +850,44 @@ Add the two private helpers inside `RoundBeatmapRow` (before `updatePanel`):
 
 ```csharp
 /// <summary>
-/// Serialise a <see cref="RoundBeatmap.ModParameters"/> dictionary into the textbox format.
-/// One line per setting: <c>ACRONYM.setting=value</c>.
+/// Serialise <see cref="RoundBeatmap.ModParameters"/> into compact JSON
+/// (e.g. <c>{"DT":{"speed_change":1.5}}</c>). Matches the on-disk shape in
+/// <c>bracket.json</c>, so the textbox doubles as a copy/paste sink for that file.
 /// </summary>
 private static string serialiseModParameters(Dictionary<string, Dictionary<string, object>> parameters)
 {
     if (parameters.Count == 0)
         return string.Empty;
 
-    var lines = new List<string>();
-    foreach (var (acronym, settings) in parameters)
-    {
-        foreach (var (key, value) in settings)
-            lines.Add($"{acronym}.{key}={value}");
-    }
-
-    return string.Join('\n', lines);
+    return JsonConvert.SerializeObject(parameters);
 }
 
 /// <summary>
-/// Parse the textbox content. Each line is <c>ACRONYM.setting=value</c>; the value is
-/// tried as <c>double</c>, then <c>bool</c>, then falls through as a raw string.
-/// Malformed lines are silently skipped — free-form editor, iterate UI later if clunky.
+/// Parse the textbox content as a JSON object of <c>{acronym: {setting: value}}</c>.
+/// Newtonsoft lands numeric values as <c>long</c>/<c>double</c>, booleans as
+/// <c>bool</c>, strings as strings — all coerced downstream by
+/// <see cref="osu.Game.Rulesets.Mods.Mod.CopyAdjustedSetting"/>. Invalid JSON
+/// returns an empty dictionary so a typo doesn't blow up the editor; the user
+/// fixes the JSON and the next commit re-renders the panel.
 /// </summary>
 internal static Dictionary<string, Dictionary<string, object>> parseModParameters(string text)
 {
-    var result = new Dictionary<string, Dictionary<string, object>>();
-
     if (string.IsNullOrWhiteSpace(text))
-        return result;
+        return new Dictionary<string, Dictionary<string, object>>();
 
-    foreach (string rawLine in text.Split('\n'))
+    try
     {
-        string line = rawLine.Trim();
-        if (line.Length == 0)
-            continue;
-
-        int dot = line.IndexOf('.');
-        int eq = line.IndexOf('=');
-
-        if (dot <= 0 || eq <= dot + 1)
-            continue;
-
-        string acronym = line.Substring(0, dot).Trim();
-        string key = line.Substring(dot + 1, eq - dot - 1).Trim();
-        string rawValue = line.Substring(eq + 1).Trim();
-
-        if (acronym.Length == 0 || key.Length == 0)
-            continue;
-
-        object value;
-        if (double.TryParse(rawValue, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out double d))
-            value = d;
-        else if (bool.TryParse(rawValue, out bool b))
-            value = b;
-        else
-            value = rawValue;
-
-        if (!result.TryGetValue(acronym, out var settings))
-        {
-            settings = new Dictionary<string, object>();
-            result[acronym] = settings;
-        }
-
-        settings[key] = value;
+        return JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, object>>>(text)
+               ?? new Dictionary<string, Dictionary<string, object>>();
     }
-
-    return result;
+    catch (JsonException)
+    {
+        return new Dictionary<string, Dictionary<string, object>>();
+    }
 }
 ```
+
+> **Rationale (JSON over per-line `ACRONYM.setting=value`).** `SettingsTextBox` wraps a single-line `OutlinedTextBox`, so the originally-planned newline-separated format could only ever hold one entry from the UI. JSON keeps the format compact, single-line, matches the on-disk `bracket.json` shape verbatim (copy/paste friendly), and reuses `JsonConvert` instead of a hand-rolled parser. Trade-off: one syntax error invalidates the whole field, but the panel re-renders on each commit so the user sees this immediately.
 
 - [x] **Step 2: Build**
 
@@ -946,10 +914,10 @@ namespace osu.Game.Tournament.Tests.Screens
     public class TestSceneRoundEditorScreen
     {
         [Test]
-        public void TestModParametersFreeForm()
+        public void TestModParametersJsonRoundTrip()
         {
             var parsed = RoundEditorScreen.RoundRow.RoundBeatmapEditor.RoundBeatmapRow
-                .parseModParameters("DT.speed_change=1.5\nMOD.flag=true\nKey.note=hello");
+                .parseModParameters("{\"DT\":{\"speed_change\":1.5},\"MOD\":{\"flag\":true},\"Key\":{\"note\":\"hello\"}}");
 
             Assert.That(parsed["DT"]["speed_change"], Is.EqualTo(1.5));
             Assert.That(parsed["MOD"]["flag"], Is.EqualTo(true));
@@ -965,13 +933,11 @@ namespace osu.Game.Tournament.Tests.Screens
         }
 
         [Test]
-        public void TestModParametersMalformedLinesSkipped()
+        public void TestModParametersMalformedJsonReturnsEmpty()
         {
             var parsed = RoundEditorScreen.RoundRow.RoundBeatmapEditor.RoundBeatmapRow
-                .parseModParameters("=1.5\nDT.\nfoo=bar\nDT.x=2.0");
-
-            Assert.That(parsed.Count, Is.EqualTo(1));
-            Assert.That(parsed["DT"]["x"], Is.EqualTo(2.0));
+                .parseModParameters("{not valid json");
+            Assert.That(parsed, Is.Empty);
         }
     }
 }
@@ -995,10 +961,10 @@ Expected: PASS (3/3).
 git add osu.Game.Tournament/Screens/Editors/RoundEditorScreen.cs osu.Game.Tournament.Tests/Screens/TestSceneRoundEditorScreen.cs
 git commit -m "add per-map mod-settings free-form editor to RoundEditorScreen
 
-Textbox per beatmap row accepting ACRONYM.setting=value lines.
-double → bool → string parse fallback chain matches APIMod.Settings value
-shape so RoundBeatmapModFactory's APIMod.ToMod round-trip applies them
-directly. Round-trips into bracket.json via the new RoundBeatmap.ModParameters."
+Textbox per beatmap row accepting a compact JSON object of
+{acronym:{setting:value}}. Round-trips through JsonConvert, matching the
+on-disk bracket.json shape so values reach RoundBeatmapModFactory via
+APIMod.ToMod without a custom parser."
 ```
 
 ---
@@ -1767,7 +1733,7 @@ Expected: all tests pass. There should be at least 4 new `RoundBeatmapModFactory
 
 - [x] **Step 3: Manual visual check (DT 1.5× rendering)**
 
-Open the tournament tools client (`dotnet run --project osu.Desktop -- --tournament`). In Round Editor, add a beatmap with `Mods = "DT"` and `Mod settings = "DT.speed_change=1.5"`. Open MapPool; the panel for that beatmap should show the DT icon with `1.50x` inline (via the embedded `ModIcon`'s extender). Switching `Mod settings` to empty (or removing the `speed_change` line) should restore the plain DT icon (custom-texture path if `Mods/DT` is registered, embedded `ModIcon` otherwise).
+Open the tournament tools client (`dotnet run --project osu.Desktop -- --tournament`). In Round Editor, add a beatmap with `Mods = "DT"` and `Mod settings = {"DT":{"speed_change":1.5}}`. Open MapPool; the panel for that beatmap should show the DT icon with `1.50x` inline (via the embedded `ModIcon`'s extender). Clearing the `Mod settings` field (or removing the `speed_change` key) should restore the plain DT icon (custom-texture path if `Mods/DT` is registered, embedded `ModIcon` otherwise).
 
 If 1.50x does not appear:
 - Check the `RoundEditorScreen` "Mod settings" textbox actually round-trips — empty out and re-enter, watch the panel rebuild.
