@@ -136,6 +136,36 @@ namespace osu.Game.Tournament.Screens.Editors
                 AutoSizeAxes = Axes.Y;
             }
 
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                // Auto-compute SlotName (NM1, NM2, HD1, ...) from each beatmap's Mods field.
+                // Ported verbatim from LGA 2025 commit 16888f90d6; the field-only port at
+                // 361c48cb84 left this hook out, which silently broke MapPoolScreen's score-edit
+                // slot dropdown (empties get filtered by refreshSlotItems).
+                // BindCollectionChanged with immediate=true also fires on screen load, so existing
+                // bracket.json rounds get their SlotNames materialised the first time the round
+                // editor is opened.
+                Model.Beatmaps.BindCollectionChanged((_, _) =>
+                {
+                    string? currentMods = null;
+                    int modSlotIndex = 1;
+
+                    foreach (var b in Model.Beatmaps)
+                    {
+                        if (currentMods != b.Mods)
+                        {
+                            currentMods = b.Mods;
+                            modSlotIndex = 1;
+                        }
+
+                        b.SlotName = currentMods == "TB" ? currentMods : $"{currentMods}{modSlotIndex}";
+                        modSlotIndex++;
+                    }
+                }, true);
+            }
+
             public partial class RoundBeatmapEditor : CompositeDrawable
             {
                 private readonly TournamentRound round;

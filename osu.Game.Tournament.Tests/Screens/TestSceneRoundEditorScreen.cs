@@ -6,6 +6,7 @@ using NUnit.Framework;
 using osu.Framework.Allocation;
 using osu.Framework.Testing;
 using osu.Game.Overlays.Settings;
+using osu.Game.Tournament.Models;
 using osu.Game.Tournament.Screens.Editors;
 
 namespace osu.Game.Tournament.Tests.Screens
@@ -74,6 +75,36 @@ namespace osu.Game.Tournament.Tests.Screens
             var parsed = RoundEditorScreen.RoundRow.RoundBeatmapEditor.RoundBeatmapRow
                 .parseModParameters("{not valid json");
             Assert.That(parsed, Is.Empty);
+        }
+
+        [Test]
+        public void TestSlotNameAutoComputeFromMods()
+        {
+            // Beatmaps seeded with Mods set but SlotName left at default empty — mirrors a
+            // bracket.json authored before the auto-compute hook was ported. The RoundRow's
+            // LoadComplete subscription should re-materialise SlotNames on first render.
+            AddStep("seed round with empty SlotNames", () =>
+            {
+                Ladder.Rounds.Clear();
+                var round = new TournamentRound { Name = { Value = "Auto Slot Test" } };
+                round.Beatmaps.Add(new RoundBeatmap { ID = 100, Mods = "NM" });
+                round.Beatmaps.Add(new RoundBeatmap { ID = 101, Mods = "NM" });
+                round.Beatmaps.Add(new RoundBeatmap { ID = 102, Mods = "HD" });
+                round.Beatmaps.Add(new RoundBeatmap { ID = 103, Mods = "HD" });
+                round.Beatmaps.Add(new RoundBeatmap { ID = 104, Mods = "TB" });
+                Ladder.Rounds.Add(round);
+            });
+
+            AddUntilStep("SlotNames auto-computed", () =>
+            {
+                var round = Ladder.Rounds.LastOrDefault();
+                if (round == null || round.Beatmaps.Count != 5) return false;
+                return round.Beatmaps[0].SlotName == "NM1"
+                       && round.Beatmaps[1].SlotName == "NM2"
+                       && round.Beatmaps[2].SlotName == "HD1"
+                       && round.Beatmaps[3].SlotName == "HD2"
+                       && round.Beatmaps[4].SlotName == "TB";
+            });
         }
     }
 }
