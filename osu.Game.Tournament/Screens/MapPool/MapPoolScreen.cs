@@ -11,6 +11,7 @@ using osu.Framework.Input.Events;
 using osu.Framework.Threading;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
+using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -41,6 +42,10 @@ namespace osu.Game.Tournament.Screens.MapPool
         private OsuButton buttonBluePick = null!;
         private OsuButton buttonRedProtect = null!;
         private OsuButton buttonBlueProtect = null!;
+
+        private SettingsDropdown<string?> mapScoreEditDropdown = null!;
+        private SettingsNumberBox redScoreTextBox = null!;
+        private SettingsNumberBox blueScoreTextBox = null!;
 
         private ScheduledDelegate? scheduledScreenChange;
 
@@ -197,6 +202,30 @@ namespace osu.Game.Tournament.Screens.MapPool
                             LabelText = "Split display by mods",
                             Current = LadderInfo.SplitMapPoolByMods,
                         },
+                        new ControlPanel.Spacer(),
+                        new TournamentSpriteText
+                        {
+                            Text = "Edit map scores",
+                        },
+                        mapScoreEditDropdown = new SettingsDropdown<string?>
+                        {
+                            LabelText = "Slot",
+                            Items = Array.Empty<string?>(),
+                        },
+                        redScoreTextBox = new SettingsNumberBox
+                        {
+                            LabelText = "Red score",
+                        },
+                        blueScoreTextBox = new SettingsNumberBox
+                        {
+                            LabelText = "Blue score",
+                        },
+                        new TourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Apply map score",
+                            Action = applyMapScoreEdit,
+                        },
                     },
                 }
             };
@@ -341,6 +370,17 @@ namespace osu.Game.Tournament.Screens.MapPool
             CurrentMatch.Value?.Sets.Clear();
             updateSetsDisplay();
             setNextMode();
+        }
+
+        private void applyMapScoreEdit()
+        {
+            if (CurrentMatch.Value == null) return;
+            if (mapScoreEditDropdown.Current.Value is not string slot) return;
+            if (redScoreTextBox.Current.Value is not int red) return;
+            if (blueScoreTextBox.Current.Value is not int blue) return;
+
+            // MapScores values are Tuple<long, long>; int → long widening is implicit and lossless.
+            CurrentMatch.Value.MapScores[slot] = new Tuple<long, long>(red, blue);
         }
 
         private void updateSetsDisplay()
@@ -509,6 +549,23 @@ namespace osu.Game.Tournament.Screens.MapPool
             base.CurrentMatchChanged(match);
             updateDisplay();
             updateSetsDisplay();
+
+            // Spec §6.3: re-bind on both CurrentMatch changes AND round-within-match changes
+            // so the slot dropdown follows a ref editing the round.
+            if (match.OldValue != null)
+                match.OldValue.Round.ValueChanged -= onRoundBindableChanged;
+            if (match.NewValue != null)
+                match.NewValue.Round.ValueChanged += onRoundBindableChanged;
+
+            refreshSlotItems();
+        }
+
+        private void onRoundBindableChanged(ValueChangedEvent<TournamentRound?> _) => refreshSlotItems();
+
+        private void refreshSlotItems()
+        {
+            var round = CurrentMatch.Value?.Round.Value;
+            mapScoreEditDropdown.Items = round?.Beatmaps.Select(b => b.SlotName).Cast<string?>().ToArray() ?? Array.Empty<string?>();
         }
 
         private void updateDisplay()

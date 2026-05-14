@@ -8,6 +8,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Testing;
 using osu.Framework.Utils;
+using osu.Game.Overlays.Settings;
 using osu.Game.Tournament;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.Models;
@@ -506,6 +507,40 @@ namespace osu.Game.Tournament.Tests.Screens
 
             AddStep("right-click map 0 again", () => rightClickBeatmapPanel(0));
             AddAssert("protect removed", () => Ladder.CurrentMatch.Value!.Protects, () => Has.Count.EqualTo(0));
+        }
+
+        [Test]
+        public void TestScoreEditApply()
+        {
+            AddStep("seed beatmaps with slot names", () =>
+            {
+                var round = Ladder.CurrentMatch.Value!.Round.Value!;
+                round.Beatmaps.Clear();
+                round.Beatmaps.Add(new RoundBeatmap { ID = 101, Beatmap = new TournamentBeatmap { OnlineID = 101 }, SlotName = "NM1", Mods = "NM" });
+                round.Beatmaps.Add(new RoundBeatmap { ID = 102, Beatmap = new TournamentBeatmap { OnlineID = 102 }, SlotName = "NM2", Mods = "NM" });
+
+                Ladder.CurrentMatch.TriggerChange();
+            });
+
+            AddStep("type slot NM1, red 100, blue 50, apply", () =>
+            {
+                var dropdown = screen.ChildrenOfType<SettingsDropdown<string?>>().First();
+                dropdown.Current.Value = "NM1";
+
+                var numberBoxes = screen.ChildrenOfType<SettingsNumberBox>().ToList();
+                // First two number boxes are red / blue map score (per-team set counters added in Task 11 follow).
+                numberBoxes[0].Current.Value = 100;
+                numberBoxes[1].Current.Value = 50;
+
+                var applyButton = screen.ChildrenOfType<TourneyButton>().First(b => b.Text == "Apply map score");
+                applyButton.TriggerClick();
+            });
+
+            AddAssert("MapScores NM1 = (100, 50)", () =>
+            {
+                var ms = Ladder.CurrentMatch.Value!.MapScores;
+                return ms.TryGetValue("NM1", out var t) && t.Item1 == 100 && t.Item2 == 50;
+            });
         }
 
         private void addBeatmap(string mods = "NM", string? titleOverride = null)
