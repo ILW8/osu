@@ -150,6 +150,63 @@ namespace osu.Game.Tournament.Tests.Screens
         }
 
         [Test]
+        public void TestMatchAutoCompleteAtPointsToWin()
+        {
+            AddStep("enable cumulative score", () => Ladder.CumulativeScore.Value = true);
+            AddStep("set BestOf 5 (PointsToWin = 3)", () => Ladder.CurrentMatch.Value!.Round.Value!.BestOf.Value = 5);
+            AddStep("ensure map 6 in round", () =>
+            {
+                if (Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.All(b => b.ID != 6))
+                    Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Add(new RoundBeatmap { ID = 6, SlotName = "HR2" });
+            });
+            AddStep("reset completion", () => Ladder.CurrentMatch.Value!.Completed.Value = false);
+            AddStep("zero scores", () =>
+            {
+                Ladder.CurrentMatch.Value!.Team1Score.Value = 0;
+                Ladder.CurrentMatch.Value!.Team2Score.Value = 0;
+            });
+
+            createScreen();
+            toggleWarmup();
+
+            AddStep("add 1 set (maps 1 & 2)", () => Ladder.CurrentMatch.Value!.Sets.Add(new MatchSet { Map1Id = { Value = 1 }, Map2Id = { Value = 2 } }));
+            playSet(mapIds: new[] { 1, 2 }, redWins: true);
+            AddAssert("not complete after set 1", () => Ladder.CurrentMatch.Value!.Completed.Value, () => Is.False);
+
+            AddStep("add set 2 (maps 3 & 4)", () => Ladder.CurrentMatch.Value!.Sets.Add(new MatchSet { Map1Id = { Value = 3 }, Map2Id = { Value = 4 } }));
+            playSet(mapIds: new[] { 3, 4 }, redWins: true);
+            AddAssert("not complete after set 2", () => Ladder.CurrentMatch.Value!.Completed.Value, () => Is.False);
+
+            AddStep("add set 3 (maps 5 & 6)", () => Ladder.CurrentMatch.Value!.Sets.Add(new MatchSet { Map1Id = { Value = 5 }, Map2Id = { Value = 6 } }));
+            playSet(mapIds: new[] { 5, 6 }, redWins: true);
+            AddAssert("team1 set wins is 3", () => Ladder.CurrentMatch.Value!.Team1Score.Value, () => Is.EqualTo(3));
+            AddAssert("Completed is true", () => Ladder.CurrentMatch.Value!.Completed.Value, () => Is.True);
+        }
+
+        private void playSet(int[] mapIds, bool redWins)
+        {
+            foreach (int mapId in mapIds)
+            {
+                int captured = mapId;
+                AddStep($"switch to map {captured}", () => IPCInfo.Beatmap.Value = new TournamentBeatmap { OnlineID = captured });
+                AddStep("set state: idle", () => IPCInfo.State.Value = TourneyState.Idle);
+                AddStep("set state: playing", () => IPCInfo.State.Value = TourneyState.Playing);
+                AddStep("add score", () =>
+                {
+                    IPCInfo.Score1.Value = redWins ? 1_000_000 : 0;
+                    IPCInfo.Score2.Value = redWins ? 0 : 1_000_000;
+                });
+                AddStep("set state: ranking", () => IPCInfo.State.Value = TourneyState.Ranking);
+                AddWaitStep("wait a bit", 4);
+                AddStep("clear scores", () =>
+                {
+                    IPCInfo.Score1.Value = 0;
+                    IPCInfo.Score2.Value = 0;
+                });
+            }
+        }
+
+        [Test]
         public void TestStartupState([Values] TourneyState state)
         {
             AddStep("set state", () => IPCInfo.State.Value = state);

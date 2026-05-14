@@ -323,6 +323,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                                 CurrentMatch.Value.Team1Score.Value++;
                                             else
                                                 CurrentMatch.Value.Team2Score.Value++;
+
+                                            // LGA 2026 §3.6 first-to-PointsToWin (3 for BestOf 5). Nullable
+                                            // comparison: null >= 3 is false, so unstarted matches can't auto-complete.
+                                            int pointsToWin = CurrentMatch.Value.PointsToWin;
+                                            if (CurrentMatch.Value.Team1Score.Value >= pointsToWin
+                                                || CurrentMatch.Value.Team2Score.Value >= pointsToWin)
+                                            {
+                                                CurrentMatch.Value.Completed.Value = true;
+                                            }
                                         }
                                     }
                                 }
