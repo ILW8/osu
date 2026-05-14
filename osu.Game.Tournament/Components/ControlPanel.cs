@@ -5,6 +5,7 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Game.Graphics;
+using osu.Game.Graphics.Containers;
 using osuTK;
 using osuTK.Graphics;
 
@@ -41,16 +42,22 @@ namespace osu.Game.Tournament.Components
                     Text = "Control Panel",
                     Font = OsuFont.GetFont(weight: FontWeight.Bold, size: 22)
                 },
-                buttons = new FillFlowContainer
+                // ScrollContainer wraps the button flow so panels with many entries (LGA 2026
+                // MapPoolScreen score-edit, GameplayScreen multiplayer controls) stay reachable
+                // when their auto-sized total exceeds the screen height. Padding.Top clears the
+                // 22pt "Control Panel" title.
+                new OsuScrollContainer
                 {
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Position = new Vector2(0, 35f),
-                    Padding = new MarginPadding(5),
-                    Direction = FillDirection.Vertical,
-                    Spacing = new Vector2(0, 5f),
+                    RelativeSizeAxes = Axes.Both,
+                    Padding = new MarginPadding { Top = 35f },
+                    Child = buttons = new FillFlowContainer
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        AutoSizeAxes = Axes.Y,
+                        Padding = new MarginPadding(5),
+                        Direction = FillDirection.Vertical,
+                        Spacing = new Vector2(0, 5f),
+                    },
                 },
             };
         }
