@@ -97,7 +97,11 @@ namespace osu.Game.Tournament.Screens.TeamIntro
             showFirstTeamButton.Enabled.Value = true;
             showSecondTeamButton.Enabled.Value = true;
 
-            currentTeam.Value = match.NewValue.Team1.Value;
+            // Use1V1Mode toggle calls CurrentMatch.TriggerChange() which re-fires this handler
+            // with OldValue == NewValue. Skip the team reset in that case so the operator's
+            // current selection (e.g. Team2) isn't snapped back to Team1.
+            if (match.OldValue != match.NewValue)
+                currentTeam.Value = match.NewValue.Team1.Value;
         }
 
         private void updateTeamDisplay() => Scheduler.AddOnce(() =>
