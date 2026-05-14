@@ -454,7 +454,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     currentSet = sets[setIndex];
                 }
 
-                BindableLong setSlotBindable = currentSet.IsTiebreaker && pickIndex == (TiebreakerSetIndex + 1) * 2
+                Bindable<long> setSlotBindable = currentSet.IsTiebreaker && pickIndex == (TiebreakerSetIndex + 1) * 2
                     ? currentSet.Map3Id
                     : setSlot == 0
                         ? currentSet.Map1Id

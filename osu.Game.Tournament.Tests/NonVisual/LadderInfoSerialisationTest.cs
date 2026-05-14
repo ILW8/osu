@@ -26,6 +26,29 @@ namespace osu.Game.Tournament.Tests.NonVisual
             JsonConvert.SerializeObject(ladder);
         }
 
+        [Test]
+        public void TestMatchSetRoundTrip()
+        {
+            // Regression for the BindableLong-no-parameterless-ctor bracket-load crash —
+            // a bracket.json carrying a non-empty match.Sets[] would fail mid-deserialise
+            // before MatchSet.Map{1,2,3}Id were switched to Bindable<long>.
+            var ladder = createSampleLadder();
+            var match = ladder.Matches[0];
+            var set = new MatchSet();
+            set.Map1Id.Value = 3508522;
+            set.Map2Id.Value = 1234567;
+            match.Sets.Add(set);
+
+            string serialised = JsonConvert.SerializeObject(ladder);
+            var roundTripped = JsonConvert.DeserializeObject<LadderInfo>(serialised, new JsonPointConverter());
+
+            Assert.That(roundTripped, Is.Not.Null);
+            Assert.That(roundTripped!.Matches[0].Sets, Has.Count.EqualTo(1));
+            Assert.That(roundTripped.Matches[0].Sets[0].Map1Id.Value, Is.EqualTo(3508522));
+            Assert.That(roundTripped.Matches[0].Sets[0].Map2Id.Value, Is.EqualTo(1234567));
+            Assert.That(roundTripped.Matches[0].Sets[0].Map3Id.Value, Is.EqualTo(0));
+        }
+
         private static LadderInfo createSampleLadder()
         {
             var match = TournamentTestScene.CreateSampleMatch();

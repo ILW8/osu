@@ -9,9 +9,14 @@ namespace osu.Game.Tournament.Models
 {
     public class MatchSet
     {
-        public BindableLong Map1Id = new BindableLong();
-        public BindableLong Map2Id = new BindableLong();
-        public BindableLong Map3Id = new BindableLong();
+        // Bindable<long>, not BindableLong: BindableLong has no parameterless ctor
+        // (`new BindableLong()` only compiles via the C# default-parameter form), and
+        // Newtonsoft's BindableJsonConverter falls back to Activator.CreateInstance —
+        // which throws "No parameterless constructor defined" mid-bracket-load.
+        // Same fix as LGA 2025 commit a2345d9044, missed by the field-only port at 361c48cb84.
+        public Bindable<long> Map1Id = new Bindable<long>();
+        public Bindable<long> Map2Id = new Bindable<long>();
+        public Bindable<long> Map3Id = new Bindable<long>();
 
         public bool IsTiebreaker { get; }
 
