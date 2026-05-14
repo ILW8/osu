@@ -114,6 +114,12 @@ namespace osu.Game.Tournament.Screens.Setup
                     Description = "When enabled, the overlay connects to a multiplayer room for match data instead of reading from the stable client's IPC files.",
                     Current = LadderInfo.UseMultiplayerSpectating,
                 },
+                new LabelledSwitchButton
+                {
+                    Label = "1v1 mode",
+                    Description = "Text elements referring to \"Team\"s will be updated to \"Player\"s and team players lists will be hidden.",
+                    Current = LadderInfo.Use1V1Mode,
+                },
                 restartButton,
             };
 
