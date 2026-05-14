@@ -54,6 +54,13 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> UseMultiplayerSpectating = new BindableBool();
 
         /// <summary>
+        /// When <c>true</c>, text elements referring to "Team"s are updated to "Player"s and
+        /// team players lists are hidden. Setup-screen toggle. Default off so legacy bracket.json
+        /// round-trips unchanged.
+        /// </summary>
+        public Bindable<bool> Use1V1Mode = new Bindable<bool>(false);
+
+        /// <summary>
         /// Interval in milliseconds between IPC file writes when multiplayer spectating is active.
         /// Defaults to 250 ms to match the stable client's historical IPC polling cadence.
         /// </summary>
