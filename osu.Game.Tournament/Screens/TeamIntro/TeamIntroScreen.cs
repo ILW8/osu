@@ -13,9 +13,6 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 {
     public partial class TeamIntroScreen : TournamentMatchScreen
     {
-        [Resolved]
-        private LadderInfo ladderInfo { get; set; } = null!;
-
         private Container mainContainer = null!;
 
         [BackgroundDependencyLoader]
@@ -50,10 +47,10 @@ namespace osu.Game.Tournament.Screens.TeamIntro
 
             const float y_offset = 460;
 
-            Drawable team1Display = ladderInfo.Use1V1Mode.Value
+            Drawable team1Display = LadderInfo.Use1V1Mode.Value
                                         ? new DrawableTeamTitleWithHeader(match.NewValue.Team1.Value, TeamColour.Red)
                                         : new DrawableTeamWithPlayers(match.NewValue.Team1.Value, TeamColour.Red);
-            Drawable team2Display = ladderInfo.Use1V1Mode.Value
+            Drawable team2Display = LadderInfo.Use1V1Mode.Value
                                         ? new DrawableTeamTitleWithHeader(match.NewValue.Team2.Value, TeamColour.Blue)
                                         : new DrawableTeamWithPlayers(match.NewValue.Team2.Value, TeamColour.Blue);
 
