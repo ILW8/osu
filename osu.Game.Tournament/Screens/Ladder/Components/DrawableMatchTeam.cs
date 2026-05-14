@@ -86,6 +86,14 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                 ? Color4Extensions.FromHex("#8E7F48")
                 : Color4Extensions.FromHex("#1462AA");
 
+            if (ladderInfo != null)
+            {
+                ladderInfo.Use1V1Mode.BindValueChanged(use1V1 =>
+                {
+                    Size = new Vector2(use1V1.NewValue ? 260 : 180, 40);
+                }, true);
+            }
+
             InternalChildren = new Drawable[]
             {
                 background = new Box
