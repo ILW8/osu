@@ -181,6 +181,18 @@ namespace osu.Game.Tournament.Tests.Screens
             playSet(mapIds: new[] { 5, 6 }, redWins: true);
             AddAssert("team1 set wins is 3", () => Ladder.CurrentMatch.Value!.Team1Score.Value, () => Is.EqualTo(3));
             AddAssert("Completed is true", () => Ladder.CurrentMatch.Value!.Completed.Value, () => Is.True);
+
+            // Teardown: restore fixture defaults so subsequent tests start from a clean round.
+            AddStep("teardown — clear Sets", () => Ladder.CurrentMatch.Value!.Sets.Clear());
+            AddStep("teardown — restore BestOf default", () => Ladder.CurrentMatch.Value!.Round.Value!.BestOf.Value = 9);
+            AddStep("teardown — remove map 6 from round", () =>
+            {
+                var round = Ladder.CurrentMatch.Value!.Round.Value!;
+                var extra = round.Beatmaps.FirstOrDefault(b => b.ID == 6);
+                if (extra != null)
+                    round.Beatmaps.Remove(extra);
+            });
+            AddStep("teardown — reset Completed", () => Ladder.CurrentMatch.Value!.Completed.Value = false);
         }
 
         private void playSet(int[] mapIds, bool redWins)
