@@ -195,6 +195,12 @@ namespace osu.Game.Tournament.Screens.Setup
                     Description = "Team seeds will display alongside each team at the top in gameplay/map pool screens.",
                     Current = LadderInfo.DisplayTeamSeeds,
                 },
+                new LabelledSwitchButton
+                {
+                    Label = "Use cumulative score",
+                    Description = "Instead of a single point per map won, set winners are decided by total cumulative score across the maps in the set.",
+                    Current = LadderInfo.CumulativeScore,
+                },
                 new SettingsSlider<int>
                 {
                     LabelText = "Multiplayer IPC write interval (ms)",

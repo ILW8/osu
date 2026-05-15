@@ -27,7 +27,7 @@ namespace osu.Game.Tournament.Tests.Screens
 
             AddStep("click 1v1 switch", () =>
             {
-                var row = this.ChildrenOfType<LabelledSwitchButton>().First(rowMatchesLabel);
+                var row = this.ChildrenOfType<LabelledSwitchButton>().First(r => rowMatchesLabel(r, "1v1 mode"));
                 row.ChildrenOfType<SwitchButton>().First().TriggerClick();
             });
 
@@ -35,20 +35,42 @@ namespace osu.Game.Tournament.Tests.Screens
 
             AddStep("click again", () =>
             {
-                var row = this.ChildrenOfType<LabelledSwitchButton>().First(rowMatchesLabel);
+                var row = this.ChildrenOfType<LabelledSwitchButton>().First(r => rowMatchesLabel(r, "1v1 mode"));
                 row.ChildrenOfType<SwitchButton>().First().TriggerClick();
             });
 
             AddAssert("Use1V1Mode is false", () => Ladder.Use1V1Mode.Value, () => Is.False);
         }
 
-        private static bool rowMatchesLabel(LabelledSwitchButton row)
+        [Test]
+        public void TestUseCumulativeScoreToggle()
+        {
+            AddStep("ensure off", () => Ladder.CumulativeScore.Value = false);
+
+            AddStep("click cumulative-score switch", () =>
+            {
+                var row = this.ChildrenOfType<LabelledSwitchButton>().First(r => rowMatchesLabel(r, "Use cumulative score"));
+                row.ChildrenOfType<SwitchButton>().First().TriggerClick();
+            });
+
+            AddAssert("CumulativeScore is true", () => Ladder.CumulativeScore.Value, () => Is.True);
+
+            AddStep("click again", () =>
+            {
+                var row = this.ChildrenOfType<LabelledSwitchButton>().First(r => rowMatchesLabel(r, "Use cumulative score"));
+                row.ChildrenOfType<SwitchButton>().First().TriggerClick();
+            });
+
+            AddAssert("CumulativeScore is false", () => Ladder.CumulativeScore.Value, () => Is.False);
+        }
+
+        private static bool rowMatchesLabel(LabelledSwitchButton row, string label)
         {
             // Concatenate all SpriteText characters that belong to the label flow container (the
             // first OsuTextFlowContainer in the row hierarchy). LabelledDrawable.Label has no
             // getter so we reconstruct it from the rendered SpriteTexts.
             string text = string.Concat(row.ChildrenOfType<SpriteText>().Select(s => s.Text.ToString()));
-            return text.Contains("1v1 mode");
+            return text.Contains(label);
         }
     }
 }
