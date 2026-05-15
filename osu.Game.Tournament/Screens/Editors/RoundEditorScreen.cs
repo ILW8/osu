@@ -374,7 +374,7 @@ namespace osu.Game.Tournament.Screens.Editors
 
                         if (Model.Beatmap != null)
                         {
-                            drawableContainer.Child = new TournamentBeatmapPanel(Model)
+                            drawableContainer.Child = new TournamentBeatmapPanel(Model.Beatmap, Model.Mods)
                             {
                                 Anchor = Anchor.CentreLeft,
                                 Origin = Anchor.CentreLeft,
