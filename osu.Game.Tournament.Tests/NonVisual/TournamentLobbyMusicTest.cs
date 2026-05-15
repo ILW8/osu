@@ -11,43 +11,43 @@ namespace osu.Game.Tournament.Tests.NonVisual
     public class TournamentLobbyMusicTest
     {
         [Test]
-        public void ShouldPlay_disconnected_returnsFalse()
+        public void DoesNotPlayWhenDisconnected()
         {
             Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: false, TourneyState.Idle, hasResolvedBeatmap: true), Is.False);
         }
 
         [Test]
-        public void ShouldPlay_noResolvedBeatmap_returnsFalse()
+        public void DoesNotPlayWhenBeatmapUnresolved()
         {
             Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.Idle, hasResolvedBeatmap: false), Is.False);
         }
 
         [Test]
-        public void ShouldPlay_idle_returnsTrue()
+        public void PlaysWhenIdleAndConnectedWithBeatmap()
         {
             Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.Idle, hasResolvedBeatmap: true), Is.True);
         }
 
         [Test]
-        public void ShouldPlay_waitingForClients_returnsTrue()
+        public void PlaysWhenWaitingForClients()
         {
             Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.WaitingForClients, hasResolvedBeatmap: true), Is.True);
         }
 
         [Test]
-        public void ShouldPlay_playing_returnsFalse()
+        public void DoesNotPlayDuringPlaying()
         {
             Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.Playing, hasResolvedBeatmap: true), Is.False);
         }
 
         [Test]
-        public void ShouldPlay_ranking_returnsFalse()
+        public void DoesNotPlayDuringRanking()
         {
             Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.Ranking, hasResolvedBeatmap: true), Is.False);
         }
 
         [Test]
-        public void ShouldPlay_initialising_returnsFalse()
+        public void DoesNotPlayDuringInitialising()
         {
             // Initialising is never a "lobby" state — be conservative and don't play.
             Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.Initialising, hasResolvedBeatmap: true), Is.False);
