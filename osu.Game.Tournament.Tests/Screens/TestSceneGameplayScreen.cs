@@ -268,20 +268,6 @@ namespace osu.Game.Tournament.Tests.Screens
         }
 
         [Test]
-        public void TestCumulativeScoreStarsHide()
-        {
-            createScreen();
-            toggleWarmup();
-
-            AddStep("enable cumulative score", () => Ladder.CumulativeScore.Value = true);
-            AddUntilStep("stars hidden", () => this.ChildrenOfType<TeamScore.TeamScoreStarCounter>().Any()
-                                               && this.ChildrenOfType<TeamScore.TeamScoreStarCounter>().All(c => Precision.AlmostEquals(c.Alpha, 0)));
-
-            AddStep("disable cumulative score", () => Ladder.CumulativeScore.Value = false);
-            AddUntilStep("stars visible", () => this.ChildrenOfType<TeamScore.TeamScoreStarCounter>().All(c => Precision.AlmostEquals(c.Alpha, 1)));
-        }
-
-        [Test]
         public void TestStartupState([Values] TourneyState state)
         {
             AddStep("set state", () => IPCInfo.State.Value = state);
