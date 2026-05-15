@@ -146,6 +146,12 @@ namespace osu.Game.Tournament.Components
                 // changes elsewhere — we own when music plays here.
                 if (music.IsPlaying)
                     music.Stop();
+
+                // Clear the looping flag we set in PrepareTrackForPreview, so the
+                // gameplay master clock doesn't loop the same track when it takes
+                // ownership for the upcoming round.
+                if (globalBeatmap.Value?.Track != null)
+                    globalBeatmap.Value.Track.Looping = false;
             }
         }
 
