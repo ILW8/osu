@@ -175,10 +175,6 @@ namespace osu.Game.Tournament.Components
                     {
                         modFlow.Add(new TournamentModIcon(configuredMod)
                         {
-                            // Centre inside the flow cell so icons line up vertically with the
-                            // string-path single icon (which uses CentreRight on its own AddInternal).
-                            Anchor = Anchor.Centre,
-                            Origin = Anchor.Centre,
                             RelativeSizeAxes = Axes.Y,
                             Width = HEIGHT,
                         });
