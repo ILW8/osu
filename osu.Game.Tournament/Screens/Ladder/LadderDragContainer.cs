@@ -29,8 +29,8 @@ namespace osu.Game.Tournament.Screens.Ladder
             this.MoveTo(target += e.Delta, 1000, Easing.OutQuint);
         }
 
-        private const float min_scale = 0.6f;
-        private const float max_scale = 1.4f;
+        private const float min_scale = 0.4f;
+        private const float max_scale = 1.6f;
 
         protected override bool OnScroll(ScrollEvent e)
         {
