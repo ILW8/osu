@@ -24,6 +24,7 @@ using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online;
 using osu.Game.Online.API.Requests;
+using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IO;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -229,7 +230,10 @@ namespace osu.Game.Tournament
                 Add(ipc);
 
                 if (ipc is MultiplayerMatchIPCInfo)
+                {
                     Add(new MultiplayerIPCWriter());
+                    Add(new TournamentLobbyMusic());
+                }
 
                 // Apply UI sample muting based on the persisted setting.
                 // We can't AddAdjustment on Audio.Samples directly because built-in skins
