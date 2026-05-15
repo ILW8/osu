@@ -30,9 +30,8 @@ namespace osu.Game.Tournament.Tests
         public void TestLeftColumnHostsMultiplayerControls()
         {
             // Left-column controls are the ones whose ancestor chain does NOT pass through
-            // any TournamentScreen. SetupScreen and GameplayScreen also render their own
-            // copies today; scoping by "not inside a screen" isolates the left-column count
-            // and keeps this assertion stable across Task 4 (which removes the gameplay copy).
+            // any TournamentScreen. SetupScreen still renders its own in-content copy by
+            // design, so scoping by "not inside a screen" isolates the left-column count.
             AddAssert("left column hosts exactly one MultiplayerRoomConnectionControls",
                 () => this.ChildrenOfType<MultiplayerRoomConnectionControls>()
                           .Count(c => !isInsideAnyTournamentScreen(c)),
