@@ -394,6 +394,10 @@ namespace osu.Game.Tournament.Screens.Gameplay
         public override void Show()
         {
             updateState();
+
+            // Replay spectator states the display's binding missed while this screen was hidden.
+            gameplayDisplay?.RefreshActiveSpectators();
+
             base.Show();
         }
 

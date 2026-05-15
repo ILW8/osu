@@ -168,6 +168,20 @@ namespace osu.Game.Tournament.Components
             }
         }
 
+        /// <summary>
+        /// Replays current <see cref="SpectatedUserState.Playing"/> entries through
+        /// <see cref="onUserStateChanged"/> so users who began playing while this display's
+        /// scheduler was paused (screen hidden) get a <c>PlayerArea</c>. Idempotent per user.
+        /// </summary>
+        public void RefreshActiveSpectators()
+        {
+            foreach (var entry in watchedStates)
+            {
+                if (entry.Value.State == SpectatedUserState.Playing)
+                    onUserStateChanged(entry.Key, entry.Value);
+            }
+        }
+
         private void onUserStateChanged(int userId, SpectatorState newState)
         {
             if (newState.RulesetID == null || newState.BeatmapID == null)
@@ -200,13 +214,12 @@ namespace osu.Game.Tournament.Components
 
         private void onLoadRequested()
         {
-            Schedule(teardownGameplay);
+            // Synchronous teardown: this drawable's Scheduler stops while GameplayScreen is hidden,
+            // so a Schedule()'d teardown could fire after the next round's PlayerAreas exist and wipe them.
+            teardownGameplay();
         }
 
-        private void onGameplayAborted(GameplayAbortReason _)
-        {
-            Schedule(teardownGameplay);
-        }
+        private void onGameplayAborted(GameplayAbortReason _) => teardownGameplay();
 
         private void onPlayerFinished(int userId)
         {

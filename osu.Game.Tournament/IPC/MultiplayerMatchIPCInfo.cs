@@ -61,6 +61,28 @@ namespace osu.Game.Tournament.IPC
         private readonly Bindable<PendingInvite?> pendingInvite = new Bindable<PendingInvite?>();
 
         /// <summary>
+        /// <c>true</c> while at least one user we're spectating is reporting
+        /// <see cref="SpectatedUserState.Playing"/>. Driven directly from
+        /// <see cref="SpectatorClient.WatchedUserStates"/> on this component, which is always
+        /// alive — unlike a <c>Drawable</c>-bound observer it doesn't depend on any screen
+        /// being visible. Consumers (e.g. <c>MapPoolScreen</c> auto-advance) get a reliable
+        /// "spectator gameplay has begun" signal regardless of which screen is currently active.
+        /// </summary>
+        public IBindable<bool> HasActiveSpectatorPlayers => hasActiveSpectatorPlayers;
+
+        private readonly Bindable<bool> hasActiveSpectatorPlayers = new Bindable<bool>();
+
+        private readonly IBindableDictionary<int, SpectatorState> watchedUserStates = new BindableDictionary<int, SpectatorState>();
+
+        private void recomputeHasActiveSpectatorPlayers()
+        {
+            bool anyPlaying = watchedUserStates.Values.Any(s => s.State == SpectatedUserState.Playing);
+
+            if (hasActiveSpectatorPlayers.Value != anyPlaying)
+                hasActiveSpectatorPlayers.Value = anyPlaying;
+        }
+
+        /// <summary>
         /// Accepts the current pending invite and connects to the room.
         /// </summary>
         public void AcceptPendingInvite()
@@ -146,6 +168,8 @@ namespace osu.Game.Tournament.IPC
         [BackgroundDependencyLoader]
         private void load()
         {
+            watchedUserStates.BindTo(spectatorClient.WatchedUserStates);
+            watchedUserStates.BindCollectionChanged((_, _) => recomputeHasActiveSpectatorPlayers(), true);
         }
 
         /// <summary>

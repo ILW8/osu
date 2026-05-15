@@ -51,8 +51,11 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         private ScheduledDelegate? scheduledScreenChange;
 
+        [Resolved]
+        private MatchIPCInfo ipc { get; set; } = null!;
+
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load()
         {
             InternalChildren = new Drawable[]
             {
@@ -265,6 +268,22 @@ namespace osu.Game.Tournament.Screens.MapPool
             splitMapPoolByMods.BindValueChanged(_ => updateDisplay());
 
             mapScoreEditDropdown.Current.BindValueChanged(slot => loadScoresForSlot(slot.NewValue));
+
+            if (ipc is MultiplayerMatchIPCInfo multiplayerIpc)
+                multiplayerIpc.HasActiveSpectatorPlayers.BindValueChanged(onHasActiveSpectatorPlayersChanged);
+        }
+
+        private void onHasActiveSpectatorPlayersChanged(ValueChangedEvent<bool> active)
+        {
+            if (!active.NewValue)
+                return;
+
+            if (!LadderInfo.AutoProgressScreens.Value)
+                return;
+
+            // Unconditional advance so a ban-undo misclick can't strand the overlay here when
+            // gameplay actually starts. SetScreen is idempotent if we're already on GameplayScreen.
+            sceneManager?.SetScreen(typeof(GameplayScreen));
         }
 
         private void loadScoresForSlot(string? slot)
@@ -584,7 +603,12 @@ namespace osu.Game.Tournament.Screens.MapPool
                 if (pickType == ChoiceType.Pick && CurrentMatch.Value.PicksBans.Any(i => i.Type == ChoiceType.Pick))
                 {
                     scheduledScreenChange?.Cancel();
-                    scheduledScreenChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(GameplayScreen)); }, 10000);
+
+                    // Multiplayer IPC drives auto-advance via onIpcStateChanged (TourneyState.Playing).
+                    // File-based IPC (stable client) doesn't deliver that signal reliably, so we keep
+                    // the legacy fixed 10s delay there — verified to work with the stable client.
+                    if (ipc is not MultiplayerMatchIPCInfo)
+                        scheduledScreenChange = Scheduler.AddDelayed(() => { sceneManager?.SetScreen(typeof(GameplayScreen)); }, 10000);
                 }
             }
         }
