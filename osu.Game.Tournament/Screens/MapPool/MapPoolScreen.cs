@@ -263,6 +263,24 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             splitMapPoolByMods = LadderInfo.SplitMapPoolByMods.GetBoundCopy();
             splitMapPoolByMods.BindValueChanged(_ => updateDisplay());
+
+            mapScoreEditDropdown.Current.BindValueChanged(slot => loadScoresForSlot(slot.NewValue));
+        }
+
+        private void loadScoresForSlot(string? slot)
+        {
+            if (slot == null || CurrentMatch.Value == null
+                || !CurrentMatch.Value.MapScores.TryGetValue(slot, out var scores))
+            {
+                redScoreTextBox.Current.Value = null;
+                blueScoreTextBox.Current.Value = null;
+                return;
+            }
+
+            // MapScores is Tuple<long, long>; the textbox round-tripped from int via applyMapScoreEdit,
+            // so the cast back is lossless for any score the user could have entered here.
+            redScoreTextBox.Current.Value = (int)scores.Item1;
+            blueScoreTextBox.Current.Value = (int)scores.Item2;
         }
 
         private void beatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)
