@@ -30,7 +30,7 @@ The decision is the only piece of logic with non-trivial behaviour — extract i
 - Create: `osu.Game.Tournament/Components/TournamentLobbyMusic.cs`
 - Create: `osu.Game.Tournament.Tests/NonVisual/TournamentLobbyMusicTest.cs`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `osu.Game.Tournament.Tests/NonVisual/TournamentLobbyMusicTest.cs`:
 
@@ -93,13 +93,13 @@ namespace osu.Game.Tournament.Tests.NonVisual
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter FullyQualifiedName~TournamentLobbyMusicTest`
 
 Expected: build fails with `The type or namespace name 'TournamentLobbyMusic' does not exist`.
 
-- [ ] **Step 3: Create the component stub with just the `ShouldPlay` function**
+- [x] **Step 3: Create the component stub with just the `ShouldPlay` function**
 
 Create `osu.Game.Tournament/Components/TournamentLobbyMusic.cs`:
 
@@ -135,13 +135,13 @@ namespace osu.Game.Tournament.Components
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter FullyQualifiedName~TournamentLobbyMusicTest`
 
 Expected: 7 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add osu.Game.Tournament/Components/TournamentLobbyMusic.cs osu.Game.Tournament.Tests/NonVisual/TournamentLobbyMusicTest.cs
@@ -157,7 +157,7 @@ Now fill in the component body so that it actually drives `MusicController`.
 **Files:**
 - Modify: `osu.Game.Tournament/Components/TournamentLobbyMusic.cs`
 
-- [ ] **Step 1: Add the framework wiring**
+- [x] **Step 1: Add the framework wiring**
 
 Replace the body of `osu.Game.Tournament/Components/TournamentLobbyMusic.cs` with the full implementation:
 
@@ -325,19 +325,19 @@ namespace osu.Game.Tournament.Components
 }
 ```
 
-- [ ] **Step 2: Verify it builds**
+- [x] **Step 2: Verify it builds**
 
 Run: `dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj`
 
 Expected: build succeeds.
 
-- [ ] **Step 3: Re-run the trigger-model unit tests**
+- [x] **Step 3: Re-run the trigger-model unit tests**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter FullyQualifiedName~TournamentLobbyMusicTest`
 
 Expected: 7 tests pass (the new wiring didn't break `ShouldPlay`).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add osu.Game.Tournament/Components/TournamentLobbyMusic.cs
@@ -351,7 +351,7 @@ git commit -m "wire TournamentLobbyMusic to MusicController and global beatmap"
 **Files:**
 - Modify: `osu.Game.Tournament/TournamentGameBase.cs` around line 232 (the `Add(new MultiplayerIPCWriter())` line).
 
-- [ ] **Step 1: Add the new `using`**
+- [x] **Step 1: Add the new `using`**
 
 Verify whether `using osu.Game.Tournament.Components;` is already present near the top of `TournamentGameBase.cs`. If not, add it.
 
@@ -359,7 +359,7 @@ Search: `grep -n "Tournament.Components" osu.Game.Tournament/TournamentGameBase.
 
 If absent, insert at the appropriate spot in the `using` block (sorted between `osu.Game.Tournament.IO` and `osu.Game.Tournament.IPC`).
 
-- [ ] **Step 2: Add the component next to `MultiplayerIPCWriter`**
+- [x] **Step 2: Add the component next to `MultiplayerIPCWriter`**
 
 In `osu.Game.Tournament/TournamentGameBase.cs`, find the existing block:
 
@@ -382,19 +382,19 @@ Change it to:
                 }
 ```
 
-- [ ] **Step 3: Verify the project builds**
+- [x] **Step 3: Verify the project builds**
 
 Run: `dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj`
 
 Expected: build succeeds with no warnings about the new code.
 
-- [ ] **Step 4: Run the full tournament test suite to verify nothing regressed**
+- [x] **Step 4: Run the full tournament test suite to verify nothing regressed**
 
 Run: `dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter FullyQualifiedName~NonVisual`
 
 Expected: all NonVisual tests pass (including the existing `MultiplayerIPCWriterTest` suite — the new component adds itself to the same multiplayer branch and shouldn't affect IPC writes).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add osu.Game.Tournament/TournamentGameBase.cs
