@@ -272,7 +272,10 @@ namespace osu.Game.Tournament.Screens.MapPool
             mapScoreEditDropdown.Current.BindValueChanged(slot => loadScoresForSlot(slot.NewValue));
 
             if (ipc is MultiplayerMatchIPCInfo multiplayerIpc)
+            {
                 multiplayerIpc.HasActiveSpectatorPlayers.BindValueChanged(onHasActiveSpectatorPlayersChanged);
+                multiplayerIpc.IsConnected.BindValueChanged(onIsConnectedChanged);
+            }
         }
 
         private void onHasActiveSpectatorPlayersChanged(ValueChangedEvent<bool> active)
@@ -286,6 +289,21 @@ namespace osu.Game.Tournament.Screens.MapPool
             // Unconditional advance so a ban-undo misclick can't strand the overlay here when
             // gameplay actually starts. SetScreen is idempotent if we're already on GameplayScreen.
             sceneManager?.SetScreen(typeof(GameplayScreen));
+        }
+
+        private void onIsConnectedChanged(ValueChangedEvent<bool> connected)
+        {
+            if (!connected.NewValue)
+                return;
+
+            // Skip when joining a room mid-match — don't override the gameplay-driven chat state.
+            if (ipc is MultiplayerMatchIPCInfo multiplayerIpc && multiplayerIpc.JoinedDuringGameplay)
+                return;
+
+            // Mirror the gameplay-screen chatToggle's "show chat" path: route through
+            // ipc.State so the toggle's reflected value stays consistent across screens.
+            // GameplayScreen's State.BindValueChanged ultimately calls chat.Expand().
+            ipc.State.Value = TourneyState.Idle;
         }
 
         private void loadScoresForSlot(string? slot)

@@ -26,6 +26,15 @@ namespace osu.Game.Tournament.Tests
             Add(new TournamentSceneManager());
         }
 
+        public override void SetUpSteps()
+        {
+            base.SetUpSteps();
+
+            // Tests in this fixture share a single IPC instance; reset connection
+            // state so each test starts disconnected and observes a clean transition.
+            AddStep("reset IPC connection", () => ((MultiplayerMatchIPCInfo)IPCInfo).SetConnectedForTesting(false));
+        }
+
         [Test]
         public void TestLeftColumnHostsMultiplayerControls()
         {
@@ -36,6 +45,40 @@ namespace osu.Game.Tournament.Tests
                 () => this.ChildrenOfType<MultiplayerRoomConnectionControls>()
                           .Count(c => !isInsideAnyTournamentScreen(c)),
                 () => Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TestConnectingToIdleRoomDrivesStateToIdle()
+        {
+            // MapPoolScreen mirrors the chatToggle's "show chat" path by routing through
+            // ipc.State on connect. Verify the IPC state lands on Idle (which downstream
+            // triggers chat.Expand() via GameplayScreen's existing State binding).
+            AddStep("seed non-Idle state", () =>
+                ((MultiplayerMatchIPCInfo)IPCInfo).State.Value = TourneyState.Playing);
+
+            AddStep("connect (no gameplay running)", () =>
+                ((MultiplayerMatchIPCInfo)IPCInfo).SetConnectedForTesting(true, roomId: 12345));
+
+            AddAssert("ipc state becomes Idle",
+                () => ((MultiplayerMatchIPCInfo)IPCInfo).State.Value,
+                () => Is.EqualTo(TourneyState.Idle));
+        }
+
+        [Test]
+        public void TestConnectingDuringGameplayPreservesIpcState()
+        {
+            // When a room is already mid-match at the time of joining, don't override the
+            // gameplay-driven chat state — leave State alone so the existing gameplay flow
+            // can manage chat visibility.
+            AddStep("seed non-Idle state", () =>
+                ((MultiplayerMatchIPCInfo)IPCInfo).State.Value = TourneyState.Playing);
+
+            AddStep("connect (gameplay already running)", () =>
+                ((MultiplayerMatchIPCInfo)IPCInfo).SetConnectedForTesting(true, roomId: 12345, joinedDuringGameplay: true));
+
+            AddAssert("ipc state preserved",
+                () => ((MultiplayerMatchIPCInfo)IPCInfo).State.Value,
+                () => Is.EqualTo(TourneyState.Playing));
         }
 
         private static bool isInsideAnyTournamentScreen(Drawable drawable)

@@ -61,6 +61,14 @@ namespace osu.Game.Tournament.IPC
         private readonly Bindable<PendingInvite?> pendingInvite = new Bindable<PendingInvite?>();
 
         /// <summary>
+        /// Whether any user in the room was already participating in a round
+        /// (Playing / Loading / Ready-for-gameplay) at the moment the connection
+        /// succeeded. Set before <see cref="IsConnected"/> flips to <c>true</c> so
+        /// IsConnected listeners read a consistent snapshot. Reset on disconnect.
+        /// </summary>
+        public bool JoinedDuringGameplay { get; private set; }
+
+        /// <summary>
         /// <c>true</c> while at least one user we're spectating is reporting
         /// <see cref="SpectatedUserState.Playing"/>. Driven directly from
         /// <see cref="SpectatorClient.WatchedUserStates"/> on this component, which is always
@@ -116,10 +124,13 @@ namespace osu.Game.Tournament.IPC
         /// Test-only helper: forces the connection state without going through <see cref="Connect"/>.
         /// Allows integration tests to drive IPC-writer behavior without a live SignalR connection.
         /// </summary>
-        internal void SetConnectedForTesting(bool value, long? roomId = null)
+        internal void SetConnectedForTesting(bool value, long? roomId = null, bool joinedDuringGameplay = false)
         {
-            isConnected.Value = value;
+            // Match Connect's ordering: snapshot fields populated before the isConnected flip
+            // so listeners reading JoinedDuringGameplay in IsConnected handlers see a consistent state.
+            JoinedDuringGameplay = joinedDuringGameplay;
             connectedRoomId.Value = roomId;
+            isConnected.Value = value;
         }
 
         [Resolved]
@@ -239,12 +250,17 @@ namespace osu.Game.Tournament.IPC
                 // transition into a participating state.
                 Schedule(() =>
                 {
+                    bool joinedDuringGameplay = false;
+
                     if (multiplayerClient.Room != null)
                     {
                         foreach (var user in multiplayerClient.Room.Users)
                         {
                             if (isParticipatingInCurrentRound(user.State))
+                            {
+                                joinedDuringGameplay = true;
                                 startWatchingUser(user.UserID);
+                            }
                         }
 
                         updateBeatmapFromRoom();
@@ -252,6 +268,8 @@ namespace osu.Game.Tournament.IPC
                         updateChatChannelFromRoom();
                     }
 
+                    // Must precede the isConnected flip so listeners observe a consistent snapshot.
+                    JoinedDuringGameplay = joinedDuringGameplay;
                     connectedRoomId.Value = roomId;
                     connectedRoomPassword = password;
                     isConnected.Value = true;
@@ -352,6 +370,7 @@ namespace osu.Game.Tournament.IPC
                 isConnected.Value = false;
                 connectedRoomId.Value = null;
                 connectedRoomPassword = null;
+                JoinedDuringGameplay = false;
                 lastBeatmapId = 0;
                 userStates.Clear();
 
