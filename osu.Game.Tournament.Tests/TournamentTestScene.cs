@@ -25,8 +25,14 @@ namespace osu.Game.Tournament.Tests
         [Cached]
         protected LadderInfo Ladder { get; private set; } = new LadderInfo();
 
-        [Cached]
-        protected MatchIPCInfo IPCInfo { get; private set; } = new MatchIPCInfo();
+        protected MatchIPCInfo IPCInfo { get; private set; } = null!;
+
+        /// <summary>
+        /// Subclasses can override to inject a derived IPC type (e.g.
+        /// <see cref="osu.Game.Tournament.IPC.MultiplayerMatchIPCInfo"/>). The returned
+        /// instance is cached as <see cref="MatchIPCInfo"/> in the dependency container.
+        /// </summary>
+        protected virtual MatchIPCInfo CreateIPCInfo() => new MatchIPCInfo();
 
         [Resolved]
         private RulesetStore rulesetStore { get; set; } = null!;
@@ -37,6 +43,9 @@ namespace osu.Game.Tournament.Tests
         private void load(TournamentStorage storage)
         {
             Ladder.Ruleset.Value ??= rulesetStore.AvailableRulesets.First();
+
+            IPCInfo = CreateIPCInfo();
+            Dependencies.CacheAs(IPCInfo);
 
             match = CreateSampleMatch();
 
