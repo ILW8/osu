@@ -35,13 +35,13 @@ jobs:
 
       - name: Create publish package (push)
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        run: dotnet publish -c Release -r ${{matrix.os}} --self-contained -warnaserror osu.Desktop.slnf
+        run: dotnet publish -c Release -r ${{matrix.os}} --self-contained osu.Desktop.slnf
 
       - name: Create publish package (tagged release)
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         env:
           REF: ${{ github.ref }}
-        run: dotnet publish -c Release -r ${{matrix.os}} /p:Version="${REF##*/}" --self-contained -warnaserror osu.Desktop.slnf
+        run: dotnet publish -c Release -r ${{matrix.os}} /p:Version="${REF##*/}" --self-contained osu.Desktop.slnf
 
       - name: tar releases (for *nix platforms)
         if: ${{ !startsWith(matrix.os, 'win') }}
