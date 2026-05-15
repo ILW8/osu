@@ -71,11 +71,11 @@ namespace osu.Game.Tournament.Screens.MapPool
                 },
                 new GridContainer
                 {
-                    // Y/X/Width values verbatim from 2025.524.2-LGA+2025.424.0-week2 — the asymmetric
-                    // Y=90 (Pool) vs Y=170 (Sets) is intentional: 90 puts the Pool heading at the
-                    // existing 90–160 band so mapFlows resumes at ~Y=160 (matches the pre-split layout
-                    // and keeps updateDisplay's padding logic valid); 170 clears MatchHeader for Sets.
-                    Y = 90,
+                    // X/Width verbatim from 2025.524.2-LGA+2025.424.0-week2; Y shifted +100 from the
+                    // reference's 90 because the content was sitting tight against the MatchHeader
+                    // bottom (Y=95). The asymmetric Pool/Sets Y offset (Pool 190, Sets 270) is preserved
+                    // from the reference so Sets clears the MatchHeader column for its own heading.
+                    Y = 190,
                     X = 0f,
                     Anchor = Anchor.TopLeft,
                     RelativePositionAxes = Axes.X,
@@ -115,8 +115,10 @@ namespace osu.Game.Tournament.Screens.MapPool
                 },
                 new GridContainer
                 {
-                    // Y=170 verbatim from 2025 LGA tag (clears MatchHeader for the Sets column).
-                    Y = 170,
+                    // Y shifted +100 from the 2025 LGA reference's 170 to match the Pool grid shift
+                    // above (keeps the asymmetric Pool/Sets offset so the Sets heading clears
+                    // MatchHeader cleanly on the right column).
+                    Y = 270,
                     X = 0.65f,
                     Anchor = Anchor.TopLeft,
                     RelativePositionAxes = Axes.X,
