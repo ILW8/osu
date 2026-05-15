@@ -360,6 +360,34 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                     case TourneyState.Ranking:
                         scheduledContract = Scheduler.AddDelayed(contract, 10000);
+
+                        // Multiplayer IPC never transitions back to Idle after results (the file-based
+                        // path relies on stable returning to song select to write Idle to ipc-state.txt),
+                        // so the Idle-case auto-advance above won't fire. Drive the screen change directly
+                        // off a fixed timer from Ranking. File-based IPC keeps the original behaviour.
+                        if (ipc is MultiplayerMatchIPCInfo
+                            && LadderInfo.AutoProgressScreens.Value
+                            && !warmup.Value
+                            && CurrentMatch.Value != null)
+                        {
+                            const float delay_before_progression = 14000;
+
+                            scheduledScreenChange = Scheduler.AddDelayed(() =>
+                            {
+                                // Clear the player grid and the per-map score bar at the exact moment of
+                                // the screen advance. onLoadRequested would otherwise leave both showing
+                                // the previous round until the next map starts loading.
+                                gameplayDisplay?.TeardownGameplay();
+                                ipc.Score1.Value = 0;
+                                ipc.Score2.Value = 0;
+
+                                sceneManager?.SetScreen(
+                                    CurrentMatch.Value?.Completed.Value == true
+                                        ? typeof(TeamWinScreen)
+                                        : typeof(MapPoolScreen));
+                            }, delay_before_progression);
+                        }
+
                         break;
 
                     default:

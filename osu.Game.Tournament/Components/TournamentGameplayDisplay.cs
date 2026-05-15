@@ -180,6 +180,13 @@ namespace osu.Game.Tournament.Components
             }
         }
 
+        /// <summary>
+        /// Tears down all live player areas and gameplay infrastructure. Safe to call when no
+        /// gameplay is active. Used by the gameplay screen to clear the player grid as part of
+        /// auto-advancing back to the map pool after results.
+        /// </summary>
+        public void TeardownGameplay() => teardownGameplay();
+
         private void onUserStateChanged(int userId, SpectatorState newState)
         {
             if (newState.RulesetID == null || newState.BeatmapID == null)
