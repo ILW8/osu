@@ -13,9 +13,7 @@ using osu.Framework.Localisation;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Drawables;
 using osu.Game.Graphics;
-using osu.Game.Rulesets;
 using osu.Game.Tournament.Models;
-using osuTK;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament.Components
@@ -25,7 +23,6 @@ namespace osu.Game.Tournament.Components
         public readonly IBeatmapInfo? Beatmap;
 
         private readonly string mod;
-        private readonly RoundBeatmap? roundBeatmap;
 
         public const float HEIGHT = 50;
 
@@ -35,23 +32,10 @@ namespace osu.Game.Tournament.Components
         private Box flash = null!;
         private TournamentProtectIcon protectIcon = null!;
 
-        [Resolved]
-        private IRulesetStore rulesets { get; set; } = null!;
-
         public TournamentBeatmapPanel(IBeatmapInfo? beatmap, string mod = "")
         {
             Beatmap = beatmap;
             this.mod = mod;
-
-            Width = 400;
-            Height = HEIGHT;
-        }
-
-        public TournamentBeatmapPanel(RoundBeatmap rb)
-        {
-            Beatmap = rb.Beatmap;
-            roundBeatmap = rb;
-            mod = string.Empty;
 
             Width = 400;
             Height = HEIGHT;
@@ -150,45 +134,16 @@ namespace osu.Game.Tournament.Components
                 },
             });
 
-            if (roundBeatmap != null)
-            {
-                var rulesetInfo = ladder.Ruleset.Value;
-                var ruleset = rulesetInfo == null ? null : rulesets.GetRuleset(rulesetInfo.OnlineID)?.CreateInstance();
-
-                if (ruleset != null)
-                {
-                    var modFlow = new FillFlowContainer
-                    {
-                        Anchor = Anchor.CentreRight,
-                        Origin = Anchor.CentreRight,
-                        AutoSizeAxes = Axes.X,
-                        RelativeSizeAxes = Axes.Y,
-                        Direction = FillDirection.Horizontal,
-                        Spacing = new Vector2(2, 0),
-                        // Right margin clears the protect-icon wedge (anchored top-right, ~35px
-                        // extent along the right edge after the 45° rotation). Matches the
-                        // string-path margin below so single- and multi-icon panels line up.
-                        Margin = new MarginPadding { Right = 50 },
-                    };
-
-                    foreach (var configuredMod in RoundBeatmapModFactory.ConstructMods(roundBeatmap, ruleset))
-                    {
-                        modFlow.Add(new TournamentModIcon(configuredMod)
-                        {
-                            RelativeSizeAxes = Axes.Y,
-                            Width = HEIGHT,
-                        });
-                    }
-
-                    AddInternal(modFlow);
-                }
-            }
-            else if (!string.IsNullOrEmpty(mod))
+            if (!string.IsNullOrEmpty(mod))
             {
                 AddInternal(new TournamentModIcon(mod)
                 {
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
+                    // Right margin clears the protect-icon wedge (anchored top-right, ~35px
+                    // extent along the right edge after the 45° rotation). With margin=20 the
+                    // mod icon's top-right portion would overlap the wedge whenever both are
+                    // active on the same map.
                     Margin = new MarginPadding { Right = 50 },
                 });
             }
