@@ -2,8 +2,11 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using osu.Framework.Allocation;
@@ -229,10 +232,52 @@ namespace osu.Game.Tournament
                     Add(new MultiplayerIPCWriter());
 
                 // Apply UI sample muting based on the persisted setting.
-                // This targets Audio.Samples (the global sample store used by UI hover/click sounds)
-                // without affecting gameplay hitsounds (which use per-skin sample stores).
+                // We can't AddAdjustment on Audio.Samples directly because built-in skins
+                // (Argon, ArgonPro, Triangles) fall back to Audio.Samples for gameplay hitsounds,
+                // which would mute those too. Per-sample adjustment also fails because
+                // SampleStore.Get returns a fresh Sample wrapper each call.
+                //
+                // Solution: attach the adjustment to the per-name SampleBassFactory cached
+                // inside Audio.Samples for each UI/ lookup. The factory adopts each created
+                // sample as its child (via AddItem in onPlay), so the adjustment cascades to
+                // all future plays of that sample without affecting non-UI factories.
                 ladder.MuteUISounds.BindValueChanged(muted => uiSampleMuteAdjustment.Value = muted.NewValue ? 0 : 1, true);
-                Audio.Samples.AddAdjustment(AdjustableProperty.Volume, uiSampleMuteAdjustment);
+
+                var uiSampleLookups = new HashSet<string>(StringComparer.Ordinal);
+
+                foreach (string resource in Audio.Samples.GetAvailableResources())
+                {
+                    if (!resource.StartsWith(@"UI/", StringComparison.Ordinal))
+                        continue;
+
+                    uiSampleLookups.Add(Path.ChangeExtension(resource, null) ?? resource);
+                }
+
+                // Force factory creation for each UI lookup so the reflection step below sees them.
+                foreach (string lookup in uiSampleLookups)
+                    Audio.Samples.Get(lookup);
+
+                var factoriesField = Audio.Samples.GetType().GetField("factories", BindingFlags.NonPublic | BindingFlags.Instance);
+
+                if (factoriesField?.GetValue(Audio.Samples) is IDictionary factories)
+                {
+                    lock (factories)
+                    {
+                        foreach (DictionaryEntry entry in factories)
+                        {
+                            if (entry.Key is string name
+                                && name.StartsWith(@"UI/", StringComparison.Ordinal)
+                                && entry.Value is AdjustableAudioComponent factory)
+                            {
+                                factory.AddAdjustment(AdjustableProperty.Volume, uiSampleMuteAdjustment);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    Logger.Log("Tournament UI sample muting: could not access SampleStore.factories via reflection (framework changed?)", level: LogLevel.Important);
+                }
 
                 // When using multiplayer spectating, store incoming room invitations as
                 // pending invites that the operator can accept from the Gameplay screen.
