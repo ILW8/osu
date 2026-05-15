@@ -40,6 +40,9 @@ namespace osu.Game.Tournament.Components
             HoldToConfirmTourneyButton disconnectButton;
             TourneyButton reconnectButton;
             TournamentSpriteText statusText;
+            TextFlowContainer inviteText;
+            TourneyButton acceptButton;
+            TourneyButton dismissButton;
 
             Children = new Drawable[]
             {
@@ -49,6 +52,29 @@ namespace osu.Game.Tournament.Components
                     Font = OsuFont.GetFont(weight: FontWeight.Bold, size: 16),
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
+                },
+                inviteText = new TextFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Colour = Colour4.Orange,
+                    Alpha = 0,
+                },
+                acceptButton = new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Accept invite",
+                    Alpha = 0,
+                    Action = multiplayerIpc.AcceptPendingInvite,
+                },
+                dismissButton = new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Dismiss",
+                    Alpha = 0,
+                    Action = multiplayerIpc.DismissPendingInvite,
                 },
                 roomIdTextBox = new OsuTextBox
                 {
@@ -129,37 +155,6 @@ namespace osu.Game.Tournament.Components
                     statusText.Text = error.NewValue;
                     statusText.Colour = Colour4.OrangeRed;
                 }
-            });
-
-            TextFlowContainer inviteText;
-            TourneyButton acceptButton;
-            TourneyButton dismissButton;
-
-            AddRange(new Drawable[]
-            {
-                inviteText = new TextFlowContainer
-                {
-                    RelativeSizeAxes = Axes.X,
-                    AutoSizeAxes = Axes.Y,
-                    Anchor = Anchor.TopCentre,
-                    Origin = Anchor.TopCentre,
-                    Colour = Colour4.Orange,
-                    Alpha = 0,
-                },
-                acceptButton = new TourneyButton
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Text = "Accept invite",
-                    Alpha = 0,
-                    Action = multiplayerIpc.AcceptPendingInvite,
-                },
-                dismissButton = new TourneyButton
-                {
-                    RelativeSizeAxes = Axes.X,
-                    Text = "Dismiss",
-                    Alpha = 0,
-                    Action = multiplayerIpc.DismissPendingInvite,
-                },
             });
 
             multiplayerIpc.PendingInvite.BindValueChanged(invite =>
