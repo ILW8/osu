@@ -255,7 +255,7 @@ namespace osu.Game.Tournament
             public Separator()
             {
                 RelativeSizeAxes = Axes.X;
-                Height = 20;
+                Height = 8;
             }
         }
 
