@@ -229,6 +229,12 @@ namespace osu.Game.Tournament.Screens.MapPool
                             Text = "Apply map score",
                             Action = applyMapScoreEdit,
                         },
+                        new HoldToConfirmTourneyButton
+                        {
+                            RelativeSizeAxes = Axes.X,
+                            Text = "Hold to remove map score",
+                            Action = removeMapScoreEdit,
+                        },
                         new ControlPanel.Spacer(),
                         new TournamentSpriteText
                         {
@@ -397,6 +403,17 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             // MapScores values are Tuple<long, long>; int → long widening is implicit and lossless.
             CurrentMatch.Value.MapScores[slot] = new Tuple<long, long>(red, blue);
+        }
+
+        private void removeMapScoreEdit()
+        {
+            if (CurrentMatch.Value == null) return;
+            if (mapScoreEditDropdown.Current.Value is not string slot) return;
+
+            // Removing the key (rather than writing (0,0)) is what clears the set-panel winner
+            // border: TournamentSetPanel.checkWinState treats null bindable values as "unscored",
+            // and SetMapResultDisplay.refreshScores nulls both when the dictionary key is absent.
+            CurrentMatch.Value.MapScores.Remove(slot);
         }
 
         private void updateSetsDisplay()

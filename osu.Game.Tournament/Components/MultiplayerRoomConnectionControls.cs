@@ -1,12 +1,10 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
-using System;
 using System.Threading.Tasks;
 using osu.Framework.Allocation;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
-using osu.Framework.Graphics.Shapes;
 using osu.Framework.Input.Events;
 using osu.Framework.Logging;
 using osu.Game.Graphics;
@@ -83,8 +81,10 @@ namespace osu.Game.Tournament.Components
                             RelativeSizeAxes = Axes.X,
                             Text = "Disconnect",
                             Alpha = 0,
+                            Action = () => fireAndForget(multiplayerIpc.Disconnect()),
+                            // Set after Action: osu-framework's Button.Action setter side-effects
+                            // Enabled.Value = true, which would otherwise undo the explicit disable here.
                             Enabled = { Value = false },
-                            ConfirmAction = () => fireAndForget(multiplayerIpc.Disconnect()),
                         },
                     },
                 },
@@ -209,84 +209,6 @@ namespace osu.Game.Tournament.Components
             {
                 Logger.Log(t.Exception?.GetBaseException().ToString() ?? "Room connection task failed.", LoggingTarget.Runtime, LogLevel.Error);
             }, TaskContinuationOptions.OnlyOnFaulted);
-        }
-
-        private partial class HoldToConfirmTourneyButton : TourneyButton
-        {
-            private const double hold_duration = 500;
-
-            public Action? ConfirmAction { get; init; }
-
-            private Box progressBox = null!;
-            private bool confirming;
-
-            [BackgroundDependencyLoader]
-            private void load(OsuColour colours)
-            {
-                BackgroundColour = colours.DangerousButtonColour;
-
-                Content.Add(progressBox = new Box
-                {
-                    RelativeSizeAxes = Axes.Both,
-                    Width = 0,
-                    Blending = BlendingParameters.Additive,
-                    Depth = 0,
-                });
-            }
-
-            protected override bool OnClick(ClickEvent e) => true;
-
-            protected override bool OnMouseDown(MouseDownEvent e)
-            {
-                if (Enabled.Value)
-                    beginConfirm();
-
-                return base.OnMouseDown(e);
-            }
-
-            protected override void OnMouseUp(MouseUpEvent e)
-            {
-                abortConfirm();
-                base.OnMouseUp(e);
-            }
-
-            protected override void OnHoverLost(HoverLostEvent e)
-            {
-                abortConfirm();
-                base.OnHoverLost(e);
-            }
-
-            private void beginConfirm()
-            {
-                if (confirming)
-                    return;
-
-                confirming = true;
-
-                progressBox.ClearTransforms();
-                progressBox.ResizeWidthTo(1, hold_duration, Easing.Out).OnComplete(_ => confirm());
-            }
-
-            private void abortConfirm()
-            {
-                if (!confirming)
-                    return;
-
-                confirming = false;
-
-                progressBox.ClearTransforms();
-                progressBox.ResizeWidthTo(0, 200, Easing.InSine);
-            }
-
-            private void confirm()
-            {
-                if (!confirming)
-                    return;
-
-                confirming = false;
-                progressBox.ResizeWidthTo(0);
-                ConfirmAction?.Invoke();
-            }
         }
     }
 }
