@@ -138,6 +138,14 @@ namespace osu.Game.Tournament.Components
         {
             if (ShouldPlay(ipc.IsConnected.Value, ipc.State.Value, hasResolvedBeatmap))
             {
+                // Re-arm Looping on every transition into the play branch. The stop
+                // branch clears it so gameplay clocks don't loop the track, and the
+                // beatmap-resolution path only sets it on a fresh resolve — without
+                // this, returning to lobby state with the same beatmap (e.g. after
+                // Ranking) would play the track once and then go silent.
+                if (globalBeatmap.Value?.Track != null)
+                    globalBeatmap.Value.Track.Looping = true;
+
                 music.EnsurePlayingSomething();
             }
             else

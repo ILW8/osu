@@ -9,6 +9,7 @@ using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Logging;
+using osu.Framework.Threading;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
 using osu.Game.Database;
@@ -175,6 +176,14 @@ namespace osu.Game.Tournament.IPC
         private readonly HashSet<int> watchedUsers = new HashSet<int>();
 
         private int lastBeatmapId;
+
+        /// <summary>
+        /// Delay before <see cref="TourneyState.Ranking"/> auto-resets back to <see cref="TourneyState.Idle"/>.
+        /// Anything that consumes State == Idle (lobby music, gameplay screen auto-advance) hangs off this.
+        /// </summary>
+        public const double RANKING_TO_IDLE_DELAY_MS = 20_000;
+
+        private ScheduledDelegate? scheduledRankingReset;
 
         [BackgroundDependencyLoader]
         private void load()
@@ -363,6 +372,8 @@ namespace osu.Game.Tournament.IPC
 
             Schedule(() =>
             {
+                cancelScheduledRankingReset();
+
                 // Stop watching all users on the update thread to avoid racing with onNewFrames.
                 foreach (int userId in watchedUsers.ToArray())
                     stopWatchingUser(userId);
@@ -453,6 +464,7 @@ namespace osu.Game.Tournament.IPC
         {
             Schedule(() =>
             {
+                cancelScheduledRankingReset();
                 State.Value = TourneyState.WaitingForClients;
 
                 // Reset per-user state for the new round. Users are re-populated on next frame.
@@ -492,12 +504,32 @@ namespace osu.Game.Tournament.IPC
                 // Ensure final scores are updated before transitioning to ranking.
                 updateTeamScores();
                 State.Value = TourneyState.Ranking;
+
+                // Auto-restore Idle so consumers gated on lobby state (lobby music, the
+                // GameplayScreen Idle->MapPool auto-advance) get a deterministic signal that
+                // results have been on screen long enough and the room is back in lobby.
+                cancelScheduledRankingReset();
+                scheduledRankingReset = Scheduler.AddDelayed(() =>
+                {
+                    if (State.Value == TourneyState.Ranking)
+                        State.Value = TourneyState.Idle;
+                }, RANKING_TO_IDLE_DELAY_MS);
             });
         }
 
         private void onGameplayAborted(GameplayAbortReason reason)
         {
-            Schedule(() => State.Value = TourneyState.Idle);
+            Schedule(() =>
+            {
+                cancelScheduledRankingReset();
+                State.Value = TourneyState.Idle;
+            });
+        }
+
+        private void cancelScheduledRankingReset()
+        {
+            scheduledRankingReset?.Cancel();
+            scheduledRankingReset = null;
         }
 
         private void onUserJoined(MultiplayerRoomUser user)
