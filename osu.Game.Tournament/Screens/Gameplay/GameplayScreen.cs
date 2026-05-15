@@ -8,6 +8,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
+using osu.Framework.Logging;
 using osu.Framework.Threading;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterfaceV2;
@@ -154,6 +155,17 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     KeyboardStep = 1,
                 });
 
+                controlPanel.AddRange(new Drawable[]
+                {
+                    new ControlPanel.Spacer(),
+                    new TourneyButton
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Text = "Force Idle state",
+                        Action = forceLobbyState,
+                    },
+                });
+
                 foreach (var child in chroma.Children.OfType<ChromaArea>())
                     child.Hide();
 
@@ -181,6 +193,25 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }, true);
 
             warmup.BindValueChanged(w => header.ShowScores = !w.NewValue, true);
+        }
+
+        /// <summary>
+        /// Operator override that forces <see cref="TourneyState.Idle"/>. Skips ahead when the
+        /// IPC-driven Ranking → Idle timer (<see cref="MultiplayerMatchIPCInfo.RANKING_TO_IDLE_DELAY_MS"/>)
+        /// hasn't fired yet, or re-pokes consumers (lobby music, screen advance) when already Idle.
+        /// </summary>
+        private void forceLobbyState()
+        {
+            if (ipc.State.Value == TourneyState.Idle)
+            {
+                Logger.Log("[GameplayScreen] Manual lobby trigger: state already Idle, re-firing event");
+                ipc.State.TriggerChange();
+            }
+            else
+            {
+                Logger.Log($"[GameplayScreen] Manual lobby trigger: forcing state {ipc.State.Value} -> Idle");
+                ipc.State.Value = TourneyState.Idle;
+            }
         }
 
         private void addVolumeControls()
@@ -274,6 +305,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private void updateState()
         {
+            Logger.Log($"[GameplayScreen] updateState: state={State.Value} lastState={lastState} " +
+                       $"warmup={warmup.Value} autoProgress={LadderInfo.AutoProgressScreens.Value} " +
+                       $"match={(CurrentMatch.Value == null ? "null" : "set")} " +
+                       $"completed={CurrentMatch.Value?.Completed.Value.ToString() ?? "n/a"} " +
+                       $"isLoaded={IsLoaded} isPresent={IsPresent}");
+
             try
             {
                 scheduledScreenChange?.Cancel();
@@ -343,7 +380,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                         if (LadderInfo.AutoProgressScreens.Value)
                         {
-                            const float delay_before_progression = 4000;
+                            // Multiplayer IPC reaches Idle via a fixed timer in MultiplayerMatchIPCInfo
+                            // (RANKING_TO_IDLE_DELAY_MS) that already provides the post-results viewing
+                            // window, so we don't stack another delay on top — and aligning the screen
+                            // advance with the state transition keeps it synchronous with
+                            // TournamentLobbyMusic resuming on the same Idle tick. File-based IPC keeps
+                            // the historical 4s delay so the chat/score panel has time to collapse.
+                            float delay_before_progression = ipc is MultiplayerMatchIPCInfo ? 0 : 4000;
 
                             // if we've returned to idle and the last screen was ranking
                             // we should automatically proceed after a short delay
@@ -356,17 +399,21 @@ namespace osu.Game.Tournament.Screens.Gameplay
                                     _ => null,
                                 };
 
+                                Logger.Log($"[GameplayScreen] Idle: scheduling advance to {nextScreen?.Name ?? "(null)"}");
+
                                 if (nextScreen != null)
                                 {
                                     scheduledScreenChange = Scheduler.AddDelayed(() =>
                                     {
-                                        // Multiplayer-only: clear the player grid and per-map score bar at the
-                                        // moment of screen advance so the next round's MapPool doesn't briefly
-                                        // show stale state from the previous round. No-op for file-based IPC
-                                        // (gameplayDisplay is null and Score1/Score2 are already being driven
-                                        // by the IPC writer).
-                                        gameplayDisplay?.TeardownGameplay();
+                                        Logger.Log($"[GameplayScreen] Advance timer fired, switching to {nextScreen.Name}");
 
+                                        // Reset the per-map score bar for the next round. Teardown of the
+                                        // player grid is intentionally deferred to the next round's
+                                        // LoadRequested — the grid is hidden behind MapPoolScreen anyway,
+                                        // and TournamentGameplayDisplay.teardownGameplay() calls
+                                        // masterClockContainer.Stop() which would stop the shared
+                                        // WorkingBeatmap.Track that the lobby-music MusicController has
+                                        // just started playing on the same Idle tick.
                                         if (ipc is MultiplayerMatchIPCInfo)
                                         {
                                             ipc.Score1.Value = 0;
