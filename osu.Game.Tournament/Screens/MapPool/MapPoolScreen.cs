@@ -740,10 +740,15 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             mapFlows.Padding = new MarginPadding(5)
             {
-                // Padding halved (was 100) to track the narrower 65% Pool column; row-count boundary
-                // kept at `> 9` so TestJustEnoughMaps/TestJustEnoughMods (the empirical anchors) still
-                // describe the 2-wide → 3-wide flip. Spec §7.2 proposed `> 7` as a starting estimate.
-                Horizontal = totalRows > 9 ? 0 : 50
+                // Stream area is 1366px so the 65% Pool column is ~888px. TournamentBeatmapPanel is
+                // 400px wide and mapFlows.Spacing.X = 10, so two panels need 810px; with the previous
+                // 50px side padding (787.9px usable) FillDirection.Full wrapped to a single column.
+                // Cap at 30px so two panels always fit (max safe is floor((888-810)/2) = 38px).
+                // The `totalRows > 9 ? 0` branch (originally meant to flip to 3-wide) is now purely
+                // cosmetic — three 400px panels need 1220px, which never fits in this column — but
+                // it's preserved so TestSceneMapPoolScreen's Padding.Left == 0 vs > 0 assertions
+                // continue to anchor "many maps" vs "few maps".
+                Horizontal = totalRows > 9 ? 0 : 30
             };
         }
     }
