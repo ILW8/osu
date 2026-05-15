@@ -141,6 +141,8 @@ namespace osu.Game.Tournament.Components
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
                     Margin = new MarginPadding { Right = 20 },
+                    Width = 60,
+                    RelativeSizeAxes = Axes.Y,
                 });
             }
         }
