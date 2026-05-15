@@ -88,9 +88,9 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
 
             if (ladderInfo != null)
             {
-                ladderInfo.Use1V1Mode.BindValueChanged(use1V1 =>
+                ladderInfo.Use1V1Mode.BindValueChanged(_ =>
                 {
-                    Size = new Vector2(use1V1.NewValue ? 260 : 180, 40);
+                    Size = new Vector2(260, 40);
                 }, true);
             }
 
@@ -113,10 +113,10 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                 new Container
                 {
                     Masking = true,
-                    Width = 0.3f,
+                    Width = 50,
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
-                    RelativeSizeAxes = Axes.Both,
+                    RelativeSizeAxes = Axes.Y,
                     Children = new Drawable[]
                     {
                         backgroundRight = new Box
