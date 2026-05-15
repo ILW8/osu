@@ -1,187 +1,93 @@
-on: [push, pull_request]
-name: Continuous Integration
+on:
+  push:
+    tags:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+name: Build local release
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: "${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: true
 
 permissions:
   contents: read # to fetch code (actions/checkout)
-  security-events: write # for reporting InspectCode issues
 
 jobs:
-  inspect-code:
-    name: Code Quality
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install .NET 8.0.x
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "8.0.x"
-
-      - name: Restore Tools
-        run: dotnet tool restore
-
-      - name: Restore Packages
-        run: dotnet restore osu.Desktop.slnf
-
-      - name: Restore inspectcode cache
-        uses: actions/cache@v5
-        with:
-          path: ${{ github.workspace }}/inspectcode
-          key: inspectcode-${{ hashFiles('.config/dotnet-tools.json', '.github/workflows/ci.yml', 'osu.sln*', 'osu*.slnf', '.editorconfig', '.globalconfig', 'CodeAnalysis/*', '**/*.csproj', '**/*.props') }}
-
-      - name: Dotnet code style
-        run: dotnet build -c Debug -warnaserror osu.Desktop.slnf -p:EnforceCodeStyleInBuild=true
-
-      - name: CodeFileSanity
-        run: |
-          # TODO: Add ignore filters and GitHub Workflow Command Reporting in CFS. That way we don't have to do this workaround.
-          # FIXME: Suppress warnings from templates project
-          exit_code=0
-          while read -r line; do
-            if [[ ! -z "$line" ]]; then
-              echo "::error::$line"
-              exit_code=1
-            fi
-          done <<< $(dotnet codefilesanity)
-          exit $exit_code
-
-      - name: InspectCode
-        uses: JetBrains/ReSharper-InspectCode@v0.12
-        with:
-          # this is WTF tier but if you don't specify *both* of these the defaults assume `build: true`
-          build: false
-          no-build: true
-          solution: ./osu.Desktop.slnf
-          caches-home: inspectcode
-          verbosity: WARN
-
-  test:
-    name: Test
-    runs-on: ${{matrix.os.fullname}}
-    env:
-      OSU_EXECUTION_MODE: ${{matrix.threadingMode}}
+  build:
+    name: Build
+    runs-on: Ubuntu-latest
     strategy:
-       fail-fast: false
-       matrix:
-          os:
-            - { prettyname: Windows, fullname: windows-latest }
-            # macOS runner performance has gotten unbearably slow so let's turn them off temporarily.
-            # - { prettyname: macOS, fullname: macos-latest }
-            - { prettyname: Linux, fullname: ubuntu-latest }
-          threadingMode: ['SingleThread', 'MultiThreaded']
-    timeout-minutes: 120
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Install .NET 8.0.x
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "8.0.x"
-
-      - name: Compile
-        run: dotnet build -c Debug -warnaserror osu.Desktop.slnf
-
-      - name: Test
-        run: >
-          dotnet test
-          osu.Game.Tests/bin/Debug/**/osu.Game.Tests.dll
-          osu.Game.Rulesets.Osu.Tests/bin/Debug/**/osu.Game.Rulesets.Osu.Tests.dll
-          osu.Game.Rulesets.Taiko.Tests/bin/Debug/**/osu.Game.Rulesets.Taiko.Tests.dll
-          osu.Game.Rulesets.Catch.Tests/bin/Debug/**/osu.Game.Rulesets.Catch.Tests.dll
-          osu.Game.Rulesets.Mania.Tests/bin/Debug/**/osu.Game.Rulesets.Mania.Tests.dll
-          osu.Game.Tournament.Tests/bin/Debug/**/osu.Game.Tournament.Tests.dll
-          Templates/**/*.Tests/bin/Debug/**/*.Tests.dll
-          --logger "trx;LogFileName=TestResults-${{matrix.os.prettyname}}-${{matrix.threadingMode}}.trx"
-          --
-          NUnit.ConsoleOut=0
-
-      # Attempt to upload results even if test fails.
-      # https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#cancelled
-      - name: Upload Test Results
-        uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
-        with:
-          name: osu-test-results-${{matrix.os.prettyname}}-${{matrix.threadingMode}}
-          path: ${{github.workspace}}/TestResults/TestResults-${{matrix.os.prettyname}}-${{matrix.threadingMode}}.trx
-
-  test-results:
-    name: Test results
-    runs-on: ubuntu-latest
-    # we want to wait for the `test` job to complete, but run regardless of whether it succeeds or fails
-    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-not-requiring-successful-dependent-jobs
-    if: ${{ !cancelled() }}
-    needs: test
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Download results
-        uses: actions/download-artifact@v8
-        with:
-          pattern: osu-test-results-*
-          merge-multiple: true
-
-      - name: Add test results summary to workflow run
-        uses: dorny/test-reporter@v3.0.0
-        with:
-          name: Results
-          path: "*.trx"
-          reporter: dotnet-trx
-          list-suites: 'failed'
-          list-tests: 'failed'
-          use-actions-summary: 'true'
-
-  build-only-android:
-    name: Build only (Android)
-    runs-on: windows-latest
+      fail-fast: false
+      matrix:
+        os:
+          - linux-x64
+          - win-x64
     timeout-minutes: 60
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup JDK 11
-        uses: actions/setup-java@v5
-        with:
-          distribution: microsoft
-          java-version: 11
+        uses: actions/checkout@v4
 
       - name: Install .NET 8.0.x
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
 
-      - name: Install .NET workloads
-        run: dotnet workload install android
+      - name: Create publish package (push)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: dotnet publish -c Release -r ${{matrix.os}} --self-contained -warnaserror osu.Desktop.slnf
 
-      - name: Compile
-        run: dotnet build -c Debug osu.Android.slnf
+      - name: Create publish package (tagged release)
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        env:
+          REF: ${{ github.ref }}
+        run: dotnet publish -c Release -r ${{matrix.os}} /p:Version="${REF##*/}" --self-contained -warnaserror osu.Desktop.slnf
 
-  build-only-ios:
-    name: Build only (iOS)
-    runs-on: macos-15
-    timeout-minutes: 60
+      - name: tar releases (for *nix platforms)
+        if: ${{ !startsWith(matrix.os, 'win') }}
+        run: tar -cvzf ${{matrix.os}}.tar.gz osu.Desktop/bin/Release/net8.0/${{matrix.os}}
+
+      - uses: actions/upload-artifact@v4
+        name: upload artifacts (windows)
+        if: ${{ startsWith(matrix.os, 'win') }}
+        with:
+          name: ${{matrix.os}}
+          path: osu.Desktop/bin/Release/net8.0/${{matrix.os}}
+
+      - uses: actions/upload-artifact@v4
+        name: upload artifacts (*nix)
+        if: ${{ !startsWith(matrix.os, 'win') }}
+        with:
+          name: ${{matrix.os}}
+          path: ${{matrix.os}}.tar.gz
+
+  release:
+    name: Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: Ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
 
-      - name: Install .NET 8.0.x
-        uses: actions/setup-dotnet@v5
+      - name: zip releases
+        run: |
+          for directory in */
+          do
+            zip -r "${directory::-1}.zip" "$directory"
+          done
+
+      - name: delete artifacts
+        uses: geekyeggo/delete-artifact@v5
         with:
-          dotnet-version: "8.0.x"
+          name: |
+            win-x64
+            linux-x64
 
-      - name: Install .NET Workloads
-        run: dotnet workload install ios
-
-      # https://github.com/dotnet/macios/issues/19157
-      # https://github.com/actions/runner-images/issues/12758
-      - name: Use Xcode 16.4
-        run: sudo xcode-select -switch /Applications/Xcode_16.4.app
-
-      - name: Build
-        run: dotnet build -c Debug osu.iOS.slnf
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: ./*
