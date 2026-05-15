@@ -140,11 +140,7 @@ namespace osu.Game.Tournament.Components
                 {
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
-                    // Right margin clears the protect-icon wedge (anchored top-right, ~35px
-                    // extent along the right edge after the 45° rotation). With margin=20 the
-                    // mod icon's top-right portion would overlap the wedge whenever both are
-                    // active on the same map.
-                    Margin = new MarginPadding { Right = 50 },
+                    Margin = new MarginPadding { Right = 20 },
                 });
             }
         }
