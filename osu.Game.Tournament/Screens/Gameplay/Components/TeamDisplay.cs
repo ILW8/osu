@@ -1,10 +1,16 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Game.Graphics;
+using osu.Game.Graphics.Sprites;
+using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.Components;
+using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osuTK;
 
@@ -12,7 +18,86 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 {
     public partial class TeamDisplay : DrawableTournamentTeam
     {
+        public partial class MatchCumulativeScoreCounter : CommaSeparatedScoreCounter
+        {
+            private const int font_size = 50;
+
+            public readonly TeamColour TeamColour;
+
+            private OsuSpriteText displayedSpriteText = null!;
+
+            [Resolved]
+            private LadderInfo ladder { get; set; } = null!;
+
+            [Resolved]
+            private MatchIPCInfo ipc { get; set; } = null!;
+
+            private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
+            private readonly BindableDictionary<string, Tuple<long, long>> matchScores = new BindableDictionary<string, Tuple<long, long>>();
+            private Bindable<bool> useCumulativeScore = null!;
+
+            public MatchCumulativeScoreCounter(TeamColour colour)
+            {
+                TeamColour = colour;
+                Margin = new MarginPadding(8);
+            }
+
+            [BackgroundDependencyLoader]
+            private void load()
+            {
+                useCumulativeScore = ladder.CumulativeScore.GetBoundCopy();
+                currentMatch.BindTo(ladder.CurrentMatch);
+            }
+
+            protected override void LoadComplete()
+            {
+                base.LoadComplete();
+
+                currentMatch.BindValueChanged(matchChanged, true);
+                useCumulativeScore.BindValueChanged(v => displayedSpriteText.Alpha = v.NewValue ? 1 : 0, true);
+                ipc.Beatmap.BindValueChanged(_ => Scheduler.AddOnce(updateScore));
+                matchScores.BindCollectionChanged((_, _) => Scheduler.AddOnce(updateScore));
+            }
+
+            private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
+            {
+                matchScores.UnbindBindings();
+                if (match.NewValue != null)
+                    matchScores.BindTo(match.NewValue.MapScores);
+                Scheduler.AddOnce(updateScore);
+            }
+
+            private void updateScore()
+            {
+                if (currentMatch.Value == null)
+                {
+                    Current.Value = 0;
+                    return;
+                }
+
+                int mapId = ipc.Beatmap.Value?.OnlineID ?? 0;
+                var scores = mapId <= 0 ? null : MatchSet.FindSetByMapId(currentMatch.Value, mapId)?.GetSetScores(currentMatch.Value);
+
+                if (scores == null)
+                {
+                    Current.Value = 0;
+                    return;
+                }
+
+                Current.Value = TeamColour == TeamColour.Red ? scores.Item1 : scores.Item2;
+            }
+
+            protected override OsuSpriteText CreateSpriteText() => base.CreateSpriteText().With(s =>
+            {
+                displayedSpriteText = s;
+                displayedSpriteText.Spacing = new Vector2(-6);
+                displayedSpriteText.Font = OsuFont.Torus.With(weight: FontWeight.SemiBold, size: font_size, fixedWidth: true);
+            });
+        }
+
         private readonly TeamScore score;
+
+        private readonly MatchCumulativeScoreCounter cumulativeScoreCounter;
 
         private readonly TournamentSpriteTextWithBackground teamNameText;
 
@@ -109,6 +194,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                     },
                                 }
                             },
+                            cumulativeScoreCounter = new MatchCumulativeScoreCounter(colour)
+                            {
+                                Origin = anchor,
+                                Anchor = anchor,
+                            },
                         }
                     },
                 }
@@ -131,6 +221,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private void updateDisplay()
         {
             score.FadeTo(ShowScore ? 1 : 0, 200);
+            cumulativeScoreCounter.FadeTo(ShowScore ? 1 : 0, 200);
         }
     }
 }

@@ -219,6 +219,69 @@ namespace osu.Game.Tournament.Tests.Screens
         }
 
         [Test]
+        public void TestCumulativeScoreCounterPerTeam()
+        {
+            AddStep("enable cumulative score", () => Ladder.CumulativeScore.Value = true);
+            AddStep("seed two sets (NM1+NM2, HD1+HD2)", () =>
+            {
+                Ladder.CurrentMatch.Value!.Sets.Clear();
+                Ladder.CurrentMatch.Value!.Sets.Add(new MatchSet { Map1Id = { Value = 1 }, Map2Id = { Value = 2 } });
+                Ladder.CurrentMatch.Value!.Sets.Add(new MatchSet { Map1Id = { Value = 3 }, Map2Id = { Value = 4 } });
+            });
+            AddStep("seed MapScores for set 1", () =>
+            {
+                Ladder.CurrentMatch.Value!.MapScores["NM1"] = new Tuple<long, long>(100_000, 50_000);
+                Ladder.CurrentMatch.Value!.MapScores["NM2"] = new Tuple<long, long>(200_000, 300_000);
+            });
+
+            createScreen();
+            toggleWarmup();
+
+            AddStep("switch to map 2 (mid set 1)", () => IPCInfo.Beatmap.Value = new TournamentBeatmap { OnlineID = 2 });
+
+            AddUntilStep("red counter shows 300k", () =>
+            {
+                var redCounter = this.ChildrenOfType<TeamDisplay.MatchCumulativeScoreCounter>().FirstOrDefault(c => c.TeamColour == TeamColour.Red);
+                return redCounter != null && Math.Abs(redCounter.Current.Value - 300_000) < 0.5;
+            });
+            AddUntilStep("blue counter shows 350k", () =>
+            {
+                var blueCounter = this.ChildrenOfType<TeamDisplay.MatchCumulativeScoreCounter>().FirstOrDefault(c => c.TeamColour == TeamColour.Blue);
+                return blueCounter != null && Math.Abs(blueCounter.Current.Value - 350_000) < 0.5;
+            });
+
+            AddStep("switch to map 3 (start of set 2 — no scores yet)", () => IPCInfo.Beatmap.Value = new TournamentBeatmap { OnlineID = 3 });
+
+            AddUntilStep("red counter resets to 0", () =>
+            {
+                var redCounter = this.ChildrenOfType<TeamDisplay.MatchCumulativeScoreCounter>().FirstOrDefault(c => c.TeamColour == TeamColour.Red);
+                return redCounter != null && Math.Abs(redCounter.Current.Value) < 0.5;
+            });
+            AddUntilStep("blue counter resets to 0", () =>
+            {
+                var blueCounter = this.ChildrenOfType<TeamDisplay.MatchCumulativeScoreCounter>().FirstOrDefault(c => c.TeamColour == TeamColour.Blue);
+                return blueCounter != null && Math.Abs(blueCounter.Current.Value) < 0.5;
+            });
+
+            AddStep("teardown — clear Sets", () => Ladder.CurrentMatch.Value!.Sets.Clear());
+            AddStep("teardown — clear MapScores", () => Ladder.CurrentMatch.Value!.MapScores.Clear());
+        }
+
+        [Test]
+        public void TestCumulativeScoreStarsHide()
+        {
+            createScreen();
+            toggleWarmup();
+
+            AddStep("enable cumulative score", () => Ladder.CumulativeScore.Value = true);
+            AddUntilStep("stars hidden", () => this.ChildrenOfType<TeamScore.TeamScoreStarCounter>().Any()
+                                               && this.ChildrenOfType<TeamScore.TeamScoreStarCounter>().All(c => Precision.AlmostEquals(c.Alpha, 0)));
+
+            AddStep("disable cumulative score", () => Ladder.CumulativeScore.Value = false);
+            AddUntilStep("stars visible", () => this.ChildrenOfType<TeamScore.TeamScoreStarCounter>().All(c => Precision.AlmostEquals(c.Alpha, 1)));
+        }
+
+        [Test]
         public void TestStartupState([Values] TourneyState state)
         {
             AddStep("set state", () => IPCInfo.State.Value = state);
