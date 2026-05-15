@@ -129,11 +129,8 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 }
             });
 
-            // Add multiplayer room connection controls if using multiplayer spectating.
             if (ipc is MultiplayerMatchIPCInfo multiplayerIpc)
             {
-                addMultiplayerControls(multiplayerIpc);
-
                 // Add gameplay display as a sibling of the UI audio container
                 // (not a child) so its hitsounds bypass the UI sample muting.
                 gameplayDisplay = new TournamentGameplayDisplay(multiplayerIpc)
@@ -184,15 +181,6 @@ namespace osu.Game.Tournament.Screens.Gameplay
             }, true);
 
             warmup.BindValueChanged(w => header.ShowScores = !w.NewValue, true);
-        }
-
-        private void addMultiplayerControls(MultiplayerMatchIPCInfo multiplayerIpc)
-        {
-            controlPanel.AddRange(new Drawable[]
-            {
-                new ControlPanel.Spacer(),
-                new MultiplayerRoomConnectionControls(multiplayerIpc),
-            });
         }
 
         private void addVolumeControls()
