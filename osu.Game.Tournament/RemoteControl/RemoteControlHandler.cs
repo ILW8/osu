@@ -3,7 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Threading.Tasks;
+using System.Web;
 using osu.Game.Tournament.Screens.Drawings;
 using osu.Game.Tournament.Screens.Editors;
 using osu.Game.Tournament.Screens.Gameplay;
@@ -31,6 +33,13 @@ namespace osu.Game.Tournament.RemoteControl
             NoInvite,     // no pending invite to act on
         }
 
+        public enum ConnectionResult
+        {
+            Ok,
+            NotAvailable, // file-based IPC
+            WrongState,   // connect-when-connected, disconnect/reconnect-when-not-connected, etc.
+        }
+
         public class Callbacks
         {
             /// <summary>
@@ -56,6 +65,23 @@ namespace osu.Game.Tournament.RemoteControl
             /// Dismiss the current pending invite. Same result semantics as <see cref="AcceptPendingInvite"/>.
             /// </summary>
             public Func<Task<InviteResult>> DismissPendingInvite { get; init; } = () => Task.FromResult(InviteResult.NotAvailable);
+
+            /// <summary>
+            /// Connect to the specified multiplayer room. Returns NotAvailable when multiplayer IPC
+            /// isn't in use, WrongState when already connected, otherwise Ok.
+            /// </summary>
+            public Func<long, string?, Task<ConnectionResult>> Connect { get; init; } =
+                (_, _) => Task.FromResult(ConnectionResult.NotAvailable);
+
+            /// <summary>
+            /// Disconnect from the current multiplayer room.
+            /// </summary>
+            public Func<Task<ConnectionResult>> Disconnect { get; init; } = () => Task.FromResult(ConnectionResult.NotAvailable);
+
+            /// <summary>
+            /// Reconnect to the current multiplayer room.
+            /// </summary>
+            public Func<Task<ConnectionResult>> Reconnect { get; init; } = () => Task.FromResult(ConnectionResult.NotAvailable);
         }
 
         private static readonly IReadOnlyDictionary<string, Type> screen_types = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
@@ -84,6 +110,14 @@ namespace osu.Game.Tournament.RemoteControl
 
         public async Task<RemoteControlResponse> Handle(string method, string path, string? requestBody)
         {
+            string queryString = "";
+            int qIdx = path.IndexOf('?');
+            if (qIdx >= 0)
+            {
+                queryString = path.Substring(qIdx + 1);
+                path = path.Substring(0, qIdx);
+            }
+
             if (path.StartsWith("/screen/", StringComparison.Ordinal))
             {
                 if (method != "POST")
@@ -130,6 +164,61 @@ namespace osu.Game.Tournament.RemoteControl
                 };
             }
 
+            if (path == "/multiplayer/connect")
+            {
+                if (method != "POST")
+                    return RemoteControlResponse.Error(405, "method not allowed");
+
+                long? roomId = null;
+                string? password = null;
+
+                if (queryString.Length > 0)
+                {
+                    NameValueCollection q = HttpUtility.ParseQueryString(queryString);
+                    if (long.TryParse(q["roomId"], out long qRoomId))
+                        roomId = qRoomId;
+                    password = q["password"];
+                }
+
+                if (!string.IsNullOrEmpty(requestBody))
+                {
+                    try
+                    {
+                        var parsed = Newtonsoft.Json.JsonConvert.DeserializeAnonymousType(requestBody, new { roomId = (long?)null, password = (string?)null });
+                        if (parsed?.roomId != null) roomId = parsed.roomId;
+                        if (parsed?.password != null) password = parsed.password;
+                    }
+                    catch (Newtonsoft.Json.JsonException)
+                    {
+                        return RemoteControlResponse.Error(400, "malformed JSON body");
+                    }
+                }
+
+                if (roomId == null)
+                    return RemoteControlResponse.Error(400, "missing roomId");
+
+                var connectResult = await callbacks.Connect(roomId.Value, password).ConfigureAwait(false);
+                return connectionResultToResponse(connectResult);
+            }
+
+            if (path == "/multiplayer/disconnect")
+            {
+                if (method != "POST")
+                    return RemoteControlResponse.Error(405, "method not allowed");
+
+                var result = await callbacks.Disconnect().ConfigureAwait(false);
+                return connectionResultToResponse(result);
+            }
+
+            if (path == "/multiplayer/reconnect")
+            {
+                if (method != "POST")
+                    return RemoteControlResponse.Error(405, "method not allowed");
+
+                var result = await callbacks.Reconnect().ConfigureAwait(false);
+                return connectionResultToResponse(result);
+            }
+
             if (path == "/status")
             {
                 if (method != "GET")
@@ -140,5 +229,13 @@ namespace osu.Game.Tournament.RemoteControl
 
             return RemoteControlResponse.Error(404, "unknown route");
         }
+
+        private static RemoteControlResponse connectionResultToResponse(ConnectionResult result) => result switch
+        {
+            ConnectionResult.Ok => RemoteControlResponse.Ok(),
+            ConnectionResult.NotAvailable => RemoteControlResponse.Error(503, "multiplayer not available"),
+            ConnectionResult.WrongState => RemoteControlResponse.Error(409, "wrong connection state"),
+            _ => RemoteControlResponse.Error(500, "unexpected result"),
+        };
     }
 }

@@ -200,5 +200,160 @@ namespace osu.Game.Tournament.Tests.NonVisual.RemoteControl
             Assert.That(response.StatusCode, Is.EqualTo(200));
             Assert.That(called, Is.True);
         }
+
+        [Test]
+        public async Task Connect_FromJsonBody_InvokesCallback()
+        {
+            long? roomId = null;
+            string? password = null;
+
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                Connect = (r, p) =>
+                {
+                    roomId = r;
+                    password = p;
+                    return Task.FromResult(RemoteControlHandler.ConnectionResult.Ok);
+                },
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/connect", @"{""roomId"":42,""password"":""hunter2""}");
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(roomId, Is.EqualTo(42));
+            Assert.That(password, Is.EqualTo("hunter2"));
+        }
+
+        [Test]
+        public async Task Connect_FromQueryString_InvokesCallback()
+        {
+            long? roomId = null;
+
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                Connect = (r, _) =>
+                {
+                    roomId = r;
+                    return Task.FromResult(RemoteControlHandler.ConnectionResult.Ok);
+                },
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/connect?roomId=99", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(roomId, Is.EqualTo(99));
+        }
+
+        [Test]
+        public async Task Connect_BodyOverridesQuery()
+        {
+            long? roomId = null;
+
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                Connect = (r, _) =>
+                {
+                    roomId = r;
+                    return Task.FromResult(RemoteControlHandler.ConnectionResult.Ok);
+                },
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/connect?roomId=99", @"{""roomId"":42}");
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(roomId, Is.EqualTo(42));
+        }
+
+        [Test]
+        public async Task Connect_MissingRoomId_Returns400()
+        {
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                Connect = (_, _) => Task.FromResult(RemoteControlHandler.ConnectionResult.Ok),
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/connect", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(400));
+        }
+
+        [Test]
+        public async Task Connect_AlreadyConnected_Returns409()
+        {
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                Connect = (_, _) => Task.FromResult(RemoteControlHandler.ConnectionResult.WrongState),
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/connect?roomId=99", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(409));
+        }
+
+        [Test]
+        public async Task Connect_NotAvailable_Returns503()
+        {
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                Connect = (_, _) => Task.FromResult(RemoteControlHandler.ConnectionResult.NotAvailable),
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/connect?roomId=99", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(503));
+        }
+
+        [Test]
+        public async Task Disconnect_HappyPath_Returns200()
+        {
+            bool called = false;
+
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                Disconnect = () =>
+                {
+                    called = true;
+                    return Task.FromResult(RemoteControlHandler.ConnectionResult.Ok);
+                },
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/disconnect", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(called, Is.True);
+        }
+
+        [Test]
+        public async Task Disconnect_NotConnected_Returns409()
+        {
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                Disconnect = () => Task.FromResult(RemoteControlHandler.ConnectionResult.WrongState),
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/disconnect", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(409));
+        }
+
+        [Test]
+        public async Task Reconnect_HappyPath_Returns200()
+        {
+            bool called = false;
+
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                Reconnect = () =>
+                {
+                    called = true;
+                    return Task.FromResult(RemoteControlHandler.ConnectionResult.Ok);
+                },
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/reconnect", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(called, Is.True);
+        }
     }
 }

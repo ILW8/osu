@@ -698,7 +698,7 @@ Connection callbacks return a `ConnectionResult` enum so the handler can disting
 
 `/multiplayer/connect` parses `roomId` (required) and `password` (optional) from either a JSON body (`{"roomId": 123, "password": "..."}`) or a query string (`?roomId=123&password=...`). Per the spec, when both are present the JSON body wins.
 
-- [ ] **Step 1: Add failing tests.**
+- [x] **Step 1: Add failing tests.**
 
 Append inside `RemoteControlHandlerTest`:
 
@@ -859,7 +859,7 @@ public async Task Reconnect_HappyPath_Returns200()
 }
 ```
 
-- [ ] **Step 2: Run the tests to confirm they fail.**
+- [x] **Step 2: Run the tests to confirm they fail.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlHandlerTest"
@@ -867,7 +867,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: build error — `ConnectionResult`, `Connect`, `Disconnect`, `Reconnect` not defined.
 
-- [ ] **Step 3: Extend `RemoteControlHandler.cs`.**
+- [x] **Step 3: Extend `RemoteControlHandler.cs`.**
 
 Add at the top of the file:
 
@@ -1032,7 +1032,7 @@ private static RemoteControlResponse connectionResultToResponse(ConnectionResult
 };
 ```
 
-- [ ] **Step 4: Run the tests.**
+- [x] **Step 4: Run the tests.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlHandlerTest"
@@ -1040,7 +1040,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: all twenty-one tests pass.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add osu.Game.Tournament/RemoteControl/RemoteControlHandler.cs osu.Game.Tournament.Tests/NonVisual/RemoteControl/RemoteControlHandlerTest.cs
