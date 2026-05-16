@@ -257,7 +257,13 @@ namespace osu.Game.Tournament.Components
             // in LoadComplete recognises this as our own write.
             lastAssignedBeatmap = working;
             globalBeatmap.Value = working;
-            working.PrepareTrackForPreview(looping: true);
+
+            // Loop the track from its natural start. Avoid PrepareTrackForPreview here — that
+            // helper is for the main-menu preview behaviour and sets RestartPoint to the
+            // beatmap's preview offset, which would cause each loop iteration to jump back to
+            // the preview point instead of the beginning of the audio.
+            working.Track.Looping = true;
+            working.Track.RestartPoint = 0;
 
             hasResolvedBeatmap = true;
             Logger.Log($"[TournamentLobbyMusic] Resolved beatmap {wantedBeatmapId} ('{working.BeatmapInfo?.Metadata.Title}') for lobby playback");
