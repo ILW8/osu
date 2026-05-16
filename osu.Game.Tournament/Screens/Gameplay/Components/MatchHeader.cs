@@ -2,16 +2,18 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Specialized;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Sprites;
+using osu.Framework.Logging;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.Components;
-using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osuTK;
 
@@ -29,9 +31,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                 s.Font = OsuFont.Torus.With(weight: FontWeight.Regular, size: cumulative_delta_height, fixedWidth: true);
             });
         }
-
-        [Resolved]
-        private MatchIPCInfo ipc { get; set; } = null!;
 
         [Resolved]
         private LadderInfo ladder { get; set; } = null!;
@@ -193,12 +192,17 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             };
         }
 
-        private void updateScoreDelta()
+        private void updateScoreDelta(string trigger)
         {
             if (currentMatch.Value == null)
+            {
+                Logger.Log($"[MatchHeader] updateScoreDelta({trigger}) skipped — currentMatch=null");
                 return;
+            }
 
             long scoreDelta = calculateScoreDelta();
+
+            Logger.Log($"[MatchHeader] updateScoreDelta({trigger}) delta={scoreDelta} → counter={Math.Abs(scoreDelta)}");
 
             cumulativeScoreDiffCounter.Current.Value = Math.Abs(scoreDelta);
 
@@ -208,12 +212,20 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             long calculateScoreDelta()
             {
-                int mapId = ipc.Beatmap.Value?.OnlineID ?? 0;
-
-                if (mapId <= 0 || currentMatch.Value == null)
+                if (currentMatch.Value == null)
                     return 0;
 
-                var scores = MatchSet.FindSetByMapId(currentMatch.Value, mapId)?.GetSetScores(currentMatch.Value);
+                // "Current set" = the set the latest pick landed into, i.e. the last entry in Sets.
+                // Intentionally not tied to ipc.Beatmap: a stream operator may need to override
+                // sets manually after an accidental room map change, and the header should reflect
+                // their picks rather than what the room happens to be showing.
+                var set = currentMatch.Value.Sets.LastOrDefault();
+                var scores = set?.GetSetScores(currentMatch.Value);
+
+                Logger.Log($"[MatchHeader]   calculateScoreDelta: lastSet={(set == null ? "null" : "set")} " +
+                           $"setMaps=[{set?.Map1Id.Value ?? -1},{set?.Map2Id.Value ?? -1},{set?.Map3Id.Value ?? -1}] " +
+                           $"scores={(scores == null ? "null" : $"({scores.Item1},{scores.Item2})")} " +
+                           $"mapScoresKeys=[{string.Join(",", currentMatch.Value.MapScores.Keys)}]");
 
                 return scores != null ? scores.Item1 - scores.Item2 : 0;
             }
@@ -221,12 +233,44 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
         {
+            Logger.Log($"[MatchHeader] matchChanged: old={(match.OldValue == null ? "null" : "set")} new={(match.NewValue == null ? "null" : "set")}");
+
+            if (match.OldValue != null)
+            {
+                match.OldValue.PicksBans.CollectionChanged -= onPicksBansChanged;
+                match.OldValue.Sets.CollectionChanged -= onSetsChanged;
+            }
+
             matchScores.UnbindBindings();
 
             if (match.NewValue != null)
+            {
                 matchScores.BindTo(match.NewValue.MapScores);
+                match.NewValue.PicksBans.CollectionChanged += onPicksBansChanged;
+                match.NewValue.Sets.CollectionChanged += onSetsChanged;
+            }
 
-            Scheduler.AddOnce(updateScoreDelta);
+            // Defer so that MapPoolScreen.updateSets has finished writing slot bindables before
+            // we read Sets.LastOrDefault().
+            Scheduler.AddOnce(() => updateScoreDelta("matchChanged"));
+        }
+
+        private void onPicksBansChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            Logger.Log($"[MatchHeader] PicksBans changed: action={e.Action}");
+
+            // PicksBans.CollectionChanged fires synchronously from PicksBans.Add/Remove, BEFORE
+            // MapPoolScreen.updateSets runs on the next line — so Sets is still stale at this
+            // moment. Defer the recompute to the next frame so we read post-updateSets state.
+            // Also covers pick-within-existing-set (Map2 of a half-full set) which doesn't fire
+            // Sets.CollectionChanged because no new MatchSet was added.
+            Scheduler.AddOnce(() => updateScoreDelta($"PicksBans.{e.Action}"));
+        }
+
+        private void onSetsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            Logger.Log($"[MatchHeader] Sets changed: action={e.Action}");
+            Scheduler.AddOnce(() => updateScoreDelta($"Sets.{e.Action}"));
         }
 
         protected override void LoadComplete()
@@ -235,8 +279,11 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             currentMatch.BindValueChanged(matchChanged, true);
             useCumulativeScore.BindValueChanged(_ => updateDisplay(), true);
-            ipc.Beatmap.BindValueChanged(_ => updateScoreDelta(), true);
-            matchScores.BindCollectionChanged((_, _) => updateScoreDelta());
+            matchScores.BindCollectionChanged((_, args) =>
+            {
+                Logger.Log($"[MatchHeader] matchScores changed: action={args.Action}");
+                updateScoreDelta("matchScores");
+            });
 
             updateDisplay();
         }

@@ -221,6 +221,9 @@ namespace osu.Game.Tournament.Tests.Screens
         [Test]
         public void TestCumulativeScoreCounterPerTeam()
         {
+            // Per-team cumulative counters follow Sets.LastOrDefault() (the set the latest pick landed into),
+            // not ipc.Beatmap. This lets the stream operator override the displayed set by editing picks,
+            // independent of what the multiplayer room is currently showing.
             AddStep("enable cumulative score", () => Ladder.CumulativeScore.Value = true);
             AddStep("seed two sets (NM1+NM2, HD1+HD2)", () =>
             {
@@ -228,39 +231,41 @@ namespace osu.Game.Tournament.Tests.Screens
                 Ladder.CurrentMatch.Value!.Sets.Add(new MatchSet { Map1Id = { Value = 1 }, Map2Id = { Value = 2 } });
                 Ladder.CurrentMatch.Value!.Sets.Add(new MatchSet { Map1Id = { Value = 3 }, Map2Id = { Value = 4 } });
             });
-            AddStep("seed MapScores for set 1", () =>
+            AddStep("seed MapScores for both sets", () =>
             {
                 Ladder.CurrentMatch.Value!.MapScores["NM1"] = new Tuple<long, long>(100_000, 50_000);
                 Ladder.CurrentMatch.Value!.MapScores["NM2"] = new Tuple<long, long>(200_000, 300_000);
+                Ladder.CurrentMatch.Value!.MapScores["HD1"] = new Tuple<long, long>(400_000, 250_000);
+                Ladder.CurrentMatch.Value!.MapScores["HD2"] = new Tuple<long, long>(150_000, 350_000);
             });
 
             createScreen();
             toggleWarmup();
 
-            AddStep("switch to map 2 (mid set 1)", () => IPCInfo.Beatmap.Value = new TournamentBeatmap { OnlineID = 2 });
+            // Last set is set 2 (HD1+HD2). Red sum: 400+150 = 550k. Blue sum: 250+350 = 600k.
+            AddUntilStep("red counter shows 550k (set 2's red sum)", () =>
+            {
+                var redCounter = this.ChildrenOfType<TeamDisplay.MatchCumulativeScoreCounter>().FirstOrDefault(c => c.TeamColour == TeamColour.Red);
+                return redCounter != null && Math.Abs(redCounter.Current.Value - 550_000) < 0.5;
+            });
+            AddUntilStep("blue counter shows 600k (set 2's blue sum)", () =>
+            {
+                var blueCounter = this.ChildrenOfType<TeamDisplay.MatchCumulativeScoreCounter>().FirstOrDefault(c => c.TeamColour == TeamColour.Blue);
+                return blueCounter != null && Math.Abs(blueCounter.Current.Value - 600_000) < 0.5;
+            });
 
-            AddUntilStep("red counter shows 300k", () =>
+            // Remove set 2 — counters should snap to set 1's sums even though ipc.Beatmap is untouched.
+            AddStep("remove set 2", () => Ladder.CurrentMatch.Value!.Sets.RemoveAt(1));
+
+            AddUntilStep("red counter shows 300k (set 1's red sum)", () =>
             {
                 var redCounter = this.ChildrenOfType<TeamDisplay.MatchCumulativeScoreCounter>().FirstOrDefault(c => c.TeamColour == TeamColour.Red);
                 return redCounter != null && Math.Abs(redCounter.Current.Value - 300_000) < 0.5;
             });
-            AddUntilStep("blue counter shows 350k", () =>
+            AddUntilStep("blue counter shows 350k (set 1's blue sum)", () =>
             {
                 var blueCounter = this.ChildrenOfType<TeamDisplay.MatchCumulativeScoreCounter>().FirstOrDefault(c => c.TeamColour == TeamColour.Blue);
                 return blueCounter != null && Math.Abs(blueCounter.Current.Value - 350_000) < 0.5;
-            });
-
-            AddStep("switch to map 3 (start of set 2 — no scores yet)", () => IPCInfo.Beatmap.Value = new TournamentBeatmap { OnlineID = 3 });
-
-            AddUntilStep("red counter resets to 0", () =>
-            {
-                var redCounter = this.ChildrenOfType<TeamDisplay.MatchCumulativeScoreCounter>().FirstOrDefault(c => c.TeamColour == TeamColour.Red);
-                return redCounter != null && Math.Abs(redCounter.Current.Value) < 0.5;
-            });
-            AddUntilStep("blue counter resets to 0", () =>
-            {
-                var blueCounter = this.ChildrenOfType<TeamDisplay.MatchCumulativeScoreCounter>().FirstOrDefault(c => c.TeamColour == TeamColour.Blue);
-                return blueCounter != null && Math.Abs(blueCounter.Current.Value) < 0.5;
             });
 
             AddStep("teardown — clear Sets", () => Ladder.CurrentMatch.Value!.Sets.Clear());

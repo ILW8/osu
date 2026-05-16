@@ -2,15 +2,17 @@
 // See the LICENCE file in the repository root for full licence text.
 
 using System;
+using System.Collections.Specialized;
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
+using osu.Framework.Logging;
 using osu.Game.Graphics;
 using osu.Game.Graphics.Sprites;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Tournament.Components;
-using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
 using osuTK;
 
@@ -28,9 +30,6 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
             [Resolved]
             private LadderInfo ladder { get; set; } = null!;
-
-            [Resolved]
-            private MatchIPCInfo ipc { get; set; } = null!;
 
             private readonly Bindable<TournamentMatch?> currentMatch = new Bindable<TournamentMatch?>();
             private readonly BindableDictionary<string, Tuple<long, long>> matchScores = new BindableDictionary<string, Tuple<long, long>>();
@@ -55,17 +54,38 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
                 currentMatch.BindValueChanged(matchChanged, true);
                 useCumulativeScore.BindValueChanged(v => displayedSpriteText.Alpha = v.NewValue ? 1 : 0, true);
-                ipc.Beatmap.BindValueChanged(_ => Scheduler.AddOnce(updateScore));
                 matchScores.BindCollectionChanged((_, _) => Scheduler.AddOnce(updateScore));
             }
 
             private void matchChanged(ValueChangedEvent<TournamentMatch?> match)
             {
+                if (match.OldValue != null)
+                {
+                    match.OldValue.PicksBans.CollectionChanged -= onPicksBansChanged;
+                    match.OldValue.Sets.CollectionChanged -= onSetsChanged;
+                }
+
                 matchScores.UnbindBindings();
+
                 if (match.NewValue != null)
+                {
                     matchScores.BindTo(match.NewValue.MapScores);
+                    match.NewValue.PicksBans.CollectionChanged += onPicksBansChanged;
+                    match.NewValue.Sets.CollectionChanged += onSetsChanged;
+                }
+
                 Scheduler.AddOnce(updateScore);
             }
+
+            private void onPicksBansChanged(object? sender, NotifyCollectionChangedEventArgs e)
+            {
+                // Defer so MapPoolScreen.updateSets has finished writing slot bindables before we read Sets.LastOrDefault().
+                // Covers pick-within-existing-set (Map2 of a half-full set) which doesn't fire Sets.CollectionChanged.
+                Scheduler.AddOnce(updateScore);
+            }
+
+            private void onSetsChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
+                Scheduler.AddOnce(updateScore);
 
             private void updateScore()
             {
@@ -75,8 +95,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                     return;
                 }
 
-                int mapId = ipc.Beatmap.Value?.OnlineID ?? 0;
-                var scores = mapId <= 0 ? null : MatchSet.FindSetByMapId(currentMatch.Value, mapId)?.GetSetScores(currentMatch.Value);
+                // "Current set" = the set the latest pick landed into. See MatchHeader for the same logic.
+                var scores = currentMatch.Value.Sets.LastOrDefault()?.GetSetScores(currentMatch.Value);
+
+                Logger.Log($"[TeamDisplay:{TeamColour}] updateScore: scores={(scores == null ? "null" : $"({scores.Item1},{scores.Item2})")}");
 
                 if (scores == null)
                 {

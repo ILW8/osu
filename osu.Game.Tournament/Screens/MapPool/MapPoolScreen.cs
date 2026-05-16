@@ -8,6 +8,7 @@ using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Input.Events;
+using osu.Framework.Logging;
 using osu.Framework.Threading;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterface;
@@ -121,7 +122,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                     // Y shifted +100 from the 2025 LGA reference's 170 to match the Pool grid shift
                     // above (keeps the asymmetric Pool/Sets offset so the Sets heading clears
                     // MatchHeader cleanly on the right column).
-                    Y = 270,
+                    Y = 240,
                     X = 0.65f,
                     Anchor = Anchor.TopLeft,
                     RelativePositionAxes = Axes.X,
@@ -414,6 +415,8 @@ namespace osu.Game.Tournament.Screens.MapPool
                 }
                 else
                 {
+                    Logger.Log($"[MapPool] right-click removal on beatmap={map.Beatmap?.OnlineID}");
+
                     // Two-stage removal: prefer removing a Pick or Ban first; if none, fall back to removing a Protect.
                     var existing = CurrentMatch.Value?.PicksBans
                         .FirstOrDefault(p => p.BeatmapID == map.Beatmap?.OnlineID
@@ -421,6 +424,7 @@ namespace osu.Game.Tournament.Screens.MapPool
 
                     if (existing != null)
                     {
+                        Logger.Log($"[MapPool]   removing {existing.Type} by {existing.Team} for beatmap={existing.BeatmapID}");
                         CurrentMatch.Value?.PicksBans.Remove(existing);
                     }
                     else
@@ -431,6 +435,7 @@ namespace osu.Game.Tournament.Screens.MapPool
                         if (existingProtect == null)
                             return true;
 
+                        Logger.Log($"[MapPool]   removing Protect by {existingProtect.Team} for beatmap={existingProtect.BeatmapID}");
                         CurrentMatch.Value?.Protects.Remove(existingProtect);
                     }
 
@@ -545,16 +550,33 @@ namespace osu.Game.Tournament.Screens.MapPool
                     setSlotBindable.Value = picks[pickIndex].BeatmapID;
             }
 
-            // clear stale Map2 slot if the last (non-tiebreaker) set only has one pick.
-            var lastSet = sets.LastOrDefault();
+            // Clear stale slots: any slot whose corresponding pick has been removed must drop back to 0.
+            // Without this, the slot retains the removed pick's BeatmapID, which (a) suppresses
+            // Bindable<long>.ValueChanged on re-pick (value matches the stale one) and (b) causes
+            // GetSetScores to phantom-include the unpicked map's score in the set total.
+            for (int setIndex = 0; setIndex < sets.Count; setIndex++)
+            {
+                var setRef = sets[setIndex];
 
-            if (lastSet != null && !lastSet.IsTiebreaker && picks.Count % 2 == 1)
-                lastSet.Map2Id.Value = 0;
+                int map1PickIndex = setIndex * 2;
+                int map2PickIndex = setIndex * 2 + 1;
+                int map3PickIndex = (tbIndex >= 0 && setIndex == tbIndex) ? (tbIndex + 1) * 2 : -1;
+
+                if (picks.Count <= map1PickIndex && setRef.Map1Id.Value != 0)
+                    setRef.Map1Id.Value = 0;
+                if (picks.Count <= map2PickIndex && setRef.Map2Id.Value != 0)
+                    setRef.Map2Id.Value = 0;
+                if (map3PickIndex >= 0 && picks.Count <= map3PickIndex && setRef.Map3Id.Value != 0)
+                    setRef.Map3Id.Value = 0;
+            }
 
             int expectedSets = (picks.Count + 1) / 2;
 
             while (sets.Count > expectedSets)
                 sets.RemoveAt(sets.Count - 1);
+
+            Logger.Log($"[MapPool] updateSets done: picks={picks.Count} sets={sets.Count} " +
+                       $"setMaps=[{string.Join(" | ", sets.Select(s => $"{s.Map1Id.Value},{s.Map2Id.Value},{s.Map3Id.Value}{(s.IsTiebreaker ? " TB" : string.Empty)}"))}]");
         }
 
         private void addForBeatmap(int beatmapId)
@@ -602,6 +624,7 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             if (pickType == ChoiceType.Protect)
             {
+                Logger.Log($"[MapPool] addForBeatmap: Protect by {pickColour} beatmap={beatmapId}");
                 CurrentMatch.Value.Protects.Add(new BeatmapChoice
                 {
                     Team = pickColour,
@@ -611,6 +634,7 @@ namespace osu.Game.Tournament.Screens.MapPool
             }
             else
             {
+                Logger.Log($"[MapPool] addForBeatmap: {pickType} by {pickColour} beatmap={beatmapId}");
                 CurrentMatch.Value.PicksBans.Add(new BeatmapChoice
                 {
                     Team = pickColour,
