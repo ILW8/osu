@@ -355,5 +355,55 @@ namespace osu.Game.Tournament.Tests.NonVisual.RemoteControl
             Assert.That(response.StatusCode, Is.EqualTo(200));
             Assert.That(called, Is.True);
         }
+
+        [Test]
+        public async Task Status_Available_ReturnsExpectedShape()
+        {
+            var snapshot = new StatusSnapshot(
+                CurrentScreen: "GameplayScreen",
+                Multiplayer: new MultiplayerSnapshot(
+                    Available: true,
+                    Connected: true,
+                    RoomId: 123,
+                    PendingInvite: null,
+                    TourneyState: "Playing"),
+                Match: new MatchSnapshot(2, 1, "RED", "BLU")
+            );
+
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                GetStatus = () => Task.FromResult(snapshot),
+            });
+
+            var response = await handler.Handle("GET", "/status", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(response.JsonBody, Does.Contain(@"""currentScreen"":""GameplayScreen"""));
+            Assert.That(response.JsonBody, Does.Contain(@"""available"":true"));
+            Assert.That(response.JsonBody, Does.Contain(@"""roomId"":123"));
+            Assert.That(response.JsonBody, Does.Contain(@"""team1Score"":2"));
+        }
+
+        [Test]
+        public async Task Status_Unavailable_OmitsMultiplayerDetails()
+        {
+            var snapshot = new StatusSnapshot(
+                CurrentScreen: "SetupScreen",
+                Multiplayer: MultiplayerSnapshot.Unavailable(),
+                Match: null
+            );
+
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                GetStatus = () => Task.FromResult(snapshot),
+            });
+
+            var response = await handler.Handle("GET", "/status", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(response.JsonBody, Does.Contain(@"""available"":false"));
+            Assert.That(response.JsonBody, Does.Not.Contain(@"""connected"""));
+            Assert.That(response.JsonBody, Does.Not.Contain(@"""roomId"""));
+        }
     }
 }

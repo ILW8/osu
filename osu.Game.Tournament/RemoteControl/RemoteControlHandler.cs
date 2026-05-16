@@ -82,6 +82,13 @@ namespace osu.Game.Tournament.RemoteControl
             /// Reconnect to the current multiplayer room.
             /// </summary>
             public Func<Task<ConnectionResult>> Reconnect { get; init; } = () => Task.FromResult(ConnectionResult.NotAvailable);
+
+            /// <summary>
+            /// Return an immutable snapshot of the current tournament status.
+            /// Construction should happen on the framework update thread.
+            /// </summary>
+            public Func<Task<StatusSnapshot>> GetStatus { get; init; } = () => Task.FromResult(
+                new StatusSnapshot(null, MultiplayerSnapshot.Unavailable(), null));
         }
 
         private static readonly IReadOnlyDictionary<string, Type> screen_types = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
@@ -224,7 +231,10 @@ namespace osu.Game.Tournament.RemoteControl
                 if (method != "GET")
                     return RemoteControlResponse.Error(405, "method not allowed");
 
-                return RemoteControlResponse.Error(500, "status not yet implemented");
+                var snapshot = await callbacks.GetStatus().ConfigureAwait(false);
+                string body = Newtonsoft.Json.JsonConvert.SerializeObject(snapshot,
+                    new Newtonsoft.Json.JsonSerializerSettings { NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore });
+                return RemoteControlResponse.OkWith(body);
             }
 
             return RemoteControlResponse.Error(404, "unknown route");

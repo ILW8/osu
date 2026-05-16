@@ -1058,7 +1058,7 @@ git commit -m "add POST /multiplayer/{connect|disconnect|reconnect} routing"
 
 The handler asks its callback for a `StatusSnapshot` (already populated from a snapshot taken on the update thread by `TournamentRemoteControl`), then serializes it to JSON on the listener thread. Keeping snapshot construction outside the handler keeps the handler pure.
 
-- [ ] **Step 1: Create `StatusSnapshot.cs`.**
+- [x] **Step 1: Create `StatusSnapshot.cs`.**
 
 Create `osu.Game.Tournament/RemoteControl/StatusSnapshot.cs`:
 
@@ -1105,7 +1105,7 @@ namespace osu.Game.Tournament.RemoteControl
 }
 ```
 
-- [ ] **Step 2: Add failing tests.**
+- [x] **Step 2: Add failing tests.**
 
 Append inside `RemoteControlHandlerTest`:
 
@@ -1161,7 +1161,7 @@ public async Task Status_Unavailable_OmitsMultiplayerDetails()
 }
 ```
 
-- [ ] **Step 3: Extend `Callbacks` and replace the `/status` placeholder in `RemoteControlHandler.cs`.**
+- [x] **Step 3: Extend `Callbacks` and replace the `/status` placeholder in `RemoteControlHandler.cs`.**
 
 Inside `Callbacks`, add:
 
@@ -1185,7 +1185,7 @@ if (path == "/status")
 }
 ```
 
-- [ ] **Step 4: Run the tests.**
+- [x] **Step 4: Run the tests.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlHandlerTest"
@@ -1193,7 +1193,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: all twenty-three tests pass.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add osu.Game.Tournament/RemoteControl/StatusSnapshot.cs osu.Game.Tournament/RemoteControl/RemoteControlHandler.cs osu.Game.Tournament.Tests/NonVisual/RemoteControl/RemoteControlHandlerTest.cs
