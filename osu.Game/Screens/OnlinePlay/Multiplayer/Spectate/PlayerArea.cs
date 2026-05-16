@@ -30,6 +30,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         public event Action? OnGameplayStarted;
 
         /// <summary>
+        /// Raised when the loaded <see cref="Player"/> is about to push its results screen.
+        /// </summary>
+        public event Action? OnShowingResults;
+
+        /// <summary>
         /// Whether a <see cref="Player"/> is loaded in the area.
         /// </summary>
         public bool PlayerLoaded => (stack?.CurrentScreen as Player)?.IsLoaded == true;
@@ -115,6 +120,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             {
                 var player = new MultiSpectatorPlayer(Score, SpectatorPlayerClock, showFailingLayer);
                 player.OnGameplayStarted += () => OnGameplayStarted?.Invoke();
+                player.OnShowingResults += () => OnShowingResults?.Invoke();
 
                 clockAdjustmentsFromMods.BindAdjustments(player.ClockAdjustmentsFromMods);
 
