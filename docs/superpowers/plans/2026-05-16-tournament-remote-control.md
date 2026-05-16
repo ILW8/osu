@@ -538,7 +538,7 @@ git commit -m "add POST /match/score/{red|blue}/increment routing"
 
 The callbacks return a tri-state `InviteResult` (`Accepted`, `NotAvailable`, `NoInvite`) so the handler can choose between 200 / 503 / 409 cleanly.
 
-- [ ] **Step 1: Add failing tests.**
+- [x] **Step 1: Add failing tests.**
 
 Append inside `RemoteControlHandlerTest`:
 
@@ -610,7 +610,7 @@ public async Task InviteDismiss_HappyPath_Returns200()
 }
 ```
 
-- [ ] **Step 2: Run the tests to confirm they fail.**
+- [x] **Step 2: Run the tests to confirm they fail.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlHandlerTest"
@@ -618,7 +618,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: build error — `InviteResult`, `AcceptPendingInvite`, `DismissPendingInvite` not defined.
 
-- [ ] **Step 3: Extend `RemoteControlHandler.cs`.**
+- [x] **Step 3: Extend `RemoteControlHandler.cs`.**
 
 Inside the `RemoteControlHandler` class (above the `Callbacks` class), add:
 
@@ -668,7 +668,7 @@ if (path == "/multiplayer/invite/accept" || path == "/multiplayer/invite/dismiss
 }
 ```
 
-- [ ] **Step 4: Run the tests.**
+- [x] **Step 4: Run the tests.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlHandlerTest"
@@ -676,7 +676,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: all twelve tests pass.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add osu.Game.Tournament/RemoteControl/RemoteControlHandler.cs osu.Game.Tournament.Tests/NonVisual/RemoteControl/RemoteControlHandlerTest.cs

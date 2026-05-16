@@ -134,5 +134,71 @@ namespace osu.Game.Tournament.Tests.NonVisual.RemoteControl
 
             Assert.That(response.StatusCode, Is.EqualTo(409));
         }
+
+        [Test]
+        public async Task InviteAccept_HappyPath_Returns200()
+        {
+            bool called = false;
+
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                AcceptPendingInvite = () =>
+                {
+                    called = true;
+                    return Task.FromResult(RemoteControlHandler.InviteResult.Accepted);
+                },
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/invite/accept", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(called, Is.True);
+        }
+
+        [Test]
+        public async Task InviteAccept_MultiplayerUnavailable_Returns503()
+        {
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                AcceptPendingInvite = () => Task.FromResult(RemoteControlHandler.InviteResult.NotAvailable),
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/invite/accept", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(503));
+        }
+
+        [Test]
+        public async Task InviteAccept_NoInvite_Returns409()
+        {
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                AcceptPendingInvite = () => Task.FromResult(RemoteControlHandler.InviteResult.NoInvite),
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/invite/accept", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(409));
+        }
+
+        [Test]
+        public async Task InviteDismiss_HappyPath_Returns200()
+        {
+            bool called = false;
+
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                DismissPendingInvite = () =>
+                {
+                    called = true;
+                    return Task.FromResult(RemoteControlHandler.InviteResult.Accepted);
+                },
+            });
+
+            var response = await handler.Handle("POST", "/multiplayer/invite/dismiss", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(called, Is.True);
+        }
     }
 }

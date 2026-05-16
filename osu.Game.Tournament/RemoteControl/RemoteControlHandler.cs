@@ -24,6 +24,13 @@ namespace osu.Game.Tournament.RemoteControl
     /// </summary>
     public class RemoteControlHandler
     {
+        public enum InviteResult
+        {
+            Accepted,
+            NotAvailable, // running with FileBasedIPC — multiplayer endpoint unavailable
+            NoInvite,     // no pending invite to act on
+        }
+
         public class Callbacks
         {
             /// <summary>
@@ -38,6 +45,17 @@ namespace osu.Game.Tournament.RemoteControl
             /// Returns the new score, or null if there is no current match.
             /// </summary>
             public Func<string, Task<int?>> IncrementMatchScore { get; init; } = _ => Task.FromResult<int?>(null);
+
+            /// <summary>
+            /// Accept the current pending invite. Returns NotAvailable when multiplayer IPC
+            /// isn't in use, NoInvite when there's nothing pending, otherwise Accepted.
+            /// </summary>
+            public Func<Task<InviteResult>> AcceptPendingInvite { get; init; } = () => Task.FromResult(InviteResult.NotAvailable);
+
+            /// <summary>
+            /// Dismiss the current pending invite. Same result semantics as <see cref="AcceptPendingInvite"/>.
+            /// </summary>
+            public Func<Task<InviteResult>> DismissPendingInvite { get; init; } = () => Task.FromResult(InviteResult.NotAvailable);
         }
 
         private static readonly IReadOnlyDictionary<string, Type> screen_types = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
@@ -92,6 +110,24 @@ namespace osu.Game.Tournament.RemoteControl
                     return RemoteControlResponse.Error(409, "no current match");
 
                 return RemoteControlResponse.Ok();
+            }
+
+            if (path == "/multiplayer/invite/accept" || path == "/multiplayer/invite/dismiss")
+            {
+                if (method != "POST")
+                    return RemoteControlResponse.Error(405, "method not allowed");
+
+                var result = path == "/multiplayer/invite/accept"
+                    ? await callbacks.AcceptPendingInvite().ConfigureAwait(false)
+                    : await callbacks.DismissPendingInvite().ConfigureAwait(false);
+
+                return result switch
+                {
+                    InviteResult.Accepted => RemoteControlResponse.Ok(),
+                    InviteResult.NotAvailable => RemoteControlResponse.Error(503, "multiplayer not available"),
+                    InviteResult.NoInvite => RemoteControlResponse.Error(409, "no pending invite"),
+                    _ => RemoteControlResponse.Error(500, "unexpected result"),
+                };
             }
 
             if (path == "/status")
