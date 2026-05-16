@@ -16,6 +16,7 @@ using osu.Game.Graphics.Cursor;
 using osu.Game.Graphics.UserInterface;
 using osu.Game.Overlays;
 using osu.Game.Tournament.Models;
+using osu.Game.Tournament.RemoteControl;
 using osuTK.Graphics;
 
 namespace osu.Game.Tournament
@@ -95,7 +96,8 @@ namespace osu.Game.Tournament
                         RelativeSizeAxes = Axes.Both,
                         Child = new TournamentSceneManager()
                     },
-                    dialogOverlay
+                    dialogOverlay,
+                    new TournamentRemoteControl()
                 }, drawables =>
                 {
                     loadingSpinner.Hide();

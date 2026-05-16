@@ -1524,7 +1524,7 @@ The component is a `Component` (Drawable, no visual output). In `BackgroundDepen
 
 There are no unit tests for this class — it's the integration glue. End-to-end behavior is validated by `RemoteControlListenerTest` (Task 8) and manual verification (Task 11).
 
-- [ ] **Step 1: Create the file.**
+- [x] **Step 1: Create the file.**
 
 Create `osu.Game.Tournament/RemoteControl/TournamentRemoteControl.cs`:
 
@@ -1762,7 +1762,7 @@ namespace osu.Game.Tournament.RemoteControl
 }
 ```
 
-- [ ] **Step 2: Confirm `TournamentSceneManager` exposes `CurrentScreen` publicly.**
+- [x] **Step 2: Confirm `TournamentSceneManager` exposes `CurrentScreen` publicly.**
 
 Open `osu.Game.Tournament/TournamentSceneManager.cs` and check whether `currentScreen` is private (it currently is). The status snapshot reads it, so the field must be exposed.
 
@@ -1780,7 +1780,7 @@ public Drawable? CurrentScreen { get; private set; }
 
 Then within the file, replace every remaining reference to `currentScreen` with `CurrentScreen` (there should be five — the assignment in `SetScreen(Drawable)`, three in `SetScreen(Type)`, and the conditional in `SetScreen(Type)` checking `currentScreen == target`). Confirm with a quick grep on the file that there are no remaining lowercase `currentScreen` identifiers (other than the local capture `var lastScreen = currentScreen;` which becomes `var lastScreen = CurrentScreen;`).
 
-- [ ] **Step 3: Build to confirm nothing else broke.**
+- [x] **Step 3: Build to confirm nothing else broke.**
 
 ```powershell
 dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj
@@ -1788,7 +1788,7 @@ dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj
 
 Expected: build succeeds.
 
-- [ ] **Step 4: Run the full test suite.**
+- [x] **Step 4: Run the full test suite.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj
@@ -1796,7 +1796,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj
 
 Expected: all existing tests still pass (including the existing handler + listener tests added in earlier tasks).
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add osu.Game.Tournament/RemoteControl/TournamentRemoteControl.cs osu.Game.Tournament/TournamentSceneManager.cs
@@ -1810,7 +1810,7 @@ git commit -m "add TournamentRemoteControl component bridging handler to game st
 **Files:**
 - Modify: `osu.Game.Tournament/TournamentGame.cs`
 
-- [ ] **Step 1: Add `TournamentRemoteControl` to the drawable list inside the BracketLoadTask continuation.**
+- [x] **Step 1: Add `TournamentRemoteControl` to the drawable list inside the BracketLoadTask continuation.**
 
 Open `osu.Game.Tournament/TournamentGame.cs`. Locate the `LoadComponentsAsync(new[] { … })` call inside the `BracketLoadTask.ContinueWith(...)` block.
 
@@ -1846,7 +1846,7 @@ LoadComponentsAsync(new[]
 
 Note: the existing array uses an implicit `Drawable[]` element type. `TournamentRemoteControl` is a `Component` (a `Drawable`), so it fits.
 
-- [ ] **Step 2: Build.**
+- [x] **Step 2: Build.**
 
 ```powershell
 dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj
@@ -1854,7 +1854,7 @@ dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj
 
 Expected: build succeeds.
 
-- [ ] **Step 3: Run the full test suite.**
+- [x] **Step 3: Run the full test suite.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj
@@ -1862,7 +1862,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj
 
 Expected: all tests pass.
 
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
 
 ```bash
 git add osu.Game.Tournament/TournamentGame.cs
