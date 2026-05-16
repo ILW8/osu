@@ -12,7 +12,6 @@ using osu.Game.Beatmaps;
 using osu.Game.Database;
 using osu.Game.Overlays;
 using osu.Game.Tournament.IPC;
-using Realms;
 
 namespace osu.Game.Tournament.Components
 {
@@ -64,6 +63,13 @@ namespace osu.Game.Tournament.Components
         /// <see cref="LoadComplete"/>.
         /// </summary>
         private WorkingBeatmap? lastAssignedBeatmap;
+
+        /// <summary>
+        /// Set during <see cref="Dispose"/> so the <see cref="MusicController.AllowTrackControl"/>
+        /// reverter (which normally forces the value back to <c>false</c>) leaves the final
+        /// teardown <c>true</c> write alone.
+        /// </summary>
+        private bool disposing;
 
         /// <summary>
         /// What the trigger model says to do for the current (connected, state, resolved) tuple.
@@ -148,9 +154,24 @@ namespace osu.Game.Tournament.Components
             // The tournament UI never wants either behaviour: lobby music is owned by this
             // component, never user-driven. Our own Play()/Stop() calls don't check
             // AllowTrackControl (they pass requestedByUser=false), so they keep working.
+            //
+            // Setting once is not enough: each TournamentGameplayDisplay PlayerArea hosts its
+            // own nested OsuScreenStack, and when MultiSpectatorPlayer suspends in favour of
+            // MultiSpectatorResultsScreen (inherits ResultsScreen.AllowGlobalTrackControl=true)
+            // at the end of every round, OsuScreen.OnEntering re-writes AllowTrackControl=true.
+            // We bind a reverter so any such external flip is immediately undone.
             bool previousAllowTrackControl = music.AllowTrackControl.Value;
             music.AllowTrackControl.Value = false;
             Logger.Log($"[TournamentLobbyMusic] MusicController.AllowTrackControl: {previousAllowTrackControl} -> false (suppress auto-advance on track completion)");
+
+            music.AllowTrackControl.BindValueChanged(c =>
+            {
+                if (disposing || !c.NewValue)
+                    return;
+
+                Logger.Log("[TournamentLobbyMusic] AllowTrackControl was flipped to True externally (likely a nested OsuScreen entering); forcing back to False");
+                music.AllowTrackControl.Value = false;
+            });
 
             // Subscribe to globalBeatmap changes from any source. If we see a change whose new
             // value isn't what we last assigned, something else (MusicController.NextTrack
@@ -193,8 +214,8 @@ namespace osu.Game.Tournament.Components
 
         private void onMusicControllerTrackChanged(WorkingBeatmap newWorking, TrackChangeDirection direction)
         {
-            int onlineId = newWorking?.BeatmapInfo?.OnlineID ?? 0;
-            string title = newWorking?.BeatmapInfo?.Metadata.Title ?? "(unknown)";
+            int onlineId = newWorking.BeatmapInfo?.OnlineID ?? 0;
+            string title = newWorking.BeatmapInfo?.Metadata.Title ?? "(unknown)";
             Logger.Log($"[TournamentLobbyMusic] MusicController.TrackChanged direction={direction} -> '{title}' (OnlineID={onlineId}, wanted={wantedBeatmapId}, state={ipc.State.Value})");
         }
 
@@ -329,6 +350,8 @@ namespace osu.Game.Tournament.Components
 
         protected override void Dispose(bool isDisposing)
         {
+            disposing = true;
+
             base.Dispose(isDisposing);
             realmSubscription?.Dispose();
 
@@ -341,6 +364,7 @@ namespace osu.Game.Tournament.Components
 
                 // Restore AllowTrackControl so the regular client behaviour is intact if this
                 // component is somehow recreated without a full process restart (e.g. in tests).
+                // The `disposing` guard above prevents the reverter from undoing this write.
                 music.AllowTrackControl.Value = true;
             }
         }
