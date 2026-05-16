@@ -464,6 +464,10 @@ namespace osu.Game.Tournament.IPC
         {
             Schedule(() =>
             {
+                Logger.Log($"[MultiplayerMatchIPCInfo] onLoadRequested: state {State.Value} -> WaitingForClients " +
+                           $"(rankingResetScheduled={scheduledRankingReset != null}, currentBeatmap={Beatmap.Value?.OnlineID ?? 0})",
+                    LoggingTarget.Runtime);
+
                 cancelScheduledRankingReset();
                 State.Value = TourneyState.WaitingForClients;
 
@@ -494,13 +498,20 @@ namespace osu.Game.Tournament.IPC
 
         private void onGameplayStarted()
         {
-            Schedule(() => State.Value = TourneyState.Playing);
+            Schedule(() =>
+            {
+                Logger.Log($"[MultiplayerMatchIPCInfo] onGameplayStarted: state {State.Value} -> Playing", LoggingTarget.Runtime);
+                State.Value = TourneyState.Playing;
+            });
         }
 
         private void onResultsReady()
         {
             Schedule(() =>
             {
+                Logger.Log($"[MultiplayerMatchIPCInfo] onResultsReady: state {State.Value} -> Ranking " +
+                           $"(scheduling Idle reset in {RANKING_TO_IDLE_DELAY_MS}ms)", LoggingTarget.Runtime);
+
                 // Ensure final scores are updated before transitioning to ranking.
                 updateTeamScores();
                 State.Value = TourneyState.Ranking;
@@ -511,6 +522,8 @@ namespace osu.Game.Tournament.IPC
                 cancelScheduledRankingReset();
                 scheduledRankingReset = Scheduler.AddDelayed(() =>
                 {
+                    Logger.Log($"[MultiplayerMatchIPCInfo] Ranking->Idle timer fired (state={State.Value})", LoggingTarget.Runtime);
+
                     if (State.Value == TourneyState.Ranking)
                         State.Value = TourneyState.Idle;
                 }, RANKING_TO_IDLE_DELAY_MS);
@@ -521,6 +534,7 @@ namespace osu.Game.Tournament.IPC
         {
             Schedule(() =>
             {
+                Logger.Log($"[MultiplayerMatchIPCInfo] onGameplayAborted({reason}): state {State.Value} -> Idle", LoggingTarget.Runtime);
                 cancelScheduledRankingReset();
                 State.Value = TourneyState.Idle;
             });
@@ -528,8 +542,12 @@ namespace osu.Game.Tournament.IPC
 
         private void cancelScheduledRankingReset()
         {
-            scheduledRankingReset?.Cancel();
-            scheduledRankingReset = null;
+            if (scheduledRankingReset != null)
+            {
+                Logger.Log("[MultiplayerMatchIPCInfo] cancelling scheduled Ranking->Idle reset", LoggingTarget.Runtime);
+                scheduledRankingReset.Cancel();
+                scheduledRankingReset = null;
+            }
         }
 
         private void onUserJoined(MultiplayerRoomUser user)
@@ -587,6 +605,11 @@ namespace osu.Game.Tournament.IPC
 
             if (beatmapId == lastBeatmapId)
                 return;
+
+            Logger.Log($"[MultiplayerMatchIPCInfo] updateBeatmapFromRoom: CurrentPlaylistItem.BeatmapID changed {lastBeatmapId} -> {beatmapId} " +
+                       $"(state={State.Value}, playlist size={multiplayerClient.Room.Playlist.Count}, " +
+                       $"playlistItemID={currentItem.ID}, expired={currentItem.Expired})",
+                LoggingTarget.Runtime);
 
             lastBeatmapId = beatmapId;
 
