@@ -1210,7 +1210,7 @@ git commit -m "add GET /status endpoint and StatusSnapshot record types"
 
 The listener wraps `HttpListener`, runs a single background accept loop, calls the handler, writes the response, and gracefully exits on `Dispose`. Bind failures are logged and **do not throw** to the caller — they leave the listener in a non-running state.
 
-- [ ] **Step 1: Create the integration test (which will fail because the class doesn't exist yet).**
+- [x] **Step 1: Create the integration test (which will fail because the class doesn't exist yet).**
 
 Create `osu.Game.Tournament.Tests/NonVisual/RemoteControl/RemoteControlListenerTest.cs`:
 
@@ -1308,7 +1308,7 @@ namespace osu.Game.Tournament.Tests.NonVisual.RemoteControl
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails.**
+- [x] **Step 2: Run the test to verify it fails.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlListenerTest"
@@ -1316,7 +1316,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: build error — `RemoteControlListener` does not yet exist.
 
-- [ ] **Step 3: Create `RemoteControlListener.cs`.**
+- [x] **Step 3: Create `RemoteControlListener.cs`.**
 
 Create `osu.Game.Tournament/RemoteControl/RemoteControlListener.cs`:
 
@@ -1490,7 +1490,7 @@ namespace osu.Game.Tournament.RemoteControl
 }
 ```
 
-- [ ] **Step 4: Run the listener tests.**
+- [x] **Step 4: Run the listener tests.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlListenerTest"
@@ -1498,7 +1498,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: all three tests pass.
 
-- [ ] **Step 5: Run the full handler tests too, to make sure nothing regressed.**
+- [x] **Step 5: Run the full handler tests too, to make sure nothing regressed.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControl"
@@ -1506,7 +1506,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: all twenty-six tests pass (23 handler + 3 listener).
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ```bash
 git add osu.Game.Tournament/RemoteControl/RemoteControlListener.cs osu.Game.Tournament.Tests/NonVisual/RemoteControl/RemoteControlListenerTest.cs
