@@ -39,7 +39,7 @@ Test files:
 **Files:**
 - Modify: `osu.Game.Tournament/Configuration/TournamentConfigManager.cs`
 
-- [ ] **Step 1: Add the three keys to the `StorageConfig` enum.**
+- [x] **Step 1: Add the three keys to the `StorageConfig` enum.**
 
 Open `osu.Game.Tournament/Configuration/TournamentConfigManager.cs` and replace the enum at the bottom of the file:
 
@@ -53,7 +53,7 @@ public enum StorageConfig
 }
 ```
 
-- [ ] **Step 2: Add the defaults inside `InitialiseDefaults()`.**
+- [x] **Step 2: Add the defaults inside `InitialiseDefaults()`.**
 
 Inside the existing `InitialiseDefaults()` method, after the existing `SetDefault(StorageConfig.CurrentTournament, default_tournament);` line, add:
 
@@ -63,7 +63,7 @@ SetDefault(StorageConfig.RemoteControlBindAddress, @"127.0.0.1");
 SetDefault(StorageConfig.RemoteControlPort, 7270);
 ```
 
-- [ ] **Step 3: Build and confirm the project still compiles.**
+- [x] **Step 3: Build and confirm the project still compiles.**
 
 Run from the repo root:
 
@@ -73,7 +73,7 @@ dotnet build osu.Game.Tournament/osu.Game.Tournament.csproj
 
 Expected: build succeeds, no errors. (No tests yet for this change — config keys are exercised by Task 9.)
 
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
 
 ```bash
 git add osu.Game.Tournament/Configuration/TournamentConfigManager.cs

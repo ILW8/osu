@@ -22,11 +22,17 @@ namespace osu.Game.Tournament.Configuration
             base.InitialiseDefaults();
 
             SetDefault(StorageConfig.CurrentTournament, default_tournament);
+            SetDefault(StorageConfig.RemoteControlEnabled, false);
+            SetDefault(StorageConfig.RemoteControlBindAddress, @"127.0.0.1");
+            SetDefault(StorageConfig.RemoteControlPort, 7270);
         }
     }
 
     public enum StorageConfig
     {
         CurrentTournament,
+        RemoteControlEnabled,
+        RemoteControlBindAddress,
+        RemoteControlPort,
     }
 }
