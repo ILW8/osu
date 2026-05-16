@@ -51,6 +51,7 @@ namespace osu.Game.Tournament.RemoteControl
             catch (HttpListenerException e)
             {
                 Logger.Log($"[RemoteControl] Failed to bind to {bindAddress}:{port}: {e.Message}", LoggingTarget.Runtime, LogLevel.Error);
+                listener.Close();
                 listener = null;
                 return;
             }
@@ -122,6 +123,7 @@ namespace osu.Game.Tournament.RemoteControl
 
             if (!handleTask.Wait(2500))
             {
+                Logger.Log($"[RemoteControl] Request timed out: {method} {path}", LoggingTarget.Runtime, LogLevel.Important);
                 writeResponse(context, RemoteControlResponse.Error(504, "request timed out"));
                 return;
             }
