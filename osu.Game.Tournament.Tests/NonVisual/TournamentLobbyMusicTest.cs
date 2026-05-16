@@ -11,46 +11,56 @@ namespace osu.Game.Tournament.Tests.NonVisual
     public class TournamentLobbyMusicTest
     {
         [Test]
-        public void DoesNotPlayWhenDisconnected()
+        public void StopsWhenDisconnected()
         {
-            Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: false, TourneyState.Idle, hasResolvedBeatmap: true), Is.False);
+            Assert.That(TournamentLobbyMusic.Decide(isConnected: false, TourneyState.Idle, hasResolvedBeatmap: true),
+                Is.EqualTo(TournamentLobbyMusic.PlaybackAction.Stop));
         }
 
         [Test]
-        public void DoesNotPlayWhenBeatmapUnresolved()
+        public void StopsWhenBeatmapUnresolved()
         {
-            Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.Idle, hasResolvedBeatmap: false), Is.False);
+            Assert.That(TournamentLobbyMusic.Decide(isConnected: true, TourneyState.Idle, hasResolvedBeatmap: false),
+                Is.EqualTo(TournamentLobbyMusic.PlaybackAction.Stop));
         }
 
         [Test]
         public void PlaysWhenIdleAndConnectedWithBeatmap()
         {
-            Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.Idle, hasResolvedBeatmap: true), Is.True);
+            Assert.That(TournamentLobbyMusic.Decide(isConnected: true, TourneyState.Idle, hasResolvedBeatmap: true),
+                Is.EqualTo(TournamentLobbyMusic.PlaybackAction.Play));
         }
 
         [Test]
-        public void PlaysWhenWaitingForClients()
+        public void ContinueOnlyDuringWaitingForClients()
         {
-            Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.WaitingForClients, hasResolvedBeatmap: true), Is.True);
+            // WaitingForClients is a bridge: continue if already playing (came from Idle), but
+            // never start. Starting here is the production bug that causes the next-round song
+            // to play during the post-Ranking window when the host advances quickly.
+            Assert.That(TournamentLobbyMusic.Decide(isConnected: true, TourneyState.WaitingForClients, hasResolvedBeatmap: true),
+                Is.EqualTo(TournamentLobbyMusic.PlaybackAction.ContinueOnly));
         }
 
         [Test]
-        public void DoesNotPlayDuringPlaying()
+        public void StopsDuringPlaying()
         {
-            Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.Playing, hasResolvedBeatmap: true), Is.False);
+            Assert.That(TournamentLobbyMusic.Decide(isConnected: true, TourneyState.Playing, hasResolvedBeatmap: true),
+                Is.EqualTo(TournamentLobbyMusic.PlaybackAction.Stop));
         }
 
         [Test]
-        public void DoesNotPlayDuringRanking()
+        public void StopsDuringRanking()
         {
-            Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.Ranking, hasResolvedBeatmap: true), Is.False);
+            Assert.That(TournamentLobbyMusic.Decide(isConnected: true, TourneyState.Ranking, hasResolvedBeatmap: true),
+                Is.EqualTo(TournamentLobbyMusic.PlaybackAction.Stop));
         }
 
         [Test]
-        public void DoesNotPlayDuringInitialising()
+        public void StopsDuringInitialising()
         {
             // Initialising is never a "lobby" state — be conservative and don't play.
-            Assert.That(TournamentLobbyMusic.ShouldPlay(isConnected: true, TourneyState.Initialising, hasResolvedBeatmap: true), Is.False);
+            Assert.That(TournamentLobbyMusic.Decide(isConnected: true, TourneyState.Initialising, hasResolvedBeatmap: true),
+                Is.EqualTo(TournamentLobbyMusic.PlaybackAction.Stop));
         }
     }
 }
