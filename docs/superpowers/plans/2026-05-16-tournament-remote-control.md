@@ -89,7 +89,7 @@ git commit -m "add remote control config keys (enabled, bind address, port)"
 - Create: `osu.Game.Tournament/RemoteControl/RemoteControlHandler.cs`
 - Create: `osu.Game.Tournament.Tests/NonVisual/RemoteControl/RemoteControlHandlerTest.cs`
 
-- [ ] **Step 1: Write the failing test.**
+- [x] **Step 1: Write the failing test.**
 
 Create the test directory and file `osu.Game.Tournament.Tests/NonVisual/RemoteControl/RemoteControlHandlerTest.cs`:
 
@@ -130,7 +130,7 @@ namespace osu.Game.Tournament.Tests.NonVisual.RemoteControl
 }
 ```
 
-- [ ] **Step 2: Run the test to verify it fails.**
+- [x] **Step 2: Run the test to verify it fails.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlHandlerTest"
@@ -138,7 +138,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: build error — `RemoteControlHandler` and `RemoteControlResponse` do not yet exist.
 
-- [ ] **Step 3: Create `RemoteControlResponse.cs`.**
+- [x] **Step 3: Create `RemoteControlResponse.cs`.**
 
 Create `osu.Game.Tournament/RemoteControl/RemoteControlResponse.cs`:
 
@@ -160,7 +160,7 @@ namespace osu.Game.Tournament.RemoteControl
 }
 ```
 
-- [ ] **Step 4: Create `RemoteControlHandler.cs` with the minimum routing skeleton.**
+- [x] **Step 4: Create `RemoteControlHandler.cs` with the minimum routing skeleton.**
 
 Create `osu.Game.Tournament/RemoteControl/RemoteControlHandler.cs`:
 
@@ -207,7 +207,7 @@ namespace osu.Game.Tournament.RemoteControl
 }
 ```
 
-- [ ] **Step 5: Run the tests.**
+- [x] **Step 5: Run the tests.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlHandlerTest"
@@ -215,7 +215,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: both tests pass.
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ```bash
 git add osu.Game.Tournament/RemoteControl/RemoteControlResponse.cs osu.Game.Tournament/RemoteControl/RemoteControlHandler.cs osu.Game.Tournament.Tests/NonVisual/RemoteControl/RemoteControlHandlerTest.cs
