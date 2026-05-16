@@ -81,5 +81,58 @@ namespace osu.Game.Tournament.Tests.NonVisual.RemoteControl
 
             Assert.That(response.StatusCode, Is.EqualTo(405));
         }
+
+        [Test]
+        public async Task ScoreIncrement_Red_InvokesCallbackAndReturns200()
+        {
+            string? side = null;
+
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                IncrementMatchScore = team =>
+                {
+                    side = team;
+                    return Task.FromResult<int?>(1);
+                },
+            });
+
+            var response = await handler.Handle("POST", "/match/score/red/increment", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(side, Is.EqualTo("red"));
+        }
+
+        [Test]
+        public async Task ScoreIncrement_Blue_InvokesCallbackAndReturns200()
+        {
+            string? side = null;
+
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                IncrementMatchScore = team =>
+                {
+                    side = team;
+                    return Task.FromResult<int?>(1);
+                },
+            });
+
+            var response = await handler.Handle("POST", "/match/score/blue/increment", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(side, Is.EqualTo("blue"));
+        }
+
+        [Test]
+        public async Task ScoreIncrement_NoCurrentMatch_Returns409()
+        {
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                IncrementMatchScore = _ => Task.FromResult<int?>(null),
+            });
+
+            var response = await handler.Handle("POST", "/match/score/red/increment", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(409));
+        }
     }
 }

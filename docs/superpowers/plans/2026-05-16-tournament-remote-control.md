@@ -416,7 +416,7 @@ git commit -m "add POST /screen/{name} routing to RemoteControlHandler"
 
 The callback returns an `int?` — the new score after increment, or `null` if there is no current match (→ 409).
 
-- [ ] **Step 1: Add failing tests.**
+- [x] **Step 1: Add failing tests.**
 
 Append inside `RemoteControlHandlerTest`:
 
@@ -475,7 +475,7 @@ public async Task ScoreIncrement_NoCurrentMatch_Returns409()
 }
 ```
 
-- [ ] **Step 2: Run the tests to confirm they fail.**
+- [x] **Step 2: Run the tests to confirm they fail.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlHandlerTest"
@@ -483,7 +483,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: build error — `Callbacks.IncrementMatchScore` not defined.
 
-- [ ] **Step 3: Add the callback and route in `RemoteControlHandler.cs`.**
+- [x] **Step 3: Add the callback and route in `RemoteControlHandler.cs`.**
 
 Inside the `Callbacks` class, after `SwitchScreen`, add:
 
@@ -513,7 +513,7 @@ if (path == "/match/score/red/increment" || path == "/match/score/blue/increment
 }
 ```
 
-- [ ] **Step 4: Run the tests.**
+- [x] **Step 4: Run the tests.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlHandlerTest"
@@ -521,7 +521,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: all eight tests pass.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add osu.Game.Tournament/RemoteControl/RemoteControlHandler.cs osu.Game.Tournament.Tests/NonVisual/RemoteControl/RemoteControlHandlerTest.cs

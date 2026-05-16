@@ -32,6 +32,12 @@ namespace osu.Game.Tournament.RemoteControl
             /// the framework update thread.
             /// </summary>
             public Func<Type, Task<bool>> SwitchScreen { get; init; } = _ => Task.FromResult(false);
+
+            /// <summary>
+            /// Increment the current match score for the given side ("red" or "blue").
+            /// Returns the new score, or null if there is no current match.
+            /// </summary>
+            public Func<string, Task<int?>> IncrementMatchScore { get; init; } = _ => Task.FromResult<int?>(null);
         }
 
         private static readonly IReadOnlyDictionary<string, Type> screen_types = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
@@ -72,6 +78,20 @@ namespace osu.Game.Tournament.RemoteControl
 
                 bool ok = await callbacks.SwitchScreen(type).ConfigureAwait(false);
                 return ok ? RemoteControlResponse.Ok() : RemoteControlResponse.Error(500, "screen switch failed");
+            }
+
+            if (path == "/match/score/red/increment" || path == "/match/score/blue/increment")
+            {
+                if (method != "POST")
+                    return RemoteControlResponse.Error(405, "method not allowed");
+
+                string side = path == "/match/score/red/increment" ? "red" : "blue";
+
+                int? newScore = await callbacks.IncrementMatchScore(side).ConfigureAwait(false);
+                if (newScore == null)
+                    return RemoteControlResponse.Error(409, "no current match");
+
+                return RemoteControlResponse.Ok();
             }
 
             if (path == "/status")
