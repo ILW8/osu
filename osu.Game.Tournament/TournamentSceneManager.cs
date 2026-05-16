@@ -182,15 +182,15 @@ namespace osu.Game.Tournament
 
         private float depth;
 
-        private Drawable? currentScreen;
+        public Drawable? CurrentScreen { get; private set; }
         private ScheduledDelegate? scheduledHide;
 
         private Drawable? temporaryScreen;
 
         public void SetScreen(Drawable screen)
         {
-            currentScreen?.Hide();
-            currentScreen = null;
+            CurrentScreen?.Hide();
+            CurrentScreen = null;
 
             screens.Add(temporaryScreen = screen);
         }
@@ -201,7 +201,7 @@ namespace osu.Game.Tournament
 
             var target = screens.FirstOrDefault(s => s.GetType() == screenType);
 
-            if (target == null || currentScreen == target) return;
+            if (target == null || CurrentScreen == target) return;
 
             if (scheduledHide?.Completed == false)
             {
@@ -210,10 +210,10 @@ namespace osu.Game.Tournament
                 scheduledHide = null;
             }
 
-            var lastScreen = currentScreen;
-            currentScreen = target;
+            var lastScreen = CurrentScreen;
+            CurrentScreen = target;
 
-            if (currentScreen.ChildrenOfType<TourneyVideo>().FirstOrDefault()?.VideoAvailable == true)
+            if (CurrentScreen.ChildrenOfType<TourneyVideo>().FirstOrDefault()?.VideoAvailable == true)
             {
                 video.FadeOut(200);
 
@@ -226,10 +226,10 @@ namespace osu.Game.Tournament
                 video.Show();
             }
 
-            screens.ChangeChildDepth(currentScreen, depth--);
-            currentScreen.Show();
+            screens.ChangeChildDepth(CurrentScreen, depth--);
+            CurrentScreen.Show();
 
-            switch (currentScreen)
+            switch (CurrentScreen)
             {
                 case MapPoolScreen:
                     chatContainer.FadeIn(TournamentScreen.FADE_DELAY);
