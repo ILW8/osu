@@ -230,7 +230,7 @@ git commit -m "scaffold RemoteControlHandler with 404/405 routing"
 - Modify: `osu.Game.Tournament/RemoteControl/RemoteControlHandler.cs`
 - Modify: `osu.Game.Tournament.Tests/NonVisual/RemoteControl/RemoteControlHandlerTest.cs`
 
-- [ ] **Step 1: Add the failing tests.**
+- [x] **Step 1: Add the failing tests.**
 
 Append to the `RemoteControlHandlerTest` class (above the closing brace):
 
@@ -288,7 +288,7 @@ public async Task ScreenSwitch_WrongMethod_Returns405()
 
 Add the using `using osu.Game.Tournament.Screens.Setup;` at the top of the file (or leave the fully-qualified reference).
 
-- [ ] **Step 2: Run the tests to confirm they fail.**
+- [x] **Step 2: Run the tests to confirm they fail.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlHandlerTest"
@@ -296,7 +296,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: build error — `Callbacks.SwitchScreen` doesn't exist.
 
-- [ ] **Step 3: Extend `Callbacks` and add the route in `RemoteControlHandler.cs`.**
+- [x] **Step 3: Extend `Callbacks` and add the route in `RemoteControlHandler.cs`.**
 
 Replace the body of `RemoteControlHandler.cs` with:
 
@@ -391,7 +391,7 @@ namespace osu.Game.Tournament.RemoteControl
 }
 ```
 
-- [ ] **Step 4: Run the tests.**
+- [x] **Step 4: Run the tests.**
 
 ```powershell
 dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter "FullyQualifiedName~RemoteControlHandlerTest"
@@ -399,7 +399,7 @@ dotnet test osu.Game.Tournament.Tests/osu.Game.Tournament.Tests.csproj --filter 
 
 Expected: all five tests pass.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add osu.Game.Tournament/RemoteControl/RemoteControlHandler.cs osu.Game.Tournament.Tests/NonVisual/RemoteControl/RemoteControlHandlerTest.cs

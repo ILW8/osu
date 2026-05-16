@@ -1,7 +1,19 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using osu.Game.Tournament.Screens.Drawings;
+using osu.Game.Tournament.Screens.Editors;
+using osu.Game.Tournament.Screens.Gameplay;
+using osu.Game.Tournament.Screens.Ladder;
+using osu.Game.Tournament.Screens.MapPool;
+using osu.Game.Tournament.Screens.Schedule;
+using osu.Game.Tournament.Screens.Setup;
+using osu.Game.Tournament.Screens.Showcase;
+using osu.Game.Tournament.Screens.TeamIntro;
+using osu.Game.Tournament.Screens.TeamWin;
 
 namespace osu.Game.Tournament.RemoteControl
 {
@@ -14,8 +26,30 @@ namespace osu.Game.Tournament.RemoteControl
     {
         public class Callbacks
         {
-            // Filled in by later tasks.
+            /// <summary>
+            /// Switch the active screen. Return false from the lambda if the type is unknown
+            /// to the scene manager; the handler will then return 400. The callback runs on
+            /// the framework update thread.
+            /// </summary>
+            public Func<Type, Task<bool>> SwitchScreen { get; init; } = _ => Task.FromResult(false);
         }
+
+        private static readonly IReadOnlyDictionary<string, Type> screen_types = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["setup"] = typeof(SetupScreen),
+            ["schedule"] = typeof(ScheduleScreen),
+            ["ladder"] = typeof(LadderScreen),
+            ["ladder-editor"] = typeof(LadderEditorScreen),
+            ["team-editor"] = typeof(TeamEditorScreen),
+            ["round-editor"] = typeof(RoundEditorScreen),
+            ["showcase"] = typeof(ShowcaseScreen),
+            ["mappool"] = typeof(MapPoolScreen),
+            ["teamintro"] = typeof(TeamIntroScreen),
+            ["seeding"] = typeof(SeedingScreen),
+            ["drawings"] = typeof(DrawingsScreen),
+            ["gameplay"] = typeof(GameplayScreen),
+            ["teamwin"] = typeof(TeamWinScreen),
+        };
 
         private readonly Callbacks callbacks;
 
@@ -24,17 +58,31 @@ namespace osu.Game.Tournament.RemoteControl
             this.callbacks = callbacks;
         }
 
-        public Task<RemoteControlResponse> Handle(string method, string path, string? requestBody)
+        public async Task<RemoteControlResponse> Handle(string method, string path, string? requestBody)
         {
+            if (path.StartsWith("/screen/", StringComparison.Ordinal))
+            {
+                if (method != "POST")
+                    return RemoteControlResponse.Error(405, "method not allowed");
+
+                string name = path.Substring("/screen/".Length);
+
+                if (!screen_types.TryGetValue(name, out var type))
+                    return RemoteControlResponse.Error(400, $"unknown screen '{name}'");
+
+                bool ok = await callbacks.SwitchScreen(type).ConfigureAwait(false);
+                return ok ? RemoteControlResponse.Ok() : RemoteControlResponse.Error(500, "screen switch failed");
+            }
+
             if (path == "/status")
             {
                 if (method != "GET")
-                    return Task.FromResult(RemoteControlResponse.Error(405, "method not allowed"));
+                    return RemoteControlResponse.Error(405, "method not allowed");
 
-                return Task.FromResult(RemoteControlResponse.Error(500, "status not yet implemented"));
+                return RemoteControlResponse.Error(500, "status not yet implemented");
             }
 
-            return Task.FromResult(RemoteControlResponse.Error(404, "unknown route"));
+            return RemoteControlResponse.Error(404, "unknown route");
         }
     }
 }

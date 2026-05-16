@@ -4,6 +4,7 @@
 using System.Threading.Tasks;
 using NUnit.Framework;
 using osu.Game.Tournament.RemoteControl;
+using osu.Game.Tournament.Screens.Setup;
 
 namespace osu.Game.Tournament.Tests.NonVisual.RemoteControl
 {
@@ -27,6 +28,56 @@ namespace osu.Game.Tournament.Tests.NonVisual.RemoteControl
 
             // /status is a known GET route; POST is not allowed.
             var response = await handler.Handle("POST", "/status", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(405));
+        }
+
+        [Test]
+        public async Task ScreenSwitch_KnownName_InvokesCallbackAndReturns200()
+        {
+            System.Type? captured = null;
+
+            var callbacks = new RemoteControlHandler.Callbacks
+            {
+                SwitchScreen = type =>
+                {
+                    captured = type;
+                    return Task.FromResult(true);
+                },
+            };
+
+            var handler = new RemoteControlHandler(callbacks);
+
+            var response = await handler.Handle("POST", "/screen/setup", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(200));
+            Assert.That(captured, Is.EqualTo(typeof(SetupScreen)));
+        }
+
+        [Test]
+        public async Task ScreenSwitch_UnknownName_Returns400()
+        {
+            var callbacks = new RemoteControlHandler.Callbacks
+            {
+                SwitchScreen = _ => Task.FromResult(true),
+            };
+
+            var handler = new RemoteControlHandler(callbacks);
+
+            var response = await handler.Handle("POST", "/screen/banana", null);
+
+            Assert.That(response.StatusCode, Is.EqualTo(400));
+        }
+
+        [Test]
+        public async Task ScreenSwitch_WrongMethod_Returns405()
+        {
+            var handler = new RemoteControlHandler(new RemoteControlHandler.Callbacks
+            {
+                SwitchScreen = _ => Task.FromResult(true),
+            });
+
+            var response = await handler.Handle("GET", "/screen/setup", null);
 
             Assert.That(response.StatusCode, Is.EqualTo(405));
         }
