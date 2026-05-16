@@ -25,7 +25,10 @@ namespace osu.Game.Tournament.Screens.MapPool
 {
     public partial class MapPoolScreen : TournamentMatchScreen
     {
-        public int TiebreakerSetIndex { get; set; } = -1;
+        // BO5 → set index 4 (5th set is TB). -1 disables TB when no round / BestOf is set.
+        private int tiebreakerSetIndex => CurrentMatch.Value?.Round.Value?.BestOf.Value is int bestOf && bestOf >= 1
+            ? bestOf - 1
+            : -1;
 
         private FillFlowContainer<FillFlowContainer<TournamentBeatmapPanel>> mapFlows = null!;
         private FillFlowContainer<TournamentSetPanel> setsFlow = null!;
@@ -502,8 +505,9 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         /// <summary>
         /// Synchronises <see cref="TournamentMatch.Sets"/> with the picks recorded in <see cref="TournamentMatch.PicksBans"/>.
-        /// Each consecutive pair of picks forms a regular set; once <see cref="TiebreakerSetIndex"/> is reached, additional picks
-        /// are placed onto the slots of that tiebreaker set (which holds up to three maps).
+        /// Each consecutive pair of picks forms a regular set; once the tiebreaker set index (derived from
+        /// <see cref="TournamentRound.BestOf"/>) is reached, additional picks are placed onto the slots of that
+        /// tiebreaker set (which holds up to three maps).
         /// </summary>
         private void updateSets()
         {
@@ -513,23 +517,25 @@ namespace osu.Game.Tournament.Screens.MapPool
             var picks = CurrentMatch.Value.PicksBans.Where(pb => pb.Type == ChoiceType.Pick).ToList();
             var sets = CurrentMatch.Value.Sets;
 
+            int tbIndex = tiebreakerSetIndex;
+
             for (int pickIndex = 0; pickIndex < picks.Count; pickIndex++)
             {
-                int setIndex = TiebreakerSetIndex >= 0 ? Math.Min(pickIndex / 2, TiebreakerSetIndex) : pickIndex / 2;
+                int setIndex = tbIndex >= 0 ? Math.Min(pickIndex / 2, tbIndex) : pickIndex / 2;
                 int setSlot = pickIndex % 2;
 
                 MatchSet currentSet;
 
                 if (sets.Count - 1 < setIndex)
                 {
-                    sets.Add(currentSet = new MatchSet(TiebreakerSetIndex >= 0 && setIndex == TiebreakerSetIndex));
+                    sets.Add(currentSet = new MatchSet(tbIndex >= 0 && setIndex == tbIndex));
                 }
                 else
                 {
                     currentSet = sets[setIndex];
                 }
 
-                Bindable<long> setSlotBindable = currentSet.IsTiebreaker && pickIndex == (TiebreakerSetIndex + 1) * 2
+                Bindable<long> setSlotBindable = currentSet.IsTiebreaker && pickIndex == (tbIndex + 1) * 2
                     ? currentSet.Map3Id
                     : setSlot == 0
                         ? currentSet.Map1Id

@@ -158,29 +158,28 @@ namespace osu.Game.Tournament.Tests.Screens
         [Test]
         public void TestTiebreakerSetDisplay()
         {
-            int originalTiebreakerSetIndex = screen.TiebreakerSetIndex;
-
-            AddStep("load first weekend maps", () =>
+            AddStep("load maps and configure BO3", () =>
             {
                 Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.Clear();
+                // BO3 → tiebreakerSetIndex = 2 (3rd set). 8 NM maps gives the pool room for 5 picks.
+                Ladder.CurrentMatch.Value!.Round.Value!.BestOf.Value = 3;
 
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < 8; i++)
                     addBeatmap("NM", $"NM map #{i}");
 
                 resetState();
+                Ladder.CurrentMatch.Value!.Round.Value!.BestOf.Value = 3;
             });
 
             AddStep("disable cumulative score", () => Ladder.CumulativeScore.Value = false);
             AddStep("enable cumulative score", () => Ladder.CumulativeScore.Value = true);
 
-            AddStep("Set first set to be a tiebreaker set", () => screen.TiebreakerSetIndex = 0);
-
-            AddStep("pick nm1", () =>
+            // 5 picks: 2 fill set 0, 2 fill set 1, the 5th creates set 2 which is the tiebreaker.
+            AddStep("pick nm1 (red)", () =>
             {
                 screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Pick").TriggerClick();
                 clickBeatmapPanel(0);
             });
-            AddStep("Reset tiebreaker set index", () => screen.TiebreakerSetIndex = originalTiebreakerSetIndex);
             AddStep("update current beatmap", () =>
             {
                 var newTournamentBeatmap = Ladder.CurrentMatch.Value!.Round.Value!.Beatmaps.First(b => screen.ChildrenOfType<TournamentBeatmapPanel>().ElementAt(0).Beatmap!.OnlineID == b.Beatmap!.OnlineID).Beatmap;
@@ -192,15 +191,24 @@ namespace osu.Game.Tournament.Tests.Screens
             AddStep("pick nm2", () => clickBeatmapPanel(1));
             AddStep("set scores on nm2", () => Ladder.CurrentMatch.Value!.MapScores["NM2"] = new Tuple<long, long>(Random.Shared.Next() % 1_000_000, Random.Shared.Next() % 1_000_000));
 
-            AddStep("set red pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Pick").TriggerClick());
+            AddStep("set red pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Pick").TriggerClick());
             AddStep("pick nm3", () => clickBeatmapPanel(2));
             AddStep("set scores on nm3", () => Ladder.CurrentMatch.Value!.MapScores["NM3"] = new Tuple<long, long>(Random.Shared.Next() % 1_000_000, Random.Shared.Next() % 1_000_000));
 
-            // The first set was created when TiebreakerSetIndex=0 was active, so it must remain marked as a tiebreaker
-            // even after the index was reset. Subsequent picks fall into regular sets.
-            AddAssert("first set is tiebreaker", () => Ladder.CurrentMatch.Value!.Sets[0].IsTiebreaker, () => Is.True);
-            AddUntilStep("first set panel is tiebreaker",
-                () => screen.ChildrenOfType<TournamentSetPanel>().FirstOrDefault()?.Model.IsTiebreaker == true);
+            AddStep("set blue pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Blue Pick").TriggerClick());
+            AddStep("pick nm4", () => clickBeatmapPanel(3));
+            AddStep("set scores on nm4", () => Ladder.CurrentMatch.Value!.MapScores["NM4"] = new Tuple<long, long>(Random.Shared.Next() % 1_000_000, Random.Shared.Next() % 1_000_000));
+
+            AddStep("set red pick", () => screen.ChildrenOfType<TourneyButton>().First(btn => btn.Text == "Red Pick").TriggerClick());
+            AddStep("pick nm5 (creates tiebreaker set)", () => clickBeatmapPanel(4));
+
+            AddAssert("three sets exist", () => Ladder.CurrentMatch.Value!.Sets.Count, () => Is.EqualTo(3));
+            AddAssert("third set is tiebreaker", () => Ladder.CurrentMatch.Value!.Sets[2].IsTiebreaker, () => Is.True);
+            AddAssert("earlier sets are not tiebreakers",
+                () => Ladder.CurrentMatch.Value!.Sets[0].IsTiebreaker || Ladder.CurrentMatch.Value!.Sets[1].IsTiebreaker,
+                () => Is.False);
+            AddUntilStep("tiebreaker set panel rendered",
+                () => screen.ChildrenOfType<TournamentSetPanel>().LastOrDefault()?.Model.IsTiebreaker == true);
         }
 
         [Test]
