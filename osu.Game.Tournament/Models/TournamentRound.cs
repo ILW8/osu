@@ -17,7 +17,8 @@ namespace osu.Game.Tournament.Models
         public readonly Bindable<string> Name = new Bindable<string>(string.Empty);
         public readonly Bindable<string> Description = new Bindable<string>(string.Empty);
 
-        public readonly BindableInt BestOf = new BindableInt(9) { Default = 9, MinValue = 3, MaxValue = 23 };
+        [JsonProperty("BestOf")]
+        public readonly BindableInt PicksCount = new BindableInt(9) { Default = 9, MinValue = 3, MaxValue = 23 };
         public readonly BindableInt BanCount = new BindableInt(1) { Default = 1, MinValue = 0, MaxValue = 5 };
         public readonly BindableInt ProtectCount = new BindableInt { Default = 0, MinValue = 0, MaxValue = 3 };
         public readonly BindableBool AllowPickOpponentProtect = new BindableBool(true);

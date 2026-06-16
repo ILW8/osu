@@ -236,11 +236,11 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         {
             if (Match.Round.Value == null) return;
 
-            int instantWinAmount = Match.Round.Value.BestOf.Value / 2;
+            int instantWinAmount = Match.Round.Value.PicksCount.Value / 2;
 
-            Match.Completed.Value = Match.Round.Value.BestOf.Value > 0
-                                    && (Match.Team1Score.Value + Match.Team2Score.Value >= Match.Round.Value.BestOf.Value || Match.Team1Score.Value > instantWinAmount
-                                                                                                                          || Match.Team2Score.Value > instantWinAmount);
+            Match.Completed.Value = Match.Round.Value.PicksCount.Value > 0
+                                    && (Match.Team1Score.Value + Match.Team2Score.Value >= Match.Round.Value.PicksCount.Value || Match.Team1Score.Value > instantWinAmount
+                                                                                                                              || Match.Team2Score.Value > instantWinAmount);
         }
 
         protected override void LoadComplete()

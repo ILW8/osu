@@ -93,7 +93,7 @@ namespace osu.Game.Tournament.Models
 
         public TeamColour WinnerColour => Winner == Team1.Value ? TeamColour.Red : TeamColour.Blue;
 
-        public int PointsToWin => Round.Value?.BestOf.Value / 2 + 1 ?? 0;
+        public int PointsToWin => Round.Value?.PicksCount.Value / 2 + 1 ?? 0;
 
         /// <summary>
         /// Remove scores from the match, in case of a false click or false start.

@@ -102,9 +102,9 @@ namespace osu.Game.Tournament.Screens.Editors
                             },
                             new SettingsSlider<int>
                             {
-                                LabelText = "Best of",
+                                LabelText = "Picks count",
                                 Width = 0.24f,
-                                Current = Model.BestOf
+                                Current = Model.PicksCount
                             },
                             new SettingsButton
                             {

@@ -46,5 +46,10 @@ namespace osu.Game.Tournament.Models
         public Bindable<bool> SplitMapPoolByMods = new BindableBool(true);
 
         public Bindable<bool> DisplayTeamSeeds = new BindableBool();
+
+        /// <summary>
+        /// When enabled, matches are scored by capped cumulative score gap per map instead of best-of map wins.
+        /// </summary>
+        public Bindable<bool> CumulativeScore = new BindableBool(true);
     }
 }
