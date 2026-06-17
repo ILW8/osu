@@ -83,6 +83,10 @@ namespace osu.Game.Tournament.Scoring
         /// </summary>
         public static bool IsDecided(int team1Total, int team2Total, int mapsPlayed, int picksCount)
         {
+            // An unknown/zero-length format cannot be decided.
+            if (picksCount <= 0)
+                return false;
+
             int mapsRemaining = picksCount - mapsPlayed;
             int lead = Math.Abs(team1Total - team2Total);
 

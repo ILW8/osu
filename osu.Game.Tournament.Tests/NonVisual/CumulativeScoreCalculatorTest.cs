@@ -157,5 +157,12 @@ namespace osu.Game.Tournament.Tests.NonVisual
             // x = 4, threshold = 100000, lead = 100000 -> decided
             Assert.That(CumulativeScoreCalculator.IsDecided(100_000, 0, mapsPlayed: 3, picksCount: 7), Is.True);
         }
+
+        [Test]
+        public void TestNotDecidedWhenPicksCountZero()
+        {
+            // A null/zero-length round must never auto-complete the match.
+            Assert.That(CumulativeScoreCalculator.IsDecided(50_000, 0, mapsPlayed: 0, picksCount: 0), Is.False);
+        }
     }
 }

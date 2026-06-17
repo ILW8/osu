@@ -19,6 +19,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private readonly Bindable<TournamentTeam?> currentTeam = new Bindable<TournamentTeam?>();
         private readonly Bindable<int?> currentTeamScore = new Bindable<int?>();
 
+        private Bindable<bool> useCumulativeScore = null!;
+
         private TeamDisplay? teamDisplay;
 
         public bool ShowScore
@@ -48,6 +50,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
             currentMatch.BindValueChanged(matchChanged);
 
             currentTeam.BindValueChanged(teamChanged);
+
+            useCumulativeScore = ladder.CumulativeScore.GetBoundCopy();
 
             updateMatch();
         }
@@ -79,6 +83,10 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
 
         protected override bool OnMouseDown(MouseDownEvent e)
         {
+            // Manual score adjustment is disabled in cumulative scoring mode; totals are driven by gameplay.
+            if (useCumulativeScore.Value)
+                return base.OnMouseDown(e);
+
             switch (e.Button)
             {
                 case MouseButton.Left:

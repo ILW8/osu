@@ -146,6 +146,10 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                 return true;
             }
 
+            // Manual score adjustment is disabled in cumulative scoring mode; totals are driven by gameplay.
+            if (ladderInfo?.CumulativeScore.Value == true)
+                return false;
+
             if (e.Button == MouseButton.Left)
             {
                 if (score.Value == null)
