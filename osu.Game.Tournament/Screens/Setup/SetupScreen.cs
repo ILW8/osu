@@ -149,6 +149,12 @@ namespace osu.Game.Tournament.Screens.Setup
                     Description = "Team seeds will display alongside each team at the top in gameplay/map pool screens.",
                     Current = LadderInfo.DisplayTeamSeeds,
                 },
+                new LabelledSwitchButton
+                {
+                    Label = "Cumulative scoring",
+                    Description = "Score maps by capped cumulative score gap instead of best-of map wins.",
+                    Current = LadderInfo.CumulativeScore,
+                },
             };
         }
 
