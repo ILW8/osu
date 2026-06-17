@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -12,6 +13,7 @@ using osu.Game.Overlays.Settings;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
+using osu.Game.Tournament.Scoring;
 using osu.Game.Tournament.Screens.Gameplay.Components;
 using osu.Game.Tournament.Screens.MapPool;
 using osu.Game.Tournament.Screens.TeamWin;
@@ -213,7 +215,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    if (ipc.Score1.Value > ipc.Score2.Value)
+                    if (LadderInfo.CumulativeScore.Value)
+                        applyCumulativeScore();
+                    else if (ipc.Score1.Value > ipc.Score2.Value)
                         CurrentMatch.Value.Team1Score.Value++;
                     else
                         CurrentMatch.Value.Team2Score.Value++;
@@ -254,6 +258,31 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 lastState = State.Value;
             }
+        }
+
+        private void applyCumulativeScore()
+        {
+            var match = CurrentMatch.Value;
+            if (match == null) return;
+
+            var playedMap = match.Round.Value?.Beatmaps.FirstOrDefault(b => b.ID == ipc.Beatmap.Value?.OnlineID);
+            var tier = CumulativeScoreCalculator.ResolveTier(playedMap, match);
+
+            (bool winnerIsTeam1, int points) = CumulativeScoreCalculator.Contribution(ipc.Score1.Value, ipc.Score2.Value, tier);
+
+            if (winnerIsTeam1)
+                match.Team1Score.Value = (match.Team1Score.Value ?? 0) + points;
+            else
+                match.Team2Score.Value = (match.Team2Score.Value ?? 0) + points;
+
+            int mapsPlayed = match.PicksBans.Count(pb => pb.Type == ChoiceType.Pick);
+            int picksCount = match.Round.Value?.PicksCount.Value ?? 0;
+
+            match.Completed.Value = CumulativeScoreCalculator.IsDecided(
+                match.Team1Score.Value ?? 0,
+                match.Team2Score.Value ?? 0,
+                mapsPlayed,
+                picksCount);
         }
 
         public override void Hide()
