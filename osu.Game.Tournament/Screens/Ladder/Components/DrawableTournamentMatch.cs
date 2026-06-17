@@ -236,6 +236,10 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         {
             if (Match.Round.Value == null) return;
 
+            // In cumulative scoring mode, completion is driven by the gameplay flow, not win counts.
+            if (ladderInfo?.CumulativeScore.Value == true)
+                return;
+
             int instantWinAmount = Match.Round.Value.PicksCount.Value / 2;
 
             Match.Completed.Value = Match.Round.Value.PicksCount.Value > 0
