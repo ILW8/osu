@@ -1,4 +1,4 @@
-﻿// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
+// Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
 using osu.Framework.Bindables;
@@ -13,6 +13,8 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
     public partial class TeamDisplay : DrawableTournamentTeam
     {
         private readonly TeamScore score;
+
+        private readonly TeamScoreCumulative teamScoreCumulative;
 
         private readonly TournamentSpriteTextWithBackground teamNameText;
 
@@ -67,7 +69,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                             new FillFlowContainer
                             {
                                 AutoSizeAxes = Axes.Both,
-                                Direction = FillDirection.Vertical,
+                                Direction = FillDirection.Horizontal,
                                 Origin = anchor,
                                 Anchor = anchor,
                                 Spacing = new Vector2(5),
@@ -76,36 +78,54 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
                                     new FillFlowContainer
                                     {
                                         AutoSizeAxes = Axes.Both,
-                                        Direction = FillDirection.Horizontal,
-                                        Spacing = new Vector2(5),
+                                        Direction = FillDirection.Vertical,
                                         Origin = anchor,
                                         Anchor = anchor,
+                                        Spacing = new Vector2(5),
                                         Children = new Drawable[]
                                         {
-                                            new DrawableTeamHeader(colour)
+                                            new FillFlowContainer
                                             {
-                                                Scale = new Vector2(0.75f),
+                                                AutoSizeAxes = Axes.Both,
+                                                Direction = FillDirection.Horizontal,
+                                                Spacing = new Vector2(5),
+                                                Origin = anchor,
+                                                Anchor = anchor,
+                                                Children = new Drawable[]
+                                                {
+                                                    new DrawableTeamHeader(colour)
+                                                    {
+                                                        Scale = new Vector2(0.75f),
+                                                        Origin = anchor,
+                                                        Anchor = anchor,
+                                                    },
+                                                    score = new TeamScore(currentTeamScore, colour, pointsToWin)
+                                                    {
+                                                        Origin = anchor,
+                                                        Anchor = anchor,
+                                                        Name = @"Team score stars display",
+                                                    }
+                                                }
+                                            },
+                                            teamNameText = new TournamentSpriteTextWithBackground
+                                            {
+                                                Scale = new Vector2(0.5f),
                                                 Origin = anchor,
                                                 Anchor = anchor,
                                             },
-                                            score = new TeamScore(currentTeamScore, colour, pointsToWin)
+                                            new DrawableTeamSeed(Team)
                                             {
+                                                Scale = new Vector2(0.5f),
                                                 Origin = anchor,
                                                 Anchor = anchor,
-                                            }
+                                            },
                                         }
                                     },
-                                    teamNameText = new TournamentSpriteTextWithBackground
+                                    teamScoreCumulative = new TeamScoreCumulative(colour)
                                     {
-                                        Scale = new Vector2(0.5f),
                                         Origin = anchor,
                                         Anchor = anchor,
-                                    },
-                                    new DrawableTeamSeed(Team)
-                                    {
-                                        Scale = new Vector2(0.5f),
-                                        Origin = anchor,
-                                        Anchor = anchor,
+                                        Margin = new MarginPadding { Horizontal = 12 },
                                     },
                                 }
                             },
@@ -131,6 +151,7 @@ namespace osu.Game.Tournament.Screens.Gameplay.Components
         private void updateDisplay()
         {
             score.FadeTo(ShowScore ? 1 : 0, 200);
+            teamScoreCumulative.FadeTo(ShowScore ? 1 : 0, 200);
         }
     }
 }
