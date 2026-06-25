@@ -29,6 +29,7 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
         private TournamentSpriteText scoreText = null!;
         private Box background = null!;
         private Box backgroundRight = null!;
+        private Container scoreContainer = null!;
 
         private readonly Bindable<int?> score = new Bindable<int?>();
         private readonly BindableBool completed = new BindableBool();
@@ -40,6 +41,17 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
 
         [Resolved]
         private LadderInfo? ladderInfo { get; set; }
+
+        // left (flag + acronym) region stays this wide; only the score side grows.
+        private const float left_width = 105;
+
+        private static float scoreWidthFor(bool cumulative) => cumulative ? 75 : 45;
+
+        private void applyCumulativeWidth(bool cumulative)
+        {
+            scoreContainer.Width = scoreWidthFor(cumulative);
+            Width = left_width + scoreContainer.Width;
+        }
 
         private void setCurrent()
         {
@@ -102,13 +114,14 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
                         Flag,
                     }
                 },
-                new Container
+                scoreContainer = new Container
                 {
                     Masking = true,
-                    Width = 0.3f,
+                    // absolute width so widening for cumulative totals grows the whole team, not the left side.
+                    Width = scoreWidthFor(ladderInfo?.CumulativeScore.Value == true),
                     Anchor = Anchor.CentreRight,
                     Origin = Anchor.CentreRight,
-                    RelativeSizeAxes = Axes.Both,
+                    RelativeSizeAxes = Axes.Y,
                     Children = new Drawable[]
                     {
                         backgroundRight = new Box
@@ -128,6 +141,8 @@ namespace osu.Game.Tournament.Screens.Ladder.Components
             };
 
             completed.BindValueChanged(_ => updateWinStyle());
+
+            ladderInfo?.CumulativeScore.BindValueChanged(c => applyCumulativeWidth(c.NewValue), true);
 
             score.BindValueChanged(val =>
             {
