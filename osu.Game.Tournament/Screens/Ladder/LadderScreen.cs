@@ -69,6 +69,15 @@ namespace osu.Game.Tournament.Screens.Ladder
                 }
             };
 
+            // The editor subclass adds its own ControlPanel; only the plain broadcast ladder needs one here.
+            if (this is not LadderEditorScreen)
+            {
+                AddInternal(new ControlPanel
+                {
+                    Child = new CumulativeScoreEditor(),
+                });
+            }
+
             void addMatch(TournamentMatch match) =>
                 MatchesContainer.Add(new DrawableTournamentMatch(match, this is LadderEditorScreen)
                 {

@@ -118,6 +118,8 @@ namespace osu.Game.Tournament.Screens.MapPool
                             LabelText = "Split display by mods",
                             Current = LadderInfo.SplitMapPoolByMods,
                         },
+                        new ControlPanel.Spacer(),
+                        new CumulativeScoreEditor(),
                     },
                 }
             };

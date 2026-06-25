@@ -46,7 +46,11 @@ namespace osu.Game.Tournament.Screens.Editors
         {
             AddInternal(new ControlPanel
             {
-                Child = new LadderEditorSettings(),
+                Children = new Drawable[]
+                {
+                    new LadderEditorSettings(),
+                    new CumulativeScoreEditor(),
+                },
             });
 
             AddInternal(rightClickMessage = new WarningBox("Right click to place and link matches"));
