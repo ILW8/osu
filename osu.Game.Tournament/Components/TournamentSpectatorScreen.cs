@@ -9,6 +9,7 @@ using osu.Framework.Audio;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Logging;
+using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
 using osu.Game.Screens.Play;
@@ -43,6 +44,9 @@ namespace osu.Game.Tournament.Components
             MinValue = TournamentPlayerGrid.MIN_SLOTS,
             MaxValue = TournamentPlayerGrid.MAX_SLOTS,
         };
+
+        [Resolved]
+        private MultiplayerClient multiplayerClient { get; set; } = null!;
 
         private MasterGameplayClockContainer masterClockContainer = null!;
         private SpectatorSyncManager syncManager = null!;
@@ -97,7 +101,17 @@ namespace osu.Game.Tournament.Components
             if (playerAreas.ContainsKey(userId))
                 return;
 
+            // Snapshot the round's participant → slot mapping once, on the first player to start.
+            if (slots.Count == 0)
+                snapshotSlotsFromRoom();
+
             int slot = assignSlot(userId);
+
+            if (slot >= TournamentPlayerGrid.MAX_SLOTS)
+            {
+                Logger.Log($"[TournamentSpectator] user {userId} exceeds the {TournamentPlayerGrid.MAX_SLOTS}-slot grid; not rendering a tile.", level: LogLevel.Important);
+                return;
+            }
 
             var area = new PlayerArea(userId, syncManager.CreateManagedClock(), showFailingLayer: false);
             playerAreas[userId] = area;
@@ -161,14 +175,50 @@ namespace osu.Game.Tournament.Components
         private static bool isCandidateAudioSource(SpectatorPlayerClock? clock)
             => clock?.IsRunning == true && !clock.IsCatchingUp && !clock.WaitingOnFrames;
 
-        // Sequential slot assignment. Replaced by a participation-aware snapshot in a later task.
+        private void snapshotSlotsFromRoom()
+        {
+            var roomUsers = multiplayerClient.Room?.Users.Select(u => (u.UserID, u.State))
+                            ?? Enumerable.Empty<(int, MultiplayerUserState)>();
+
+            foreach ((int userId, int slot) in SnapshotSlots(roomUsers))
+                slots[userId] = slot;
+        }
+
         private int assignSlot(int userId)
         {
             if (slots.TryGetValue(userId, out int existing))
                 return existing;
 
+            // Fallback for a participant that started gameplay but wasn't in the snapshot (appends after it).
             return slots[userId] = slots.Count;
         }
+
+        /// <summary>
+        /// Projects a room's users onto a stable, gap-free slot map, including only users in an
+        /// active gameplay state (so Idle/Ready/Spectating users — including the tourney client
+        /// itself — don't reserve a tile). Slots are assigned sequentially in input order.
+        /// </summary>
+        internal static Dictionary<int, int> SnapshotSlots(IEnumerable<(int userId, MultiplayerUserState state)> roomUsers)
+        {
+            var result = new Dictionary<int, int>();
+            int next = 0;
+
+            foreach ((int userId, MultiplayerUserState state) in roomUsers)
+            {
+                if (!IsParticipating(state))
+                    continue;
+
+                result[userId] = next++;
+            }
+
+            return result;
+        }
+
+        internal static bool IsParticipating(MultiplayerUserState state)
+            => state == MultiplayerUserState.WaitingForLoad
+               || state == MultiplayerUserState.Loaded
+               || state == MultiplayerUserState.ReadyForGameplay
+               || state == MultiplayerUserState.Playing;
 
         private void performInitialSeek()
         {
