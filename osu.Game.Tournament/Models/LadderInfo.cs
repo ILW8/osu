@@ -41,6 +41,12 @@ namespace osu.Game.Tournament.Models
 
         public Bindable<bool> AutoProgressScreens = new BindableBool(true);
 
+        /// <summary>
+        /// When enabled, the tournament client spectates a live multiplayer room directly
+        /// (via MultiplayerMatchIPCInfo) instead of using the file-based IPC bridge to a stable client.
+        /// </summary>
+        public Bindable<bool> UseMultiplayerSpectating = new BindableBool();
+
         public Bindable<bool> SplitMapPoolByMods = new BindableBool(true);
 
         public Bindable<bool> DisplayTeamSeeds = new BindableBool();
