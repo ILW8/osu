@@ -154,7 +154,15 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             if (multiplayerIpc != null)
             {
-                multiplayerIpc.IsConnected.BindValueChanged(c => gameplayHost.FadeTo(c.NewValue ? 1 : 0, 300), true);
+                multiplayerIpc.IsConnected.BindValueChanged(c =>
+                {
+                    gameplayHost.FadeTo(c.NewValue ? 1 : 0, 300);
+
+                    // On disconnect the connector returns to Idle (not WaitingForClients), so tear down
+                    // here too — otherwise the stale screen lingers and a later reconnect won't re-push.
+                    if (!c.NewValue)
+                        teardownSpectatorScreen();
+                }, true);
 
                 // Auto-advance / push driven off the non-Drawable signal so a hidden screen can't miss it.
                 multiplayerIpc.HasActiveSpectatorPlayers.BindValueChanged(_ => updateSpectatorScreen(), true);
