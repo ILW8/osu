@@ -37,6 +37,8 @@ namespace osu.Game.Tournament.Screens.MapPool
 
         private ScheduledDelegate? scheduledScreenChange;
 
+        private MultiplayerMatchIPCInfo? multiplayerIpc;
+
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
         {
@@ -109,6 +111,8 @@ namespace osu.Game.Tournament.Screens.MapPool
             };
 
             ipc.Beatmap.BindValueChanged(beatmapChanged);
+
+            multiplayerIpc = ipc as MultiplayerMatchIPCInfo;
         }
 
         private Bindable<bool>? splitMapPoolByMods;
@@ -119,6 +123,17 @@ namespace osu.Game.Tournament.Screens.MapPool
 
             splitMapPoolByMods = LadderInfo.SplitMapPoolByMods.GetBoundCopy();
             splitMapPoolByMods.BindValueChanged(_ => updateDisplay());
+
+            if (multiplayerIpc != null)
+            {
+                // Auto-advance to gameplay as soon as a spectated player starts playing. Driven off the
+                // connector's non-Drawable signal so it fires even while this screen is hidden.
+                multiplayerIpc.HasActiveSpectatorPlayers.BindValueChanged(active =>
+                {
+                    if (active.NewValue && LadderInfo.AutoProgressScreens.Value)
+                        sceneManager?.SetScreen(typeof(GameplayScreen));
+                }, true);
+            }
         }
 
         private void beatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)
