@@ -40,8 +40,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         /// <param name="score">The score containing the player's replay.</param>
         /// <param name="spectatorPlayerClock">The clock controlling the gameplay running state.</param>
-        public MultiSpectatorPlayer(Score score, SpectatorPlayerClock spectatorPlayerClock)
-            : base(score, new PlayerConfiguration { AllowUserInteraction = false })
+        /// <param name="showFailingLayer">Whether the low-health red failing overlay should be shown for this player.</param>
+        public MultiSpectatorPlayer(Score score, SpectatorPlayerClock spectatorPlayerClock, bool showFailingLayer = true)
+            : base(score, new PlayerConfiguration { AllowUserInteraction = false, ShowFailingOverlay = showFailingLayer })
         {
             this.spectatorPlayerClock = spectatorPlayerClock;
 

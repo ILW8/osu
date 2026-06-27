@@ -61,13 +61,15 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         private readonly BindableDouble volumeAdjustment = new BindableDouble();
         private readonly Container gameplayContent;
         private readonly LoadingLayer loadingLayer;
+        private readonly bool showFailingLayer;
         private OsuScreenStack? stack;
         private Track? loadedTrack;
 
-        public PlayerArea(int userId, SpectatorPlayerClock clock)
+        public PlayerArea(int userId, SpectatorPlayerClock clock, bool showFailingLayer = true)
         {
             UserId = userId;
             SpectatorPlayerClock = clock;
+            this.showFailingLayer = showFailingLayer;
 
             RelativeSizeAxes = Axes.Both;
 
@@ -111,7 +113,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
             stack.Push(new MultiSpectatorPlayerLoader(Score, () =>
             {
-                var player = new MultiSpectatorPlayer(Score, SpectatorPlayerClock);
+                var player = new MultiSpectatorPlayer(Score, SpectatorPlayerClock, showFailingLayer);
                 player.OnGameplayStarted += () => OnGameplayStarted?.Invoke();
 
                 clockAdjustmentsFromMods.BindAdjustments(player.ClockAdjustmentsFromMods);

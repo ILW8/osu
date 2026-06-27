@@ -19,6 +19,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         {
         }
 
+        // Spectator loaders should not gate on window focus — the operator may be alt-tabbed
+        // (e.g. to OBS), and gameplay must still load.
+        protected override bool ReadyForGameplay => true;
+
+        // Skip the metadata display delay and shorten the content fade-out: spectators don't read map info.
+        protected override double PlayerPushDelay => 0;
+        protected override double ContentOutDelay => 250;
+
         [BackgroundDependencyLoader]
         private void load()
         {
