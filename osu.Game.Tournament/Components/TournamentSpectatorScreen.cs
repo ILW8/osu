@@ -1,10 +1,14 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
+using osu.Framework.Logging;
 using osu.Game.Online.Spectator;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
 using osu.Game.Screens.Play;
@@ -46,6 +50,9 @@ namespace osu.Game.Tournament.Components
 
         private readonly Dictionary<int, PlayerArea> playerAreas = new Dictionary<int, PlayerArea>();
         private readonly Dictionary<int, int> slots = new Dictionary<int, int>(); // userId -> slot index
+
+        private PlayerArea? currentAudioSource;
+        private IAggregateAudioAdjustment? boundAdjustments;
 
         public TournamentSpectatorScreen(int[] users)
             : base(users)
@@ -114,6 +121,46 @@ namespace osu.Game.Tournament.Components
                 syncManager.RemoveManagedClock(area.SpectatorPlayerClock);
         }
 
+        protected override void Update()
+        {
+            base.Update();
+            checkAudioSource();
+        }
+
+        /// <summary>
+        /// Picks a single player tile to act as the audio source and mutes the rest, preferring the
+        /// running, in-sync clock closest to the master time. Avoids a cacophony of overlapping audio.
+        /// </summary>
+        private void checkAudioSource()
+        {
+            // Keep the current source if it's still a good candidate.
+            if (currentAudioSource != null && isCandidateAudioSource(currentAudioSource.SpectatorPlayerClock))
+                return;
+
+            currentAudioSource = playerAreas.Values
+                                            .Where(a => isCandidateAudioSource(a.SpectatorPlayerClock))
+                                            .MinBy(a => Math.Abs(a.SpectatorPlayerClock.CurrentTime - syncManager.CurrentMasterTime));
+
+            // Only rebind if a valid source exists; otherwise keep the previous adjustments to avoid sudden audio changes.
+            if (currentAudioSource != null)
+                bindAudioAdjustments(currentAudioSource);
+
+            foreach (var area in playerAreas.Values)
+                area.Mute = area != currentAudioSource;
+        }
+
+        private void bindAudioAdjustments(PlayerArea source)
+        {
+            if (boundAdjustments != null)
+                masterClockContainer.AdjustmentsFromMods.UnbindAdjustments(boundAdjustments);
+
+            boundAdjustments = source.ClockAdjustmentsFromMods;
+            masterClockContainer.AdjustmentsFromMods.BindAdjustments(boundAdjustments);
+        }
+
+        private static bool isCandidateAudioSource(SpectatorPlayerClock? clock)
+            => clock?.IsRunning == true && !clock.IsCatchingUp && !clock.WaitingOnFrames;
+
         // Sequential slot assignment. Replaced by a participation-aware snapshot in a later task.
         private int assignSlot(int userId)
         {
@@ -125,7 +172,32 @@ namespace osu.Game.Tournament.Components
 
         private void performInitialSeek()
         {
-            masterClockContainer.Reset(0, true);
+            // Each client may be at a different point in the beatmap; find a common, low starting point
+            // so no client has to stutter to catch up.
+            var minFrameTimes = playerAreas.Values
+                                           .Where(a => a.Score != null)
+                                           .Select(a => a.Score!.Replay.Frames.MinBy(f => f.Time)?.Time ?? 0)
+                                           .ToList();
+
+            double startTime = ComputeInitialSeekTime(minFrameTimes);
+            masterClockContainer.Reset(startTime, true);
+            Logger.Log($"[TournamentSpectator] initial seek to {startTime}");
+        }
+
+        /// <summary>
+        /// Computes the initial master-clock seek time: trim low outliers (more than 1000ms below the
+        /// mean) then take the minimum of the rest. Returns 0 for an empty input.
+        /// </summary>
+        internal static double ComputeInitialSeekTime(IEnumerable<double> minFrameTimes)
+        {
+            var times = minFrameTimes.ToList();
+
+            if (times.Count == 0)
+                return 0;
+
+            double mean = times.Average();
+            times.RemoveAll(t => mean - t > 1000);
+            return times.Min();
         }
     }
 }
