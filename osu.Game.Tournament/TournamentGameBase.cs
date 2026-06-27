@@ -33,7 +33,7 @@ namespace osu.Game.Tournament
         private LadderInfo ladder = new LadderInfo();
         private TournamentStorage storage = null!;
         private DependencyContainer dependencies = null!;
-        private FileBasedIPC ipc = null!;
+        private MatchIPCInfo ipc = null!;
         private BeatmapLookupCache beatmapCache = null!;
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
@@ -202,7 +202,16 @@ namespace osu.Game.Tournament
                 Ruleset.BindTo(ladder.Ruleset);
 
                 dependencies.Cache(ladder);
-                dependencies.CacheAs<MatchIPCInfo>(ipc = new FileBasedIPC());
+
+                // Live multiplayer-room spectating sources match data straight from a room; the
+                // default file-based IPC bridges to a stable client.
+                ipc = ladder.UseMultiplayerSpectating.Value ? new MultiplayerMatchIPCInfo() : new FileBasedIPC();
+                dependencies.CacheAs(ipc);
+
+                // Cache the concrete connector too so its room-connection surface can be resolved.
+                if (ipc is MultiplayerMatchIPCInfo multiplayerIpc)
+                    dependencies.CacheAs(multiplayerIpc);
+
                 Add(ipc);
 
                 bracketLoadTaskCompletionSource.SetResult(true);
