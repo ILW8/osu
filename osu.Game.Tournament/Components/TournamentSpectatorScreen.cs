@@ -9,6 +9,7 @@ using osu.Framework.Audio;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Logging;
+using osu.Game.Beatmaps;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Spectator;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
@@ -58,6 +59,8 @@ namespace osu.Game.Tournament.Components
         private PlayerArea? currentAudioSource;
         private IAggregateAudioAdjustment? boundAdjustments;
 
+        private bool gameplayStarted;
+
         public TournamentSpectatorScreen(int[] users)
             : base(users)
         {
@@ -66,11 +69,21 @@ namespace osu.Game.Tournament.Components
         [BackgroundDependencyLoader]
         private void load()
         {
+            // The master clock + grid are built lazily on the first started player (setupGameplayInfrastructure),
+            // because the tournament client's global Beatmap.Value is the dummy beatmap — the real working
+            // beatmap for the round only arrives via the resolved SpectatorGameplayState.
+            VisibleSlotCount.Value = Math.Clamp(Users.Count, TournamentPlayerGrid.MIN_SLOTS, TournamentPlayerGrid.MAX_SLOTS);
+        }
+
+        private void setupGameplayInfrastructure(WorkingBeatmap working)
+        {
+            gameplayStarted = true;
+
             InternalChildren = new Drawable[]
             {
                 // PlayerArea tiles are nested under the master clock container so their
                 // SpectatorPlayerClocks resolve the correct IGameplayClock via DI.
-                masterClockContainer = new MasterGameplayClockContainer(Beatmap.Value, 0)
+                masterClockContainer = new MasterGameplayClockContainer(working, 0)
                 {
                     Child = grid = new TournamentPlayerGrid { RelativeSizeAxes = Axes.Both },
                 },
@@ -82,13 +95,7 @@ namespace osu.Game.Tournament.Components
                 },
             };
 
-            VisibleSlotCount.Value = System.Math.Clamp(Users.Count, TournamentPlayerGrid.MIN_SLOTS, TournamentPlayerGrid.MAX_SLOTS);
             grid.Capacity.BindTo(VisibleSlotCount);
-        }
-
-        protected override void LoadComplete()
-        {
-            base.LoadComplete();
             masterClockContainer.Reset();
         }
 
@@ -100,6 +107,10 @@ namespace osu.Game.Tournament.Components
         {
             if (playerAreas.ContainsKey(userId))
                 return;
+
+            // Build the shared clock + grid from the first resolved working beatmap.
+            if (!gameplayStarted)
+                setupGameplayInfrastructure(spectatorGameplayState.Beatmap);
 
             // Snapshot the round's participant → slot mapping once, on the first player to start.
             if (slots.Count == 0)
@@ -147,6 +158,10 @@ namespace osu.Game.Tournament.Components
         /// </summary>
         private void checkAudioSource()
         {
+            // Nothing to manage until the first player has started (lazy infrastructure setup).
+            if (!gameplayStarted)
+                return;
+
             // Keep the current source if it's still a good candidate.
             if (currentAudioSource != null && isCandidateAudioSource(currentAudioSource.SpectatorPlayerClock))
                 return;
