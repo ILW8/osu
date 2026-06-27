@@ -1,6 +1,7 @@
 // Copyright (c) ppy Pty Ltd <contact@ppy.sh>. Licensed under the MIT Licence.
 // See the LICENCE file in the repository root for full licence text.
 
+using System.Linq;
 using osu.Framework.Allocation;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
@@ -9,6 +10,7 @@ using osu.Framework.Graphics.Shapes;
 using osu.Framework.Threading;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays.Settings;
+using osu.Game.Screens;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -32,7 +34,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
         [Resolved]
         private TournamentMatchChatDisplay chat { get; set; } = null!;
 
-        private Drawable chroma = null!;
+        private Container chroma = null!;
+
+        // Multiplayer-room spectating: the connector (if active), the host container for the embedded
+        // spectating display, and the current round's display screen.
+        private MultiplayerMatchIPCInfo? multiplayerIpc;
+        private Container gameplayHost = null!;
+        private TournamentSpectatorScreen? spectatorScreen;
 
         [BackgroundDependencyLoader]
         private void load(MatchIPCInfo ipc)
@@ -127,6 +135,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
             LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
 
             warmup.BindValueChanged(w => header.ShowScores = !w.NewValue, true);
+
+            multiplayerIpc = ipc as MultiplayerMatchIPCInfo;
+
+            if (multiplayerIpc != null)
+            {
+                // Embedded spectating display, hosted over the chroma area (sized to the chroma region).
+                chroma.Add(gameplayHost = new Container { RelativeSizeAxes = Axes.Both, Alpha = 0 });
+            }
         }
 
         protected override void LoadComplete()
@@ -135,6 +151,49 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             State.BindTo(ipc.State);
             State.BindValueChanged(_ => updateState(), true);
+
+            if (multiplayerIpc != null)
+            {
+                multiplayerIpc.IsConnected.BindValueChanged(c => gameplayHost.FadeTo(c.NewValue ? 1 : 0, 300), true);
+
+                // Auto-advance / push driven off the non-Drawable signal so a hidden screen can't miss it.
+                multiplayerIpc.HasActiveSpectatorPlayers.BindValueChanged(_ => updateSpectatorScreen(), true);
+
+                // A new round is loading — tear down the previous round's tiles synchronously so they
+                // don't persist into the next round (never via Schedule, which a hidden screen would defer).
+                State.BindValueChanged(s =>
+                {
+                    if (s.NewValue == TourneyState.WaitingForClients)
+                        teardownSpectatorScreen();
+                });
+            }
+        }
+
+        private void updateSpectatorScreen()
+        {
+            if (multiplayerIpc == null)
+                return;
+
+            if (multiplayerIpc.HasActiveSpectatorPlayers.Value && spectatorScreen == null)
+                pushSpectatorScreen();
+        }
+
+        private void pushSpectatorScreen()
+        {
+            // Synchronous teardown of any previous round before pushing the new one.
+            gameplayHost.Clear(true);
+
+            var stack = new OsuScreenStack { RelativeSizeAxes = Axes.Both };
+            gameplayHost.Add(stack);
+
+            spectatorScreen = new TournamentSpectatorScreen(multiplayerIpc!.CurrentParticipants.ToArray());
+            stack.Push(spectatorScreen);
+        }
+
+        private void teardownSpectatorScreen()
+        {
+            gameplayHost.Clear(true);
+            spectatorScreen = null;
         }
 
         protected override void CurrentMatchChanged(ValueChangedEvent<TournamentMatch?> match)
@@ -195,10 +254,16 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    if (ipc.Score1.Value > ipc.Score2.Value)
-                        CurrentMatch.Value.Team1Score.Value++;
-                    else
-                        CurrentMatch.Value.Team2Score.Value++;
+                    // In multiplayer-spectating mode there is no team-score derivation (no team
+                    // assignment), so a map win can't be attributed to a team automatically — leave
+                    // match scoring to the operator and just cycle maps.
+                    if (multiplayerIpc == null)
+                    {
+                        if (ipc.Score1.Value > ipc.Score2.Value)
+                            CurrentMatch.Value.Team1Score.Value++;
+                        else
+                            CurrentMatch.Value.Team2Score.Value++;
+                    }
                 }
 
                 switch (State.Value)
@@ -247,6 +312,10 @@ namespace osu.Game.Tournament.Screens.Gameplay
         public override void Show()
         {
             updateState();
+
+            // Re-check on show in case the Playing transition arrived while this screen was hidden.
+            updateSpectatorScreen();
+
             base.Show();
         }
 
