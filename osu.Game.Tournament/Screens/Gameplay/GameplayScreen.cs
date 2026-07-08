@@ -129,14 +129,29 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 }
             });
 
-            State.BindValueChanged(state => chatToggle.Current.Value = State.Value == TourneyState.Idle, true);
-            chatToggle.Current.BindValueChanged(v => State.Value = v.NewValue ? TourneyState.Idle : TourneyState.Playing);
+            multiplayerIpc = ipc as MultiplayerMatchIPCInfo;
+
+            if (multiplayerIpc == null)
+            {
+                // File-IPC mode: the "Show chat" toggle doubles as the manual Idle/Playing switch.
+                State.BindValueChanged(_ => chatToggle.Current.Value = State.Value == TourneyState.Idle, true);
+                chatToggle.Current.BindValueChanged(v => State.Value = v.NewValue ? TourneyState.Idle : TourneyState.Playing);
+            }
+            else
+            {
+                // MP-room mode: State is connector-owned, so the toggle overrides chat visibility only.
+                chatToggle.Current.BindValueChanged(v =>
+                {
+                    if (v.NewValue)
+                        chat.Expand();
+                    else
+                        chat.Contract();
+                });
+            }
 
             LadderInfo.ChromaKeyWidth.BindValueChanged(width => chroma.Width = width.NewValue, true);
 
             warmup.BindValueChanged(w => header.ShowScores = !w.NewValue, true);
-
-            multiplayerIpc = ipc as MultiplayerMatchIPCInfo;
 
             if (multiplayerIpc != null)
             {
