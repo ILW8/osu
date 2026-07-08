@@ -158,6 +158,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
             if (multiplayerIpc != null)
             {
+                // remove green chroma boxes
+                chroma.Clear(true);
+
                 // Embedded spectating display, hosted over the chroma area (sized to the chroma region).
                 chroma.Add(gameplayHost = new Container { RelativeSizeAxes = Axes.Both, Alpha = 0 });
 
