@@ -17,7 +17,6 @@ using osu.Game.Online.API;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Rooms;
-using osu.Game.Online.Spectator;
 using osu.Game.Rulesets;
 using osu.Game.Tournament.Models;
 
@@ -25,14 +24,14 @@ namespace osu.Game.Tournament.IPC
 {
     /// <summary>
     /// A <see cref="MatchIPCInfo"/> implementation that sources match data directly from a live
-    /// multiplayer room via <see cref="MultiplayerClient"/> and <see cref="SpectatorClient"/>,
-    /// replacing the file-based IPC bridge used with the stable client.
+    /// multiplayer room via <see cref="MultiplayerClient"/>, replacing the file-based IPC bridge
+    /// used with the stable client.
     ///
-    /// This is a pure connection / data source: it joins a room as a spectator, keeps the
-    /// participant watch-set alive, mirrors the room's current beatmap / mods / chat channel onto
-    /// the <see cref="MatchIPCInfo"/> bindables, and exposes connection state plus a
-    /// <see cref="HasActiveSpectatorPlayers"/> signal. It does not render gameplay (that is the
-    /// <c>TournamentSpectatorScreen</c>), derive team scores, or write any IPC snapshot.
+    /// This is a pure connection / data source: it joins a room as a spectator, mirrors the room's
+    /// current beatmap / mods / chat channel onto the <see cref="MatchIPCInfo"/> bindables, and
+    /// exposes connection state plus a <see cref="HasActiveSpectatorPlayers"/> signal. It does not
+    /// render gameplay (that is the <c>TournamentSpectatorScreen</c>), derive team scores, or write
+    /// any IPC snapshot.
     /// </summary>
     public partial class MultiplayerMatchIPCInfo : MatchIPCInfo
     {
@@ -73,10 +72,9 @@ namespace osu.Game.Tournament.IPC
         public bool JoinedDuringGameplay { get; private set; }
 
         /// <summary>
-        /// <c>true</c> while at least one watched user is reporting <see cref="SpectatedUserState.Playing"/>.
-        /// Driven directly from <see cref="SpectatorClient.WatchedUserStates"/> on this (always-alive,
-        /// non-<c>Drawable</c>) component, so the signal fires reliably regardless of which screen is
-        /// currently visible — a hidden screen's paused scheduler cannot miss the transition.
+        /// <c>true</c> while at least one room user is in <see cref="MultiplayerUserState.Playing"/>.
+        /// Derived from room state on this always-alive component, so the signal fires reliably
+        /// regardless of which screen is currently visible.
         /// </summary>
         public IBindable<bool> HasActiveSpectatorPlayers => hasActiveSpectatorPlayers;
 
@@ -94,9 +92,6 @@ namespace osu.Game.Tournament.IPC
         private MultiplayerClient multiplayerClient { get; set; } = null!;
 
         [Resolved]
-        private SpectatorClient spectatorClient { get; set; } = null!;
-
-        [Resolved]
         private IAPIProvider api { get; set; } = null!;
 
         [Resolved]
@@ -111,27 +106,15 @@ namespace osu.Game.Tournament.IPC
         [Resolved]
         private BeatmapModelDownloader beatmapDownloader { get; set; } = null!;
 
-        private readonly IBindableDictionary<int, SpectatorState> watchedUserStates = new BindableDictionary<int, SpectatorState>();
-
-        /// <summary>
-        /// The set of user IDs we are currently watching via the spectator client.
-        /// </summary>
-        private readonly HashSet<int> watchedUsers = new HashSet<int>();
-
         private string? connectedRoomPassword;
         private int lastBeatmapId;
         private ScheduledDelegate? scheduledRankingReset;
 
-        [BackgroundDependencyLoader]
-        private void load()
-        {
-            watchedUserStates.BindTo(spectatorClient.WatchedUserStates);
-            watchedUserStates.BindCollectionChanged((_, _) => recomputeHasActiveSpectatorPlayers(), true);
-        }
-
         private void recomputeHasActiveSpectatorPlayers()
         {
-            bool anyPlaying = watchedUserStates.Values.Any(s => s.State == SpectatedUserState.Playing);
+            // Room state, not spectatorClient.WatchedUserStates — the per-map TournamentSpectatorScreen
+            // shares that watch and tears it down between maps, dropping the second map's Playing state.
+            bool anyPlaying = multiplayerClient.Room?.Users.Any(u => u.State == MultiplayerUserState.Playing) == true;
 
             if (hasActiveSpectatorPlayers.Value != anyPlaying)
                 hasActiveSpectatorPlayers.Value = anyPlaying;
@@ -188,36 +171,23 @@ namespace osu.Game.Tournament.IPC
                 multiplayerClient.LoadRequested += onLoadRequested;
                 multiplayerClient.GameplayStarted += onGameplayStarted;
                 multiplayerClient.ResultsReady += onResultsReady;
-                multiplayerClient.UserJoined += onUserJoined;
-                multiplayerClient.UserLeft += onUserLeft;
-                multiplayerClient.UserKicked += onUserKicked;
                 multiplayerClient.UserStateChanged += onUserStateChanged;
                 multiplayerClient.GameplayAborted += onGameplayAborted;
 
-                // Start watching users already participating in the current round. Users in
-                // Idle/Ready/etc. are picked up via UserStateChanged when they transition in.
                 Schedule(() =>
                 {
-                    bool joinedDuringGameplay = false;
-
                     if (multiplayerClient.Room != null)
                     {
-                        foreach (var user in multiplayerClient.Room.Users)
-                        {
-                            if (isParticipatingInCurrentRound(user.State))
-                            {
-                                joinedDuringGameplay = true;
-                                startWatchingUser(user.UserID);
-                            }
-                        }
-
                         updateBeatmapFromRoom();
                         updateModsFromRoom();
                         updateChatChannelFromRoom();
                     }
 
+                    // Seed the signal for a join-mid-gameplay.
+                    recomputeHasActiveSpectatorPlayers();
+
                     // Must precede the isConnected flip so listeners observe a consistent snapshot.
-                    JoinedDuringGameplay = joinedDuringGameplay;
+                    JoinedDuringGameplay = multiplayerClient.Room?.Users.Any(u => isParticipatingInCurrentRound(u.State)) == true;
                     connectedRoomId.Value = roomId;
                     connectedRoomPassword = password;
                     isConnected.Value = true;
@@ -266,9 +236,6 @@ namespace osu.Game.Tournament.IPC
             multiplayerClient.LoadRequested -= onLoadRequested;
             multiplayerClient.GameplayStarted -= onGameplayStarted;
             multiplayerClient.ResultsReady -= onResultsReady;
-            multiplayerClient.UserJoined -= onUserJoined;
-            multiplayerClient.UserLeft -= onUserLeft;
-            multiplayerClient.UserKicked -= onUserKicked;
             multiplayerClient.UserStateChanged -= onUserStateChanged;
             multiplayerClient.GameplayAborted -= onGameplayAborted;
 
@@ -286,15 +253,14 @@ namespace osu.Game.Tournament.IPC
             {
                 cancelScheduledRankingReset();
 
-                // Stop watching all users on the update thread.
-                foreach (int userId in watchedUsers.ToArray())
-                    stopWatchingUser(userId);
-
                 isConnected.Value = false;
                 connectedRoomId.Value = null;
                 connectedRoomPassword = null;
                 JoinedDuringGameplay = false;
                 lastBeatmapId = 0;
+
+                // Room is gone — drop the signal to false.
+                recomputeHasActiveSpectatorPlayers();
 
                 // Reset the inherited MatchIPCInfo bindables to defaults.
                 Beatmap.Value = null;
@@ -332,22 +298,6 @@ namespace osu.Game.Tournament.IPC
             return tcs.Task;
         }
 
-        private void startWatchingUser(int userId)
-        {
-            if (!watchedUsers.Add(userId))
-                return;
-
-            spectatorClient.WatchUser(userId);
-        }
-
-        private void stopWatchingUser(int userId)
-        {
-            if (!watchedUsers.Remove(userId))
-                return;
-
-            spectatorClient.StopWatchingUser(userId);
-        }
-
         #region Multiplayer event handlers
 
         private void onRoomUpdated()
@@ -357,6 +307,7 @@ namespace osu.Game.Tournament.IPC
                 updateBeatmapFromRoom();
                 updateModsFromRoom();
                 updateChatChannelFromRoom();
+                recomputeHasActiveSpectatorPlayers();
             });
         }
 
@@ -372,16 +323,6 @@ namespace osu.Game.Tournament.IPC
                 // Clear the previous map's totals; TournamentSpectatorScreen re-derives them once players start.
                 Score1.Value = 0;
                 Score2.Value = 0;
-
-                // Start watching users that are about to play.
-                if (multiplayerClient.Room != null)
-                {
-                    foreach (var user in multiplayerClient.Room.Users)
-                    {
-                        if (isParticipatingInCurrentRound(user.State))
-                            startWatchingUser(user.UserID);
-                    }
-                }
             });
         }
 
@@ -429,30 +370,8 @@ namespace osu.Game.Tournament.IPC
             scheduledRankingReset = null;
         }
 
-        private void onUserJoined(MultiplayerRoomUser user)
-        {
-            Schedule(() =>
-            {
-                if (isParticipatingInCurrentRound(user.State))
-                    startWatchingUser(user.UserID);
-            });
-        }
-
-        private void onUserLeft(MultiplayerRoomUser user) => Schedule(() => stopWatchingUser(user.UserID));
-
-        private void onUserKicked(MultiplayerRoomUser user) => Schedule(() => stopWatchingUser(user.UserID));
-
-        private void onUserStateChanged(MultiplayerRoomUser user, MultiplayerUserState state)
-        {
-            // Pick up users transitioning into a participating state (e.g. Ready -> WaitingForLoad
-            // when the host starts the round). startWatchingUser is idempotent. Watches are NOT torn
-            // down on transition out — keeping them alive across
-            // play -> FinishedPlay -> Results -> Idle -> Ready -> WaitingForLoad avoids losing the
-            // final frame bundle and avoids re-subscription churn. They are released on user-left or
-            // disconnect. This keeps bandwidth proportional to slot count, not room size.
-            if (isParticipatingInCurrentRound(state))
-                Schedule(() => startWatchingUser(user.UserID));
-        }
+        // Room state drives the push signal, so re-derive on every user-state change.
+        private void onUserStateChanged(MultiplayerRoomUser user, MultiplayerUserState state) => Schedule(recomputeHasActiveSpectatorPlayers);
 
         private static bool isParticipatingInCurrentRound(MultiplayerUserState state)
             => state == MultiplayerUserState.WaitingForLoad
@@ -562,21 +481,12 @@ namespace osu.Game.Tournament.IPC
         {
             base.Dispose(isDisposing);
 
-            if (spectatorClient.IsNotNull())
-            {
-                foreach (int userId in watchedUsers)
-                    spectatorClient.StopWatchingUser(userId);
-            }
-
             if (multiplayerClient.IsNotNull())
             {
                 multiplayerClient.RoomUpdated -= onRoomUpdated;
                 multiplayerClient.LoadRequested -= onLoadRequested;
                 multiplayerClient.GameplayStarted -= onGameplayStarted;
                 multiplayerClient.ResultsReady -= onResultsReady;
-                multiplayerClient.UserJoined -= onUserJoined;
-                multiplayerClient.UserLeft -= onUserLeft;
-                multiplayerClient.UserKicked -= onUserKicked;
                 multiplayerClient.UserStateChanged -= onUserStateChanged;
                 multiplayerClient.GameplayAborted -= onGameplayAborted;
             }
