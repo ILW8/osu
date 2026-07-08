@@ -236,45 +236,48 @@ namespace osu.Game.Tournament
             // SampleStore.Get returns a fresh Sample wrapper each call.
             //
             // Instead, attach the adjustment to the per-name SampleBassFactory cached
-            // inside Audio.Samples for each UI/ lookup. The factory adopts each created
-            // sample as its child (via AddItem in onPlay), so the adjustment cascades to
-            // all future plays of that sample without affecting non-UI factories
+            // inside Audio.Samples for each muted-prefix lookup. The factory adopts each
+            // created sample as its child (via AddItem in onPlay), so the adjustment
+            // cascades to all future plays of that sample without affecting other factories.
+            // Prefixes cover UI/ (hover/click) and Keyboard/ (textbox typing/caret feedback).
+            string[] mutedPrefixes = { @"UI/", @"Keyboard/" };
+
             ladder.MuteUISounds.BindValueChanged(muted => uiSampleMuteAdjustment.Value = muted.NewValue ? 0 : 1, true);
 
-            var uiSampleLookups = new HashSet<string>(StringComparer.Ordinal);
+            var mutedLookups = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (string resource in Audio.Samples.GetAvailableResources())
             {
-                if (!resource.StartsWith(@"UI/", StringComparison.Ordinal))
+                if (!mutedPrefixes.Any(p => resource.StartsWith(p, StringComparison.Ordinal)))
                     continue;
 
-                uiSampleLookups.Add(Path.ChangeExtension(resource, null));
+                mutedLookups.Add(Path.ChangeExtension(resource, null));
             }
 
-            // Force factory creation for each UI lookup so the reflection step below sees them.
-            foreach (string lookup in uiSampleLookups)
+            // Force factory creation for each lookup so the reflection step below sees them.
+            foreach (string lookup in mutedLookups)
                 Audio.Samples.Get(lookup);
 
             var factoriesField = Audio.Samples.GetType().GetField("factories", BindingFlags.NonPublic | BindingFlags.Instance);
 
             if (factoriesField?.GetValue(Audio.Samples) is IDictionary factories)
             {
-                var uiFactories = new List<AdjustableAudioComponent>();
+                var mutedFactories = new List<AdjustableAudioComponent>();
 
                 lock (factories)
                 {
                     foreach (DictionaryEntry entry in factories)
                     {
                         if (entry.Key is string name
-                            && name.StartsWith(@"UI/", StringComparison.Ordinal)
+                            && mutedPrefixes.Any(p => name.StartsWith(p, StringComparison.Ordinal))
                             && entry.Value is AdjustableAudioComponent factory)
                         {
-                            uiFactories.Add(factory);
+                            mutedFactories.Add(factory);
                         }
                     }
                 }
 
-                foreach (var factory in uiFactories)
+                foreach (var factory in mutedFactories)
                     factory.AddAdjustment(AdjustableProperty.Volume, uiSampleMuteAdjustment);
             }
             else
