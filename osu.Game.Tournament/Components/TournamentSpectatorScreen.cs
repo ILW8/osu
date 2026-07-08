@@ -79,10 +79,16 @@ namespace osu.Game.Tournament.Components
         {
             gameplayStarted = true;
 
+            // MasterGameplayClockContainer accesses working.Track in its constructor, which throws
+            // unless the track has been loaded first (the resolved room beatmap arrives un-loaded).
+            if (!working.TrackLoaded)
+                working.LoadTrack();
+
             InternalChildren = new Drawable[]
             {
-                // PlayerArea tiles are nested under the master clock container so their
-                // SpectatorPlayerClocks resolve the correct IGameplayClock via DI.
+                // PlayerArea tiles are nested under the master clock container to mirror MultiSpectatorScreen's
+                // layout; the master-clock link itself is established by SpectatorSyncManager.CreateManagedClock()
+                // passing the master GameplayClockContainer into each SpectatorPlayerClock by reference (not via DI).
                 masterClockContainer = new MasterGameplayClockContainer(working, 0)
                 {
                     Child = grid = new TournamentPlayerGrid { RelativeSizeAxes = Axes.Both },
