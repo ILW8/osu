@@ -262,9 +262,10 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    // In multiplayer-spectating mode there is no team-score derivation (no team
-                    // assignment), so a map win can't be attributed to a team automatically — leave
-                    // match scoring to the operator and just cycle maps.
+                    // In multiplayer-spectating mode the live Score1/Score2 team totals are derived by
+                    // TournamentSpectatorScreen, but attributing a map win to a bracket team is left to
+                    // the operator (the room's team ids don't necessarily map to Team1/Team2) — just
+                    // cycle maps and let the operator advance the match score.
                     if (multiplayerIpc == null)
                     {
                         if (ipc.Score1.Value > ipc.Score2.Value)

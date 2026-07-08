@@ -11,10 +11,12 @@ using osu.Framework.Graphics;
 using osu.Framework.Logging;
 using osu.Game.Beatmaps;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Spectator;
 using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
 using osu.Game.Screens.Play;
 using osu.Game.Screens.Spectate;
+using osu.Game.Tournament.IPC;
 
 namespace osu.Game.Tournament.Components
 {
@@ -49,12 +51,19 @@ namespace osu.Game.Tournament.Components
         [Resolved]
         private MultiplayerClient multiplayerClient { get; set; } = null!;
 
+        [Resolved]
+        private MatchIPCInfo ipc { get; set; } = null!;
+
         private MasterGameplayClockContainer masterClockContainer = null!;
         private SpectatorSyncManager syncManager = null!;
         private TournamentPlayerGrid grid = null!;
 
         private readonly Dictionary<int, PlayerArea> playerAreas = new Dictionary<int, PlayerArea>();
         private readonly Dictionary<int, int> slots = new Dictionary<int, int>(); // userId -> slot index
+
+        // Live team-score bar, derived from spectated frames (no file-based IPC in this mode).
+        private readonly Dictionary<int, SpectatorScoreProcessor> scoreProcessors = new Dictionary<int, SpectatorScoreProcessor>();
+        private readonly Dictionary<int, int> teamByUser = new Dictionary<int, int>(); // userId -> TeamVersus TeamID
 
         private PlayerArea? currentAudioSource;
         private IAggregateAudioAdjustment? boundAdjustments;
@@ -134,7 +143,25 @@ namespace osu.Game.Tournament.Components
             playerAreas[userId] = area;
             grid.Add(area, slot);
             area.LoadScore(spectatorGameplayState.Score);
+
+            addScoreProcessor(userId, area);
         });
+
+        // Reference the player's synced clock so the total tracks on-screen playback, and snapshot
+        // the user's MP-room team once (it doesn't change mid-map) for bucketing in updateTeamScores.
+        private void addScoreProcessor(int userId, PlayerArea area)
+        {
+            var processor = new SpectatorScoreProcessor(userId)
+            {
+                ReferenceClock = area.SpectatorPlayerClock,
+            };
+
+            scoreProcessors[userId] = processor;
+            AddInternal(processor);
+
+            if ((multiplayerClient.Room?.Users.FirstOrDefault(u => u.UserID == userId)?.MatchState as TeamVersusUserState)?.TeamID is int team)
+                teamByUser[userId] = team;
+        }
 
         protected override void PassGameplay(int userId) => Schedule(() => removeClock(userId));
 
@@ -156,6 +183,38 @@ namespace osu.Game.Tournament.Components
         {
             base.Update();
             checkAudioSource();
+            updateTeamScores();
+        }
+
+        // Writes live per-team totals to the overlay score bar; empty -> 0/0, which resets it between rounds.
+        private void updateTeamScores()
+        {
+            foreach (var processor in scoreProcessors.Values)
+                processor.UpdateScore();
+
+            var entries = scoreProcessors.Select(kv =>
+                (team: teamByUser.TryGetValue(kv.Key, out int t) ? (int?)t : null, score: kv.Value.TotalScore.Value));
+
+            (ipc.Score1.Value, ipc.Score2.Value) = SumTeamScores(entries);
+        }
+
+        /// <summary>
+        /// Sums per-user totals by TeamVersus TeamID: team 0 -> Red/Score1, other -> Blue/Score2,
+        /// null (e.g. a HeadToHead room with no team state) -> neither.
+        /// </summary>
+        internal static (long red, long blue) SumTeamScores(IEnumerable<(int? team, long score)> entries)
+        {
+            long red = 0, blue = 0;
+
+            foreach ((int? team, long score) in entries)
+            {
+                if (team == 0)
+                    red += score;
+                else if (team != null)
+                    blue += score;
+            }
+
+            return (red, blue);
         }
 
         /// <summary>

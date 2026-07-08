@@ -369,6 +369,10 @@ namespace osu.Game.Tournament.IPC
                 cancelScheduledRankingReset();
                 State.Value = TourneyState.WaitingForClients;
 
+                // Clear the previous map's totals; TournamentSpectatorScreen re-derives them once players start.
+                Score1.Value = 0;
+                Score2.Value = 0;
+
                 // Start watching users that are about to play.
                 if (multiplayerClient.Room != null)
                 {
