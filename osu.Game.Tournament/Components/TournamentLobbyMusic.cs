@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
 using osu.Framework.Bindables;
 using osu.Framework.Extensions.ObjectExtensions;
 using osu.Framework.Graphics;
@@ -333,12 +334,16 @@ namespace osu.Game.Tournament.Components
 
         private void startPlayback(string trigger)
         {
-            // Re-arm Looping on every transition into the play branch. The stop branch clears
-            // it so gameplay clocks don't loop the track, and the beatmap-resolution path only
-            // sets it on a fresh resolve — without this, returning to lobby state with the
-            // same beatmap (e.g. after Ranking) would play the track once and then go silent.
-            if (globalBeatmap.Value?.Track != null)
-                globalBeatmap.Value.Track.Looping = true;
+            if (globalBeatmap.Value?.Track is { } track)
+            {
+                // Reset the mod rate adjustments (e.g. DoubleTime) gameplay bound to this shared cached
+                // track and hasn't unbound yet, else the lobby loop inherits the last map's rate.
+                track.RemoveAllAdjustments(AdjustableProperty.Frequency);
+                track.RemoveAllAdjustments(AdjustableProperty.Tempo);
+
+                // Re-arm looping (the stop branch clears it so gameplay clocks don't loop the track).
+                track.Looping = true;
+            }
 
             int playingId = globalBeatmap.Value?.BeatmapInfo?.OnlineID ?? 0;
             string title = globalBeatmap.Value?.BeatmapInfo?.Metadata.Title ?? "(unknown)";
