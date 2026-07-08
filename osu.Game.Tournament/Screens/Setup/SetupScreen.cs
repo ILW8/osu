@@ -42,8 +42,14 @@ namespace osu.Game.Tournament.Screens.Setup
         [Resolved]
         private TournamentSceneManager? sceneManager { get; set; }
 
+        [Resolved]
+        private TournamentGameBase game { get; set; } = null!;
+
         private readonly IBindable<APIUser> localUser = new Bindable<APIUser>();
         private Bindable<Size> windowSize = null!;
+
+        private TourneyButton? multiplayerRestartButton;
+        private ActionableInfo? ipcSourceInfo;
 
         [BackgroundDependencyLoader]
         private void load(FrameworkConfigManager frameworkConfig)
@@ -74,15 +80,42 @@ namespace osu.Game.Tournament.Screens.Setup
             localUser.BindTo(api.LocalUser);
             localUser.BindValueChanged(_ => Schedule(reload));
             stableInfo.OnStableInfoSaved += () => Schedule(reload);
+
+            // Bound once here (not in reload(), which runs on every user/stable change) so the
+            // subscription doesn't accumulate and fade stale buttons.
+            LadderInfo.UseMultiplayerSpectating.BindValueChanged(_ => updateMultiplayerRestartButton());
+
             reload();
         }
 
         private void reload()
         {
+            bool isCurrentlyMultiplayer = ipc is MultiplayerMatchIPCInfo;
+
             var fileBasedIpc = ipc as FileBasedIPC;
+
+            multiplayerRestartButton = new TourneyButton
+            {
+                RelativeSizeAxes = Axes.X,
+                Text = "Save and restart to apply",
+                Alpha = LadderInfo.UseMultiplayerSpectating.Value != isCurrentlyMultiplayer ? 1 : 0,
+                Action = () =>
+                {
+                    game.SaveChanges();
+                    game.AttemptExit();
+                },
+            };
+
             fillFlow.Children = new Drawable[]
             {
-                new ActionableInfo
+                new LabelledSwitchButton
+                {
+                    Label = "Use multiplayer spectating",
+                    Description = "When enabled, the overlay connects to a multiplayer room for match data instead of reading from the stable client's IPC files.",
+                    Current = LadderInfo.UseMultiplayerSpectating,
+                },
+                multiplayerRestartButton,
+                ipcSourceInfo = new ActionableInfo
                 {
                     Label = "Current IPC source",
                     ButtonText = "Change source",
@@ -150,6 +183,19 @@ namespace osu.Game.Tournament.Screens.Setup
                     Current = LadderInfo.DisplayTeamSeeds,
                 },
             };
+
+            updateMultiplayerRestartButton();
+        }
+
+        // The restart button is only relevant while the pending toggle differs from the live IPC type
+        // (the IPC connector is chosen once at startup, so the mode change needs a restart to apply).
+        // The IPC source picker is hidden once multiplayer spectating is chosen (it's the alternative source).
+        private void updateMultiplayerRestartButton()
+        {
+            bool useMultiplayer = LadderInfo.UseMultiplayerSpectating.Value;
+
+            multiplayerRestartButton?.FadeTo(useMultiplayer != (ipc is MultiplayerMatchIPCInfo) ? 1 : 0, 200);
+            ipcSourceInfo?.FadeTo(useMultiplayer ? 0 : 1, 200);
         }
 
         private const float aspect_ratio = 16f / 9f;
