@@ -3,11 +3,13 @@
 
 using System.Linq;
 using osu.Framework.Allocation;
+using osu.Framework.Audio;
 using osu.Framework.Bindables;
 using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Threading;
+using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays.Settings;
 using osu.Game.Screens;
@@ -43,11 +45,12 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TournamentSpectatorScreen? spectatorScreen;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc)
+        private void load(MatchIPCInfo ipc, AudioManager audio)
         {
             this.ipc = ipc;
 
             LabelledSwitchButton chatToggle;
+            ControlPanel controlPanel;
 
             AddRangeInternal(new Drawable[]
             {
@@ -100,7 +103,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     Anchor = Anchor.BottomCentre,
                     Origin = Anchor.TopCentre,
                 },
-                new ControlPanel
+                controlPanel = new ControlPanel
                 {
                     Children = new Drawable[]
                     {
@@ -157,6 +160,39 @@ namespace osu.Game.Tournament.Screens.Gameplay
             {
                 // Embedded spectating display, hosted over the chroma area (sized to the chroma region).
                 chroma.Add(gameplayHost = new Container { RelativeSizeAxes = Axes.Both, Alpha = 0 });
+
+                // Volume controls for the embedded spectating audio (only the tourney client plays it in
+                // MP-room mode). Bound straight to the framework audio bindables, which already persist
+                // across restarts via framework config.
+                controlPanel.AddRange(new Drawable[]
+                {
+                    new ControlPanel.Spacer(),
+                    new TournamentSpriteText
+                    {
+                        Text = "Volume",
+                        Font = OsuFont.GetFont(weight: FontWeight.Bold, size: 16),
+                        Anchor = Anchor.TopCentre,
+                        Origin = Anchor.TopCentre,
+                    },
+                    new SettingsSlider<double>
+                    {
+                        LabelText = "Master",
+                        Current = audio.Volume,
+                        KeyboardStep = 0.01f,
+                    },
+                    new SettingsSlider<double>
+                    {
+                        LabelText = "Music",
+                        Current = audio.VolumeTrack,
+                        KeyboardStep = 0.01f,
+                    },
+                    new SettingsSlider<double>
+                    {
+                        LabelText = "Effects",
+                        Current = audio.VolumeSample,
+                        KeyboardStep = 0.01f,
+                    },
+                });
             }
         }
 

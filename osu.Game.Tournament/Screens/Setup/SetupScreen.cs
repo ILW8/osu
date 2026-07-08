@@ -182,6 +182,12 @@ namespace osu.Game.Tournament.Screens.Setup
                     Description = "Team seeds will display alongside each team at the top in gameplay/map pool screens.",
                     Current = LadderInfo.DisplayTeamSeeds,
                 },
+                new LabelledSwitchButton
+                {
+                    Label = "Mute UI sounds",
+                    Description = "Mutes hover and click sounds from buttons and controls. Gameplay hitsounds are unaffected.",
+                    Current = LadderInfo.MuteUISounds,
+                },
             };
 
             updateMultiplayerRestartButton();
