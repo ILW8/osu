@@ -93,6 +93,13 @@ namespace osu.Game.Tournament.Components
             if (!working.TrackLoaded)
                 working.LoadTrack();
 
+            // TournamentLobbyMusic loops the room beatmap for lobby music via Track.Looping = true, and
+            // GetWorkingBeatmap hands out a cached shared WorkingBeatmap — so this is the SAME Track the
+            // master clock is about to drive. A leftover looping flag makes the track wrap to the start
+            // at map end instead of completing, dragging every synced tile back to 0. Gameplay owns a
+            // non-looping track; assert that here rather than depending on the lobby music's teardown timing.
+            working.Track.Looping = false;
+
             InternalChildren = new Drawable[]
             {
                 // PlayerArea tiles are nested under the master clock container to mirror MultiSpectatorScreen's

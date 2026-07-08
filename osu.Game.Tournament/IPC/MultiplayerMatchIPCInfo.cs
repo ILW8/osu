@@ -188,6 +188,11 @@ namespace osu.Game.Tournament.IPC
 
                     // Must precede the isConnected flip so listeners observe a consistent snapshot.
                     JoinedDuringGameplay = multiplayerClient.Room?.Users.Any(u => isParticipatingInCurrentRound(u.State)) == true;
+
+                    // Seed State from the room snapshot so lobby-gated consumers react immediately
+                    // rather than waiting for the first state-transition event (see DeriveState).
+                    State.Value = DeriveState(multiplayerClient.Room?.Users.Select(u => u.State) ?? Enumerable.Empty<MultiplayerUserState>());
+
                     connectedRoomId.Value = roomId;
                     connectedRoomPassword = password;
                     isConnected.Value = true;
@@ -378,6 +383,27 @@ namespace osu.Game.Tournament.IPC
                || state == MultiplayerUserState.Loaded
                || state == MultiplayerUserState.ReadyForGameplay
                || state == MultiplayerUserState.Playing;
+
+        /// <summary>
+        /// Derives the tourney state from a room's current user states, for seeding
+        /// <see cref="MatchIPCInfo.State"/> on connect. The per-round events
+        /// (<see cref="onLoadRequested"/> etc.) only fire on transitions, so without this a room
+        /// already sitting in the lobby when we join would stay at the Initialising default and
+        /// nothing gated on <c>State == Idle</c> (lobby music, gameplay-screen auto-advance) would react.
+        /// </summary>
+        internal static TourneyState DeriveState(IEnumerable<MultiplayerUserState> states)
+        {
+            var list = states.ToList();
+
+            if (list.Any(s => s == MultiplayerUserState.Playing))
+                return TourneyState.Playing;
+
+            // Someone is loading into the map but nobody is playing yet.
+            if (list.Any(isParticipatingInCurrentRound))
+                return TourneyState.WaitingForClients;
+
+            return TourneyState.Idle;
+        }
 
         #endregion
 

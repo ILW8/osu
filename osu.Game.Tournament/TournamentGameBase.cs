@@ -23,6 +23,7 @@ using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online;
 using osu.Game.Online.API.Requests;
+using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IO;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -219,6 +220,10 @@ namespace osu.Game.Tournament
                     dependencies.CacheAs(multiplayerIpc);
 
                 Add(ipc);
+
+                // Play the room beatmap on loop while connected and not actively spectating gameplay.
+                if (ipc is MultiplayerMatchIPCInfo)
+                    Add(new TournamentLobbyMusic());
 
                 applyUISampleMuting();
 
