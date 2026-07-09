@@ -326,11 +326,9 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    // In multiplayer-spectating mode the live Score1/Score2 team totals are derived by
-                    // TournamentSpectatorScreen, but attributing a map win to a bracket team is left to
-                    // the operator (the room's team ids don't necessarily map to Team1/Team2) — just
-                    // cycle maps and let the operator advance the match score.
-                    if (multiplayerIpc == null)
+                    // count once on the transition into Ranking; a call to Show() can re-run updateState() while still
+                    // in Ranking state
+                    if (lastState != TourneyState.Ranking)
                     {
                         if (ipc.Score1.Value > ipc.Score2.Value)
                             CurrentMatch.Value.Team1Score.Value++;
