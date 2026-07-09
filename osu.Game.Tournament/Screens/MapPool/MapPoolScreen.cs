@@ -124,16 +124,13 @@ namespace osu.Game.Tournament.Screens.MapPool
             splitMapPoolByMods = LadderInfo.SplitMapPoolByMods.GetBoundCopy();
             splitMapPoolByMods.BindValueChanged(_ => updateDisplay());
 
-            if (multiplayerIpc != null)
+            // Auto-advance to gameplay when the room starts loading/playing (no timer). Fires even while hidden.
+            multiplayerIpc?.State.BindValueChanged(state =>
             {
-                // Auto-advance to gameplay as soon as a spectated player starts playing. Driven off the
-                // connector's non-Drawable signal so it fires even while this screen is hidden.
-                multiplayerIpc.HasActiveSpectatorPlayers.BindValueChanged(active =>
-                {
-                    if (active.NewValue && LadderInfo.AutoProgressScreens.Value)
-                        sceneManager?.SetScreen(typeof(GameplayScreen));
-                }, true);
-            }
+                if (state.NewValue is TourneyState.WaitingForClients or TourneyState.Playing
+                    && LadderInfo.AutoProgressScreens.Value)
+                    sceneManager?.SetScreen(typeof(GameplayScreen));
+            }, true);
         }
 
         private void beatmapChanged(ValueChangedEvent<TournamentBeatmap?> beatmap)

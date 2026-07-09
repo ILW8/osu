@@ -228,6 +228,17 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     if (s.NewValue == TourneyState.WaitingForClients)
                         teardownSpectatorScreen();
                 });
+
+                // Next map picked during results → back to map pool. Via Schedule so it only fires while
+                // active (hidden = paused scheduler; Show/Hide cancel scheduledScreenChange).
+                ipc.Beatmap.BindValueChanged(_ =>
+                {
+                    if (State.Value != TourneyState.Ranking || !LadderInfo.AutoProgressScreens.Value)
+                        return;
+
+                    scheduledScreenChange?.Cancel();
+                    scheduledScreenChange = Schedule(() => sceneManager?.SetScreen(typeof(MapPoolScreen)));
+                });
             }
         }
 
