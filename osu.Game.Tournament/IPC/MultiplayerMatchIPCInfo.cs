@@ -437,8 +437,20 @@ namespace osu.Game.Tournament.IPC
 
                 Schedule(() =>
                 {
-                    if (lastBeatmapId == beatmapId)
-                        Beatmap.Value = new TournamentBeatmap(apiBeatmap);
+                    if (lastBeatmapId != beatmapId)
+                        return;
+
+                    Beatmap.Value = new TournamentBeatmap(apiBeatmap);
+
+                    // Host picked the next map while results were showing: the round is over, so drop to
+                    // Idle now rather than waiting out the fallback timer. Otherwise the later
+                    // Ranking -> Idle bounces the gameplay screen back to the map pool after it has
+                    // already advanced past it for the new pick.
+                    if (State.Value == TourneyState.Ranking)
+                    {
+                        cancelScheduledRankingReset();
+                        State.Value = TourneyState.Idle;
+                    }
                 });
 
                 ensureBeatmapDownloaded(apiBeatmap);

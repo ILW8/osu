@@ -229,15 +229,14 @@ namespace osu.Game.Tournament.Screens.Gameplay
                         teardownSpectatorScreen();
                 });
 
-                // Next map picked during results → back to map pool. Via Schedule so it only fires while
-                // active (hidden = paused scheduler; Show/Hide cancel scheduledScreenChange).
+                // Next map picked after a round: tear down the tiles so the global-beatmap lease
+                // (SpectatorScreen holds it) is released and lobby music can play the new map. Synchronous
+                // so it fires even while hidden. The screen advance is left to updateState's Idle path —
+                // the connector drops Ranking -> Idle on this same map change.
                 ipc.Beatmap.BindValueChanged(_ =>
                 {
-                    if (State.Value != TourneyState.Ranking || !LadderInfo.AutoProgressScreens.Value)
-                        return;
-
-                    scheduledScreenChange?.Cancel();
-                    scheduledScreenChange = Schedule(() => sceneManager?.SetScreen(typeof(MapPoolScreen)));
+                    if (State.Value == TourneyState.Ranking || State.Value == TourneyState.Idle)
+                        teardownSpectatorScreen();
                 });
             }
         }
@@ -347,7 +346,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
                         if (LadderInfo.AutoProgressScreens.Value)
                         {
-                            const float delay_before_progression = 4000;
+                            const float delay_before_progression = 1000;
 
                             // if we've returned to idle and the last screen was ranking
                             // we should automatically proceed after a short delay
