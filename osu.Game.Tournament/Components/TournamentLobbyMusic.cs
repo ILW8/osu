@@ -195,6 +195,13 @@ namespace osu.Game.Tournament.Components
                            $"external={external}, currentlyPlaying={currentlyPlaying}, state={ipc.State.Value})");
             });
 
+            // Gameplay leases the beatmap; a deferred resolution (see tryResolveBeatmap) retries once released.
+            globalBeatmap.BindDisabledChanged(disabled =>
+            {
+                if (!disabled && !hasResolvedBeatmap && wantedBeatmapId > 0)
+                    tryResolveBeatmap();
+            });
+
             // Surface MusicController track-change events. queuedDirection (Next/Prev) reveals
             // a NextTrack/PreviousTrack call inside MusicController; None is a beatmap-bindable
             // re-routing without a directional pick.
@@ -265,6 +272,13 @@ namespace osu.Game.Tournament.Components
             if (localBeatmap == null)
             {
                 Logger.Log($"[TournamentLobbyMusic] Beatmap {wantedBeatmapId} not yet locally available; waiting for import");
+                return;
+            }
+
+            // Suspended spectator Players hold the global-beatmap lease through gameplay + results
+            if (globalBeatmap.Disabled)
+            {
+                Logger.Log($"[TournamentLobbyMusic] Beatmap {wantedBeatmapId} resolution deferred; globalBeatmap is disabled (gameplay owns it)");
                 return;
             }
 
