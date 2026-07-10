@@ -64,14 +64,6 @@ namespace osu.Game.Tournament.IPC
         private readonly Bindable<string?> connectionError = new Bindable<string?>();
 
         /// <summary>
-        /// Whether any user in the room was already participating in a round (Playing / loading /
-        /// ready-for-gameplay) at the moment the connection succeeded. Set before
-        /// <see cref="IsConnected"/> flips to <c>true</c> so IsConnected listeners read a
-        /// consistent snapshot. Reset on disconnect.
-        /// </summary>
-        public bool JoinedDuringGameplay { get; private set; }
-
-        /// <summary>
         /// <c>true</c> while at least one room user is in <see cref="MultiplayerUserState.Playing"/>.
         /// Derived from room state on this always-alive component, so the signal fires reliably
         /// regardless of which screen is currently visible.
@@ -186,9 +178,6 @@ namespace osu.Game.Tournament.IPC
                     // Seed the signal for a join-mid-gameplay.
                     recomputeHasActiveSpectatorPlayers();
 
-                    // Must precede the isConnected flip so listeners observe a consistent snapshot.
-                    JoinedDuringGameplay = multiplayerClient.Room?.Users.Any(u => isParticipatingInCurrentRound(u.State)) == true;
-
                     // Seed State from the room snapshot so lobby-gated consumers react immediately
                     // rather than waiting for the first state-transition event (see DeriveState).
                     State.Value = DeriveState(multiplayerClient.Room?.Users.Select(u => u.State) ?? Enumerable.Empty<MultiplayerUserState>());
@@ -261,7 +250,6 @@ namespace osu.Game.Tournament.IPC
                 isConnected.Value = false;
                 connectedRoomId.Value = null;
                 connectedRoomPassword = null;
-                JoinedDuringGameplay = false;
                 lastBeatmapId = 0;
 
                 // Room is gone — drop the signal to false.
@@ -320,7 +308,14 @@ namespace osu.Game.Tournament.IPC
         {
             Schedule(() =>
             {
-                Logger.Log($"[MultiplayerMatchIPCInfo] onLoadRequested: state {State.Value} -> WaitingForClients", LoggingTarget.Runtime);
+                // if LoadRequested fires while a player is still mid-map, ignore it (joining game mid-map)
+                if (multiplayerClient.Room?.Users.Any(u => u.State == MultiplayerUserState.Playing) == true)
+                {
+                    Logger.Log("[MultiplayerMatchIPCInfo] onLoadRequested ignored: players already mid-map (join-into-live-game)");
+                    return;
+                }
+
+                Logger.Log($"[MultiplayerMatchIPCInfo] onLoadRequested: state {State.Value} -> WaitingForClients");
 
                 cancelScheduledRankingReset();
                 State.Value = TourneyState.WaitingForClients;
