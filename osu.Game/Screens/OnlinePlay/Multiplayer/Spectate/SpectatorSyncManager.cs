@@ -62,12 +62,15 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// Create a new managed <see cref="SpectatorPlayerClock"/>.
         /// </summary>
         /// <returns>The newly created <see cref="SpectatorPlayerClock"/>.</returns>
-        public SpectatorPlayerClock CreateManagedClock()
+        public SpectatorPlayerClock CreateManagedClock(int userId = 0)
         {
-            var clock = new SpectatorPlayerClock(masterClock);
+            var clock = new SpectatorPlayerClock(masterClock, userId);
             playerClocks.Add(clock);
             return clock;
         }
+
+        // Sub-second timestamp for log correlation (Logger stamps only whole seconds).
+        private string stamp => $"t={Time.Current:F1}ms";
 
         /// <summary>
         /// Removes an <see cref="SpectatorPlayerClock"/>, stopping it from being managed by this <see cref="SpectatorSyncManager"/>.
@@ -139,6 +142,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             {
                 var clock = playerClocks[i];
 
+                bool wasRunning = clock.IsRunning;
+                bool wasCatchingUp = clock.IsCatchingUp;
+
                 // How far this player's clock is out of sync, compared to the master clock.
                 // A negative value means the player is running fast (ahead); a positive value means the player is running behind (catching up).
                 double timeDelta = masterClock.CurrentTime - clock.CurrentTime;
@@ -151,6 +157,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                     // when it is required to be running (ie. if all players are ahead of the master).
                     clock.IsCatchingUp = false;
                     clock.IsRunning = false;
+                    logClockTransition(clock, wasRunning, wasCatchingUp, timeDelta, "ahead of master");
                     continue;
                 }
 
@@ -169,6 +176,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                     if (timeDelta > MAX_SYNC_OFFSET)
                         clock.IsCatchingUp = true;
                 }
+
+                logClockTransition(clock, wasRunning, wasCatchingUp, timeDelta, clock.WaitingOnFrames ? "waiting on frames" : "in range");
             }
         }
 
@@ -185,7 +194,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 return;
 
             masterState = newState;
-            Logger.Log($"{nameof(SpectatorSyncManager)}'s master clock became {masterState}");
+
+            string snapshot = string.Join(", ", playerClocks.Select(c =>
+                $"u{c.UserId}:{masterClock.CurrentTime - c.CurrentTime:+0;-0}ms{(c.IsCatchingUp ? " catchup" : "")}{(c.WaitingOnFrames ? " starved" : "")}"));
+            Logger.Log($"[spectator-sync {stamp}] master {masterClock.CurrentTime:F0}ms -> {masterState} [{snapshot}]");
 
             switch (masterState)
             {
@@ -199,6 +211,16 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                     masterClock.Stop();
                     break;
             }
+        }
+
+        private void logClockTransition(SpectatorPlayerClock clock, bool wasRunning, bool wasCatchingUp, double timeDelta, string reason)
+        {
+            if (clock.IsRunning == wasRunning && clock.IsCatchingUp == wasCatchingUp)
+                return;
+
+            Logger.Log($"[spectator-sync {stamp}] u{clock.UserId} "
+                       + $"run {wasRunning}->{clock.IsRunning} catchup {wasCatchingUp}->{clock.IsCatchingUp} "
+                       + $"(delta={timeDelta:+0;-0}ms, {reason})");
         }
     }
 }

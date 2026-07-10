@@ -20,6 +20,9 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
         private readonly GameplayClockContainer masterClock;
 
+        /// <summary>The user this clock is spectating (logging only).</summary>
+        public readonly int UserId;
+
         public double CurrentTime { get; private set; }
 
         /// <summary>
@@ -41,9 +44,18 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         public bool IsRunning { get; set; }
 
-        public SpectatorPlayerClock(GameplayClockContainer masterClock)
+        /// <summary>
+        /// The master clock position last consumed by <see cref="ProcessFrame"/>. Used to detect whether the master
+        /// produced a new frame since we last advanced, so that being processed multiple times per host frame does
+        /// not advance us more than once.
+        /// </summary>
+        private double lastConsumedMasterTime;
+
+        public SpectatorPlayerClock(GameplayClockContainer masterClock, int userId = 0)
         {
             this.masterClock = masterClock;
+            UserId = userId;
+            lastConsumedMasterTime = masterClock.CurrentTime;
         }
 
         public void Reset() => CurrentTime = 0;
@@ -77,13 +89,23 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
         public void ProcessFrame()
         {
+            // false on a repeat ProcessFrame within the same frame
+            bool masterAdvanced = masterClock.CurrentTime > lastConsumedMasterTime;
+            lastConsumedMasterTime = masterClock.CurrentTime;
+
             if (IsRunning)
             {
-                // When in catch-up mode, the source is usually not running.
-                // In such a case, its elapsed time may be zero, which would cause catch-up to get stuck.
-                // To avoid this, use a constant 16ms elapsed time for now. Probably not too correct, but this whole logic isn't too correct anyway.
-                // Clamping is required to ensure that player clocks don't get too far ahead if ProcessFrame is run multiple times.
-                double elapsedSource = masterClock.ElapsedFrameTime != 0 ? masterClock.ElapsedFrameTime : Math.Clamp(masterClock.CurrentTime - CurrentTime, 0, 16);
+                double elapsedSource;
+
+                if (masterClock.ElapsedFrameTime != 0)
+                {
+                    elapsedSource = masterAdvanced ? masterClock.ElapsedFrameTime : 0;
+                }
+                else
+                {
+                    elapsedSource = Math.Clamp(masterClock.CurrentTime - CurrentTime, 0, 16);
+                }
+
                 double elapsed = elapsedSource * Rate;
 
                 CurrentTime += elapsed;

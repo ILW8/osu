@@ -145,7 +145,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             };
 
             for (int i = 0; i < Users.Count; i++)
-                grid.Add(instances[i] = new PlayerArea(Users[i], syncManager.CreateManagedClock()));
+                grid.Add(instances[i] = new PlayerArea(Users[i], syncManager.CreateManagedClock(Users[i])));
 
             LoadComponentAsync(leaderboardProvider, _ =>
             {
