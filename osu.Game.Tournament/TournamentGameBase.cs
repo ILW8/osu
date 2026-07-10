@@ -19,6 +19,7 @@ using osu.Framework.Input;
 using osu.Framework.IO.Stores;
 using osu.Framework.Logging;
 using osu.Framework.Platform;
+using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Online;
@@ -41,6 +42,7 @@ namespace osu.Game.Tournament
         private DependencyContainer dependencies = null!;
         private MatchIPCInfo ipc = null!;
         private BeatmapLookupCache beatmapCache = null!;
+        private Bindable<string> configSkin = null!;
         private readonly BindableDouble uiSampleMuteAdjustment = new BindableDouble();
 
         protected Task BracketLoadTask => bracketLoadTaskCompletionSource.Task;
@@ -92,6 +94,13 @@ namespace osu.Game.Tournament
             dependencies.CacheAs(new StableInfo(storage));
 
             beatmapCache = dependencies.Get<BeatmapLookupCache>();
+
+            // Keep the skin in sync with the main client. OsuGame does this, but the tourney client
+            // bypasses OsuGame, so replicate it: load the shared persisted skin on startup and write
+            // runtime changes back, so the embedded spectator gameplay matches the main game's skin.
+            configSkin = LocalConfig.GetBindable<string>(OsuSetting.Skin);
+            SkinManager.SetSkinFromConfiguration(configSkin.Value);
+            SkinManager.CurrentSkinInfo.ValueChanged += skin => configSkin.Value = skin.NewValue.ID.ToString();
         }
 
         protected override void LoadComplete()
