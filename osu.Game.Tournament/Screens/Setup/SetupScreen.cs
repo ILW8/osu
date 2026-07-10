@@ -184,6 +184,12 @@ namespace osu.Game.Tournament.Screens.Setup
                 },
                 new LabelledSwitchButton
                 {
+                    Label = "Display player names",
+                    Description = "Shows each player's username above their tile when spectating a multiplayer room.",
+                    Current = LadderInfo.DisplayPlayerNames,
+                },
+                new LabelledSwitchButton
+                {
                     Label = "Mute UI sounds",
                     Description = "Mutes hover and click sounds from buttons and controls. Gameplay hitsounds are unaffected.",
                     Current = LadderInfo.MuteUISounds,

@@ -17,6 +17,7 @@ using osu.Game.Screens.OnlinePlay.Multiplayer.Spectate;
 using osu.Game.Screens.Play;
 using osu.Game.Screens.Spectate;
 using osu.Game.Tournament.IPC;
+using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Components
 {
@@ -53,6 +54,9 @@ namespace osu.Game.Tournament.Components
 
         [Resolved]
         private MatchIPCInfo ipc { get; set; } = null!;
+
+        [Resolved]
+        private LadderInfo ladder { get; set; } = null!;
 
         private MasterGameplayClockContainer masterClockContainer = null!;
         private SpectatorSyncManager syncManager = null!;
@@ -146,7 +150,7 @@ namespace osu.Game.Tournament.Components
                 return;
             }
 
-            var area = new PlayerArea(userId, syncManager.CreateManagedClock(), showFailingLayer: false);
+            var area = new PlayerArea(userId, syncManager.CreateManagedClock(), showFailingLayer: false, showPlayerName: ladder.DisplayPlayerNames.Value);
             playerAreas[userId] = area;
             grid.Add(area, slot);
             area.LoadScore(spectatorGameplayState.Score);

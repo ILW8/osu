@@ -30,6 +30,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
         private readonly AudioAdjustments clockAdjustmentsFromMods = new AudioAdjustments();
         private readonly SpectatorPlayerClock spectatorPlayerClock;
+        private readonly bool showPlayerName;
 
         // purposefully cached as empty - the multi spectator screen already has one leaderboard, on the left of all the player instances
         [Cached(typeof(IGameplayLeaderboardProvider))]
@@ -41,10 +42,12 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// <param name="score">The score containing the player's replay.</param>
         /// <param name="spectatorPlayerClock">The clock controlling the gameplay running state.</param>
         /// <param name="showFailingLayer">Whether the low-health red failing overlay should be shown for this player.</param>
-        public MultiSpectatorPlayer(Score score, SpectatorPlayerClock spectatorPlayerClock, bool showFailingLayer = true)
+        /// <param name="showPlayerName">Whether the player's username should be displayed above their gameplay.</param>
+        public MultiSpectatorPlayer(Score score, SpectatorPlayerClock spectatorPlayerClock, bool showFailingLayer = true, bool showPlayerName = true)
             : base(score, new PlayerConfiguration { AllowUserInteraction = false, ShowFailingOverlay = showFailingLayer })
         {
             this.spectatorPlayerClock = spectatorPlayerClock;
+            this.showPlayerName = showPlayerName;
 
             ShowSettingsOverlay = false;
         }
@@ -65,14 +68,17 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             HUDOverlay.HoldToQuit.Expire();
 
             // Player username display
-            GameplayClockContainer.Add(new OsuTextFlowContainer(cp => cp.Font = OsuFont.Style.Title.With(size: 60, weight: FontWeight.SemiBold))
+            if (showPlayerName)
             {
-                Anchor = Anchor.TopCentre,
-                Origin = Anchor.TopCentre,
-                AutoSizeAxes = Axes.Both,
-                Text = Score.ScoreInfo.User.Username,
-                Y = 50,
-            });
+                GameplayClockContainer.Add(new OsuTextFlowContainer(cp => cp.Font = OsuFont.Style.Title.With(size: 60, weight: FontWeight.SemiBold))
+                {
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    AutoSizeAxes = Axes.Both,
+                    Text = Score.ScoreInfo.User.Username,
+                    Y = 50,
+                });
+            }
         }
 
         protected override void Update()
