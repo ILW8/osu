@@ -9,11 +9,13 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Threading;
+using osu.Game.Configuration;
 using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays.Settings;
 using osu.Game.Screens;
+using osu.Game.Screens.Play.PlayerSettings;
 using osu.Game.Skinning;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
@@ -47,7 +49,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TournamentSpectatorScreen? spectatorScreen;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc, AudioManager audio, SkinManager skins)
+        private void load(MatchIPCInfo ipc, AudioManager audio, SkinManager skins, OsuConfigManager config)
         {
             this.ipc = ipc;
 
@@ -185,6 +187,17 @@ namespace osu.Game.Tournament.Screens.Gameplay
                     {
                         Items = skins.GetAllUsableSkins().Where(s => s.ID != SkinInfo.RANDOM_SKIN),
                         Current = skins.CurrentSkinInfo,
+                    },
+                    new ControlPanel.Spacer(),
+                    new VisualSettings
+                    {
+                        RelativeSizeAxes = Axes.X,
+                        Width = 1,
+                    },
+                    new LabelledSwitchButton
+                    {
+                        Label = "Beatmap hitsounds",
+                        Current = config.GetBindable<bool>(OsuSetting.BeatmapHitsounds),
                     },
                     new ControlPanel.Spacer(),
                     new TournamentSpriteText
