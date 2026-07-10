@@ -9,10 +9,12 @@ using osu.Framework.Graphics;
 using osu.Framework.Graphics.Containers;
 using osu.Framework.Graphics.Shapes;
 using osu.Framework.Threading;
+using osu.Game.Database;
 using osu.Game.Graphics;
 using osu.Game.Graphics.UserInterfaceV2;
 using osu.Game.Overlays.Settings;
 using osu.Game.Screens;
+using osu.Game.Skinning;
 using osu.Game.Tournament.Components;
 using osu.Game.Tournament.IPC;
 using osu.Game.Tournament.Models;
@@ -45,7 +47,7 @@ namespace osu.Game.Tournament.Screens.Gameplay
         private TournamentSpectatorScreen? spectatorScreen;
 
         [BackgroundDependencyLoader]
-        private void load(MatchIPCInfo ipc, AudioManager audio)
+        private void load(MatchIPCInfo ipc, AudioManager audio, SkinManager skins)
         {
             this.ipc = ipc;
 
@@ -169,6 +171,21 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 // across restarts via framework config.
                 controlPanel.AddRange(new Drawable[]
                 {
+                    new ControlPanel.Spacer(),
+                    new TournamentSpriteText
+                    {
+                        Text = "Skin",
+                        Font = OsuFont.GetFont(weight: FontWeight.Bold, size: 16),
+                        Anchor = Anchor.TopCentre,
+                        Origin = Anchor.TopCentre,
+                    },
+                    // Drives the whole client's skin, which the embedded spectator gameplay renders with.
+                    // Random skin is dropped: it re-rolls on every reselect, which is useless for a streamer.
+                    new SettingsDropdown<Live<SkinInfo>>
+                    {
+                        Items = skins.GetAllUsableSkins().Where(s => s.ID != SkinInfo.RANDOM_SKIN),
+                        Current = skins.CurrentSkinInfo,
+                    },
                     new ControlPanel.Spacer(),
                     new TournamentSpriteText
                     {
