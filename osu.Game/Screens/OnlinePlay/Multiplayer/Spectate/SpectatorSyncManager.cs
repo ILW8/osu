@@ -144,40 +144,41 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
                 bool wasRunning = clock.IsRunning;
                 bool wasCatchingUp = clock.IsCatchingUp;
+                bool wasSlowingDown = clock.IsSlowingDown;
 
                 // How far this player's clock is out of sync, compared to the master clock.
                 // A negative value means the player is running fast (ahead); a positive value means the player is running behind (catching up).
                 double timeDelta = masterClock.CurrentTime - clock.CurrentTime;
 
-                // Check that the player clock isn't too far ahead.
-                // This is a quiet case in which the catchup is done by the master clock, so IsCatchingUp is not set on the player clock.
-                if (timeDelta < -SYNC_TARGET)
-                {
-                    // Importantly, set the clock to a non-catchup state. if this isn't done, updateMasterState may incorrectly pause the master clock
-                    // when it is required to be running (ie. if all players are ahead of the master).
-                    clock.IsCatchingUp = false;
-                    clock.IsRunning = false;
-                    logClockTransition(clock, wasRunning, wasCatchingUp, timeDelta, "ahead of master");
-                    continue;
-                }
-
                 // Make sure the player clock is running if it can.
                 clock.IsRunning = !clock.WaitingOnFrames;
 
+                // A player behind master runs fast (catchup_rate) to catch up; a player ahead of master runs slow
+                // (slow_rate) to let master catch up smoothly instead of stopping the player clock. IsCatchingUp must
+                // stay false while ahead, otherwise updateMasterState may incorrectly pause the master clock
                 if (clock.IsCatchingUp)
                 {
-                    // Stop the player clock from catching up if it's within the sync target.
                     if (timeDelta <= SYNC_TARGET)
                         clock.IsCatchingUp = false;
                 }
-                else
+                else if (clock.IsSlowingDown)
                 {
-                    // Make the player clock start catching up if it's exceeded the maximum allowable sync offset.
-                    if (timeDelta > MAX_SYNC_OFFSET)
-                        clock.IsCatchingUp = true;
+                    // Stop the player clock from slowing down once its lead is back within the sync target.
+                    if (timeDelta >= -SYNC_TARGET)
+                        clock.IsSlowingDown = false;
+                }
+                else if (timeDelta > MAX_SYNC_OFFSET)
+                {
+                    // Behind by more than the maximum allowable sync offset: speed up to catch up.
+                    clock.IsCatchingUp = true;
+                }
+                else if (timeDelta < -MAX_SYNC_OFFSET)
+                {
+                    // Ahead by more than the maximum allowable sync offset: slow down to let master catch up.
+                    clock.IsSlowingDown = true;
                 }
 
-                logClockTransition(clock, wasRunning, wasCatchingUp, timeDelta, clock.WaitingOnFrames ? "waiting on frames" : "in range");
+                logClockTransition(clock, wasRunning, wasCatchingUp, wasSlowingDown, timeDelta, clock.WaitingOnFrames ? "waiting on frames" : "in range");
             }
         }
 
@@ -196,7 +197,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             masterState = newState;
 
             string snapshot = string.Join(", ", playerClocks.Select(c =>
-                $"u{c.UserId}:{masterClock.CurrentTime - c.CurrentTime:+0;-0}ms{(c.IsCatchingUp ? " catchup" : "")}{(c.WaitingOnFrames ? " starved" : "")}"));
+                $"u{c.UserId}:{masterClock.CurrentTime - c.CurrentTime:+0;-0}ms{(c.IsCatchingUp ? " catchup" : "")}{(c.IsSlowingDown ? " slow" : "")}{(c.WaitingOnFrames ? " starved" : "")}"));
             Logger.Log($"[spectator-sync {stamp}] master {masterClock.CurrentTime:F0}ms -> {masterState} [{snapshot}]");
 
             switch (masterState)
@@ -213,13 +214,13 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             }
         }
 
-        private void logClockTransition(SpectatorPlayerClock clock, bool wasRunning, bool wasCatchingUp, double timeDelta, string reason)
+        private void logClockTransition(SpectatorPlayerClock clock, bool wasRunning, bool wasCatchingUp, bool wasSlowingDown, double timeDelta, string reason)
         {
-            if (clock.IsRunning == wasRunning && clock.IsCatchingUp == wasCatchingUp)
+            if (clock.IsRunning == wasRunning && clock.IsCatchingUp == wasCatchingUp && clock.IsSlowingDown == wasSlowingDown)
                 return;
 
             Logger.Log($"[spectator-sync {stamp}] u{clock.UserId} "
-                       + $"run {wasRunning}->{clock.IsRunning} catchup {wasCatchingUp}->{clock.IsCatchingUp} "
+                       + $"run {wasRunning}->{clock.IsRunning} catchup {wasCatchingUp}->{clock.IsCatchingUp} slow {wasSlowingDown}->{clock.IsSlowingDown} "
                        + $"(delta={timeDelta:+0;-0}ms, {reason})");
         }
     }

@@ -18,6 +18,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         private const double catchup_rate = 2;
 
+        /// <summary>
+        /// Essentially the opposite of <see cref="catchup_rate"/>
+        /// </summary>
+        private const double slow_rate = 0.5;
+
         private readonly GameplayClockContainer masterClock;
 
         /// <summary>The user this clock is spectating (logging only).</summary>
@@ -37,6 +42,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// Of note, this will be false if this clock is *ahead* of the master clock.
         /// </remarks>
         public bool IsCatchingUp { get; set; }
+
+        /// <summary>
+        /// Whether this clock is ahead of the master clock and running at a lower rate to let the master catch-up to it.
+        /// </summary>
+        /// <remarks>
+        /// Mutually exclusive with <see cref="IsCatchingUp"/>.
+        /// </remarks>
+        public bool IsSlowingDown { get; set; }
 
         /// <summary>
         /// Whether this spectator clock should be running.
@@ -83,7 +96,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
         public double Rate
         {
-            get => IsCatchingUp ? catchup_rate : 1;
+            get => IsCatchingUp ? catchup_rate : IsSlowingDown ? slow_rate : 1;
             set => throw new NotImplementedException();
         }
 
