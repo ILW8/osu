@@ -234,6 +234,19 @@ namespace osu.Game.Tournament
                 if (ipc is MultiplayerMatchIPCInfo)
                     Add(new TournamentLobbyMusic());
 
+                if (ipc is MultiplayerMatchIPCInfo matchIpc)
+                {
+                    MultiplayerClient.PresentMatch = (room, password) =>
+                    {
+                        if (room.RoomID is long roomId)
+                            matchIpc.SetPendingInvite(new PendingInvite(roomId, password, room.Name));
+                    };
+
+                    // room password is only available inside the Activated closure, no way around this
+                    // roundabout dance afaik
+                    MultiplayerClient.PostNotification = n => n.Activated?.Invoke();
+                }
+
                 applyUISampleMuting();
 
                 bracketLoadTaskCompletionSource.SetResult(true);

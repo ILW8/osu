@@ -43,6 +43,9 @@ namespace osu.Game.Tournament.Components
             TourneyButton disconnectButton;
             TourneyButton reconnectButton;
             TournamentSpriteText statusText;
+            TextFlowContainer inviteText;
+            TourneyButton acceptButton;
+            TourneyButton dismissButton;
 
             Children = new Drawable[]
             {
@@ -52,6 +55,29 @@ namespace osu.Game.Tournament.Components
                     Font = OsuFont.GetFont(weight: FontWeight.Bold, size: 16),
                     Anchor = Anchor.TopCentre,
                     Origin = Anchor.TopCentre,
+                },
+                inviteText = new TextFlowContainer
+                {
+                    RelativeSizeAxes = Axes.X,
+                    AutoSizeAxes = Axes.Y,
+                    Anchor = Anchor.TopCentre,
+                    Origin = Anchor.TopCentre,
+                    Colour = Colour4.Orange,
+                    Alpha = 0,
+                },
+                acceptButton = new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Accept invite",
+                    Alpha = 0,
+                    Action = multiplayerIpc.AcceptPendingInvite,
+                },
+                dismissButton = new TourneyButton
+                {
+                    RelativeSizeAxes = Axes.X,
+                    Text = "Dismiss",
+                    Alpha = 0,
+                    Action = multiplayerIpc.DismissPendingInvite,
                 },
                 roomIdTextBox = new OsuTextBox
                 {
@@ -133,6 +159,25 @@ namespace osu.Game.Tournament.Components
                     statusText.Colour = Colour4.OrangeRed;
                 }
             });
+
+            multiplayerIpc.PendingInvite.BindValueChanged(invite =>
+            {
+                if (invite.NewValue != null)
+                {
+                    inviteText.Clear();
+                    inviteText.AddText($"Invite to room {invite.NewValue.RoomId} ({invite.NewValue.RoomName})",
+                        s => s.Font = OsuFont.GetFont(size: 12));
+                    inviteText.FadeIn(200);
+                    acceptButton.FadeIn(200);
+                    dismissButton.FadeIn(200);
+                }
+                else
+                {
+                    inviteText.FadeOut(200);
+                    acceptButton.FadeOut(200);
+                    dismissButton.FadeOut(200);
+                }
+            }, true);
         }
 
         protected override void OnFocus(FocusEvent e)

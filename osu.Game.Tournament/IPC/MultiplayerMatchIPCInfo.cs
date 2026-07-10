@@ -64,6 +64,13 @@ namespace osu.Game.Tournament.IPC
         private readonly Bindable<string?> connectionError = new Bindable<string?>();
 
         /// <summary>
+        /// A pending room invitation awaiting operator approval, or null if none.
+        /// </summary>
+        public IBindable<PendingInvite?> PendingInvite => pendingInvite;
+
+        private readonly Bindable<PendingInvite?> pendingInvite = new Bindable<PendingInvite?>();
+
+        /// <summary>
         /// <c>true</c> while at least one room user is in <see cref="MultiplayerUserState.Playing"/>.
         /// Derived from room state on this always-alive component, so the signal fires reliably
         /// regardless of which screen is currently visible.
@@ -266,6 +273,30 @@ namespace osu.Game.Tournament.IPC
                 Logger.Log("[MultiplayerMatchIPCInfo] Disconnected from room", LoggingTarget.Network);
             });
         }
+
+        /// <summary>
+        /// Stores an incoming room invitation for the operator to accept or dismiss on the Update thread
+        /// </summary>
+        public void SetPendingInvite(PendingInvite invite) => Schedule(() => pendingInvite.Value = invite);
+
+        /// <summary>
+        /// Accepts the pending invite and connects to its room as a spectator.
+        /// </summary>
+        public void AcceptPendingInvite()
+        {
+            var invite = pendingInvite.Value;
+
+            if (invite == null)
+                return;
+
+            pendingInvite.Value = null;
+            Connect(invite.RoomId, invite.Password).FireAndForget();
+        }
+
+        /// <summary>
+        /// Discards the pending invite without connecting.
+        /// </summary>
+        public void DismissPendingInvite() => pendingInvite.Value = null;
 
         /// <summary>
         /// Schedules an async operation to start on the update thread and returns a task that
@@ -525,4 +556,9 @@ namespace osu.Game.Tournament.IPC
             }
         }
     }
+
+    /// <summary>
+    /// A multiplayer room invitation awaiting operator approval
+    /// </summary>
+    public record PendingInvite(long RoomId, string? Password, string RoomName);
 }
