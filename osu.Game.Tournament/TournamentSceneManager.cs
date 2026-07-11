@@ -135,7 +135,7 @@ namespace osu.Game.Tournament
                                 RelativeSizeAxes = Axes.X,
                                 AutoSizeAxes = Axes.Y,
                                 Direction = FillDirection.Vertical,
-                                Spacing = new Vector2(5),
+                                Spacing = new Vector2(10),
                                 Padding = new MarginPadding(5),
                                 Children = new Drawable[]
                                 {
@@ -168,11 +168,7 @@ namespace osu.Game.Tournament
             // Surface room-connection controls only when the live multiplayer-room connector is active.
             if (ipc is MultiplayerMatchIPCInfo multiplayerIpc)
             {
-                buttons.AddRange(new Drawable[]
-                {
-                    new Separator(),
-                    new MultiplayerRoomConnectionControls(multiplayerIpc),
-                });
+                buttons.Add(new MultiplayerRoomConnectionControls(multiplayerIpc));
             }
 
             foreach (var drawable in screens)
@@ -256,7 +252,7 @@ namespace osu.Game.Tournament
             public Separator()
             {
                 RelativeSizeAxes = Axes.X;
-                Height = 20;
+                Height = 5;
             }
         }
 
@@ -273,6 +269,7 @@ namespace osu.Game.Tournament
                 Type = type;
 
                 BackgroundColour = OsuColour.Gray(0.2f);
+                Height = 32;
                 Action = () => RequestSelection?.Invoke(type);
 
                 RelativeSizeAxes = Axes.X;
