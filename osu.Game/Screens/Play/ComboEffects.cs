@@ -28,6 +28,8 @@ namespace osu.Game.Screens.Play
     {
         private readonly ScoreProcessor processor;
 
+        private readonly IBindable<int> combo = new BindableInt();
+
         private SkinnableSound comboBreakSample;
 
         private Bindable<bool> alwaysPlayFirst;
@@ -85,7 +87,8 @@ namespace osu.Game.Screens.Play
         protected override void LoadComplete()
         {
             base.LoadComplete();
-            processor.Combo.BindValueChanged(onComboChange);
+            combo.BindTo(processor.Combo);
+            combo.BindValueChanged(onComboChange);
         }
 
         [Resolved(canBeNull: true)]
