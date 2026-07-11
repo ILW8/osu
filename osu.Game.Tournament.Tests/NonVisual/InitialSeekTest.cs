@@ -19,7 +19,7 @@ namespace osu.Game.Tournament.Tests.NonVisual
         [Test]
         public void FarBehindPlayer_droppedBeforeMin()
         {
-            // -25000 is 45000 behind the 20000 max edge (> 30000 cap): dropped. min of the rest 20000 - 200 = 19800.
+            // -25000 is 46000 behind the 21000 max edge (> 30000 cap): dropped. min of the rest 20000 - 200 = 19800.
             Assert.That(TournamentSpectatorScreen.ComputeInitialSeekTime(new[] { -25000d, 20000d, 21000d }), Is.EqualTo(19800d));
         }
 

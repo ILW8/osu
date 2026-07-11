@@ -264,7 +264,7 @@ namespace osu.Game.Tournament.Components
         }
 
         private static bool isCandidateAudioSource(SpectatorPlayerClock? clock)
-            => clock?.IsRunning == true && !clock.IsCatchingUp && !clock.WaitingOnFrames;
+            => clock?.IsRunning == true && !clock.IsCatchingUp && !clock.WaitingOnFrames && !clock.Abandoned;
 
         private void snapshotSlotsFromRoom()
         {

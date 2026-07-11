@@ -206,6 +206,8 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         private void updateMasterState()
         {
+            // Once started, at least one player has real frames (attemptStart requires !WaitingOnFrames, which means a
+            // finite LatestFrameTime), so liveEdge is finite here and the all-sentinel path below never fires.
             double liveEdge = playerClocks.Count == 0 ? double.NegativeInfinity : playerClocks.Max(c => c.LatestFrameTime);
 
             // Abandon update (with hysteresis).
