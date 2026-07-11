@@ -26,6 +26,25 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         public const double MAX_SYNC_OFFSET = 50;
 
         /// <summary>
+        /// Abandon a player once its frame delivery falls more than this many milliseconds behind the live edge
+        /// (the most-recent frame across all players). A beatmap-time offset cap, not a wall-clock timer.
+        /// </summary>
+        public const double MAX_LIVE_OFFSET = 30000;
+
+        /// <summary>
+        /// How far behind the slowest kept player's live edge the master clock rides, so every kept player keeps a
+        /// small frame cushion. This is the anti-stutter mechanism. Tunable.
+        /// </summary>
+        public const double LIVE_EDGE_BUFFER = 200;
+
+        /// <summary>
+        /// Hysteresis band applied to <see cref="MAX_LIVE_OFFSET"/>: an abandoned player is only re-included once it
+        /// recovers to comfortably within the cap (behind &lt; <see cref="MAX_LIVE_OFFSET"/> - this), so it doesn't
+        /// flap at the threshold.
+        /// </summary>
+        public const double ABANDON_HYSTERESIS = 5000;
+
+        /// <summary>
         /// The maximum delay to start gameplay, if any (but not all) player clocks are ready.
         /// </summary>
         public const double MAXIMUM_START_DELAY = 15000;
@@ -212,6 +231,39 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                     masterClock.Stop();
                     break;
             }
+        }
+
+        /// <summary>
+        /// Recomputes a player's abandoned state with hysteresis. A player is abandoned once it falls more than
+        /// <see cref="MAX_LIVE_OFFSET"/> behind the live edge, and only re-included once it recovers to within
+        /// <see cref="MAX_LIVE_OFFSET"/> - <see cref="ABANDON_HYSTERESIS"/>.
+        /// </summary>
+        /// <param name="abandoned">The player's current abandoned state.</param>
+        /// <param name="liveEdge">The most-recent frame time across all players.</param>
+        /// <param name="latestFrameTime">This player's most-recent frame time (NegativeInfinity if it has no frames).</param>
+        /// <returns>The player's new abandoned state.</returns>
+        internal static bool UpdateAbandoned(bool abandoned, double liveEdge, double latestFrameTime)
+        {
+            double behind = liveEdge - latestFrameTime;
+            double threshold = abandoned ? MAX_LIVE_OFFSET - ABANDON_HYSTERESIS : MAX_LIVE_OFFSET;
+            return behind > threshold;
+        }
+
+        /// <summary>
+        /// Whether the master clock should be stopped this frame. The master is paced to ride
+        /// <see cref="LIVE_EDGE_BUFFER"/> behind the slowest kept (non-abandoned) player's live edge, so every kept
+        /// player keeps a small frame cushion. With no kept players the master keeps running so the cast plays out
+        /// to the end.
+        /// </summary>
+        /// <param name="masterTime">The master clock's current time.</param>
+        /// <param name="keptLiveEdges">Live-edge times of the non-abandoned players.</param>
+        internal static bool ShouldStopMaster(double masterTime, IReadOnlyList<double> keptLiveEdges)
+        {
+            if (keptLiveEdges.Count == 0)
+                return false;
+
+            double ceiling = keptLiveEdges.Min() - LIVE_EDGE_BUFFER;
+            return masterTime >= ceiling;
         }
 
         private void logClockTransition(SpectatorPlayerClock clock, bool wasRunning, bool wasCatchingUp, bool wasSlowingDown, double timeDelta, string reason)
