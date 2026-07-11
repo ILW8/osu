@@ -60,9 +60,19 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// Whether this clock is ahead of the master clock and running at a lower rate to let the master catch-up to it.
         /// </summary>
         /// <remarks>
-        /// Mutually exclusive with <see cref="IsCatchingUp"/>.
+        /// Mutually exclusive with <see cref="IsCatchingUp"/> and <see cref="IsHalted"/>.
         /// </remarks>
         public bool IsSlowingDown { get; set; }
+
+        /// <summary>
+        /// Whether this clock is frozen because it's too far ahead of the master to ease back smoothly, holding until
+        /// the master catches up to within the sync target. While halted the clock does not advance (see
+        /// <see cref="IsRunning"/>).
+        /// </summary>
+        /// <remarks>
+        /// Mutually exclusive with <see cref="IsCatchingUp"/> and <see cref="IsSlowingDown"/>.
+        /// </remarks>
+        public bool IsHalted { get; set; }
 
         /// <summary>
         /// Whether this spectator clock should be running.

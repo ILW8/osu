@@ -26,6 +26,13 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         public const double MAX_SYNC_OFFSET = 50;
 
         /// <summary>
+        /// The maximum a player may be ahead of the master while still easing back at the slow rate. Beyond this it is
+        /// frozen until the master catches up to within <see cref="SYNC_TARGET"/>, so a large lead (e.g. a mid-game
+        /// join offset) resolves by holding still instead of playing in slow-motion for seconds.
+        /// </summary>
+        public const double MAX_SLOWDOWN_OFFSET = 1000; // ponytail: tune; above this a 0.5x ease-back reads as slow-mo
+
+        /// <summary>
         /// Abandon a player once its frame delivery falls more than this many milliseconds behind the live edge
         /// (the most-recent frame across all players). A beatmap-time offset cap, not a wall-clock timer.
         /// </summary>
@@ -164,17 +171,15 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 bool wasRunning = clock.IsRunning;
                 bool wasCatchingUp = clock.IsCatchingUp;
                 bool wasSlowingDown = clock.IsSlowingDown;
+                bool wasHalted = clock.IsHalted;
 
                 // How far this player's clock is out of sync, compared to the master clock.
                 // A negative value means the player is running fast (ahead); a positive value means the player is running behind (catching up).
                 double timeDelta = masterClock.CurrentTime - clock.CurrentTime;
 
-                // Make sure the player clock is running if it can.
-                clock.IsRunning = !clock.WaitingOnFrames;
-
-                // A player behind master runs fast (catchup_rate) to catch up; a player ahead of master runs slow
-                // (slow_rate) to let master catch up smoothly instead of stopping the player clock. IsCatchingUp must
-                // stay false while ahead, otherwise updateMasterState may incorrectly pause the master clock
+                // A player behind master runs fast (catchup_rate) to catch up; a player slightly ahead runs slow
+                // (slow_rate) to let master catch up smoothly; a player far ahead is frozen until master catches up.
+                // IsCatchingUp must stay false while ahead, otherwise updateMasterState may incorrectly pause the master clock.
                 if (clock.IsCatchingUp)
                 {
                     if (timeDelta <= SYNC_TARGET)
@@ -186,18 +191,33 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                     if (timeDelta >= -SYNC_TARGET)
                         clock.IsSlowingDown = false;
                 }
+                else if (clock.IsHalted)
+                {
+                    // Stay frozen until the master has caught up to within the sync target (no trailing slow-down).
+                    if (timeDelta >= -SYNC_TARGET)
+                        clock.IsHalted = false;
+                }
                 else if (timeDelta > MAX_SYNC_OFFSET)
                 {
                     // Behind by more than the maximum allowable sync offset: speed up to catch up.
                     clock.IsCatchingUp = true;
                 }
+                else if (timeDelta < -MAX_SLOWDOWN_OFFSET)
+                {
+                    // Ahead by too much to ease back smoothly: freeze until master catches up.
+                    clock.IsHalted = true;
+                }
                 else if (timeDelta < -MAX_SYNC_OFFSET)
                 {
-                    // Ahead by more than the maximum allowable sync offset: slow down to let master catch up.
+                    // Ahead by a small amount: slow down to let master catch up.
                     clock.IsSlowingDown = true;
                 }
 
-                logClockTransition(clock, wasRunning, wasCatchingUp, wasSlowingDown, timeDelta, clock.WaitingOnFrames ? "waiting on frames" : "in range");
+                // Run whenever frames are available, unless frozen for being too far ahead.
+                clock.IsRunning = !clock.WaitingOnFrames && !clock.IsHalted;
+
+                string reason = clock.WaitingOnFrames ? "waiting on frames" : clock.IsHalted ? "holding for master" : "in range";
+                logClockTransition(clock, wasRunning, wasCatchingUp, wasSlowingDown, wasHalted, timeDelta, reason);
             }
         }
 
@@ -281,13 +301,13 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
             return masterTime >= ceiling;
         }
 
-        private void logClockTransition(SpectatorPlayerClock clock, bool wasRunning, bool wasCatchingUp, bool wasSlowingDown, double timeDelta, string reason)
+        private void logClockTransition(SpectatorPlayerClock clock, bool wasRunning, bool wasCatchingUp, bool wasSlowingDown, bool wasHalted, double timeDelta, string reason)
         {
-            if (clock.IsRunning == wasRunning && clock.IsCatchingUp == wasCatchingUp && clock.IsSlowingDown == wasSlowingDown)
+            if (clock.IsRunning == wasRunning && clock.IsCatchingUp == wasCatchingUp && clock.IsSlowingDown == wasSlowingDown && clock.IsHalted == wasHalted)
                 return;
 
             Logger.Log($"[spectator-sync {stamp}] u{clock.UserId} "
-                       + $"run {wasRunning}->{clock.IsRunning} catchup {wasCatchingUp}->{clock.IsCatchingUp} slow {wasSlowingDown}->{clock.IsSlowingDown} "
+                       + $"run {wasRunning}->{clock.IsRunning} catchup {wasCatchingUp}->{clock.IsCatchingUp} slow {wasSlowingDown}->{clock.IsSlowingDown} halt {wasHalted}->{clock.IsHalted} "
                        + $"(delta={timeDelta:+0;-0}ms, {reason})");
         }
     }

@@ -121,18 +121,32 @@ namespace osu.Game.Tests.OnlinePlay
         }
 
         [Test]
+        public void TestPlayerClockSlowsDownWhenSlightlyAhead()
+        {
+            setAllWaiting(false);
+
+            // Ahead by more than MAX_SYNC_OFFSET but within MAX_SLOWDOWN_OFFSET: ease back at the slow rate, keep running.
+            setPlayerClockTime(() => player1, -SpectatorSyncManager.MAX_SYNC_OFFSET - 1);
+            assertSlowingDown(() => player1, true);
+            assertHalted(() => player1, false);
+            assertPlayerClockState(() => player1, true);
+        }
+
+        [Test]
         public void TestPlayerClockStopsWhenTooFarAheadAndStartsWhenBackInSync()
         {
             setAllWaiting(false);
 
-            setPlayerClockTime(() => player1, -SpectatorSyncManager.SYNC_TARGET - 1);
-
-            // This is a silent catchup, where IsCatchingUp = false but IsRunning = false also.
-            assertCatchingUp(() => player1, false);
+            // Ahead by more than MAX_SLOWDOWN_OFFSET: freeze rather than slow down (IsRunning = false, not slowing).
+            setPlayerClockTime(() => player1, -SpectatorSyncManager.MAX_SLOWDOWN_OFFSET - 1);
+            assertHalted(() => player1, true);
+            assertSlowingDown(() => player1, false);
             assertPlayerClockState(() => player1, false);
 
-            setMasterTime(1);
-            assertCatchingUp(() => player1, false);
+            // Master catches up to within the sync target: resume at normal rate, no trailing slow-down.
+            setMasterTime(SpectatorSyncManager.MAX_SLOWDOWN_OFFSET + 1);
+            assertHalted(() => player1, false);
+            assertSlowingDown(() => player1, false);
             assertPlayerClockState(() => player1, true);
         }
 
@@ -207,6 +221,12 @@ namespace osu.Game.Tests.OnlinePlay
 
         private void assertCatchingUp(Func<SpectatorPlayerClock> playerClock, bool catchingUp) =>
             AddAssert($"player clock {clocksById[playerClock()]} {(catchingUp ? "is" : "is not")} catching up", () => playerClock().IsCatchingUp == catchingUp);
+
+        private void assertSlowingDown(Func<SpectatorPlayerClock> playerClock, bool slowingDown) =>
+            AddAssert($"player clock {clocksById[playerClock()]} {(slowingDown ? "is" : "is not")} slowing down", () => playerClock().IsSlowingDown == slowingDown);
+
+        private void assertHalted(Func<SpectatorPlayerClock> playerClock, bool halted) =>
+            AddAssert($"player clock {clocksById[playerClock()]} {(halted ? "is" : "is not")} halted", () => playerClock().IsHalted == halted);
 
         private void assertPlayerClockState(Func<SpectatorPlayerClock> playerClock, bool running)
             => AddAssert($"player clock {clocksById[playerClock()]} {(running ? "is" : "is not")} running", () => playerClock().IsRunning == running);
