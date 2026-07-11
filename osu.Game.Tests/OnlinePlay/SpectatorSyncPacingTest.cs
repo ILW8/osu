@@ -14,29 +14,33 @@ namespace osu.Game.Tests.OnlinePlay
         [Test]
         public void NotAbandoned_withinCap_staysKept()
         {
-            // 20000 behind (< 30000 cap): not abandoned.
-            Assert.That(SpectatorSyncManager.UpdateAbandoned(false, 100000, 80000), Is.False);
+            // Behind by less than the cap: not abandoned.
+            double behind = SpectatorSyncManager.MAX_LIVE_OFFSET - 1000;
+            Assert.That(SpectatorSyncManager.UpdateAbandoned(false, 100000, 100000 - behind), Is.False);
         }
 
         [Test]
         public void NotAbandoned_pastCap_becomesAbandoned()
         {
-            // 40000 behind (> 30000 cap): abandoned.
-            Assert.That(SpectatorSyncManager.UpdateAbandoned(false, 100000, 60000), Is.True);
+            // Behind by more than the cap: abandoned.
+            double behind = SpectatorSyncManager.MAX_LIVE_OFFSET + 1000;
+            Assert.That(SpectatorSyncManager.UpdateAbandoned(false, 100000, 100000 - behind), Is.True);
         }
 
         [Test]
         public void Abandoned_insideHysteresisBand_staysAbandoned()
         {
-            // 27000 behind: below the 30000 cap but above (cap - hysteresis = 25000), so it does NOT flap back.
-            Assert.That(SpectatorSyncManager.UpdateAbandoned(true, 100000, 73000), Is.True);
+            // Below the cap but above (cap - hysteresis), so it does NOT flap back.
+            double behind = SpectatorSyncManager.MAX_LIVE_OFFSET - SpectatorSyncManager.ABANDON_HYSTERESIS / 2;
+            Assert.That(SpectatorSyncManager.UpdateAbandoned(true, 100000, 100000 - behind), Is.True);
         }
 
         [Test]
         public void Abandoned_comfortablyWithinCap_reincluded()
         {
-            // 10000 behind (< cap - hysteresis = 25000): re-included.
-            Assert.That(SpectatorSyncManager.UpdateAbandoned(true, 100000, 90000), Is.False);
+            // Below (cap - hysteresis): re-included.
+            double behind = SpectatorSyncManager.MAX_LIVE_OFFSET - SpectatorSyncManager.ABANDON_HYSTERESIS - 1000;
+            Assert.That(SpectatorSyncManager.UpdateAbandoned(true, 100000, 100000 - behind), Is.False);
         }
 
         [Test]

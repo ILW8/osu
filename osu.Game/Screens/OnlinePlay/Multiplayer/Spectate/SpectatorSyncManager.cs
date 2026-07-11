@@ -177,46 +177,64 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                 // A negative value means the player is running fast (ahead); a positive value means the player is running behind (catching up).
                 double timeDelta = masterClock.CurrentTime - clock.CurrentTime;
 
-                // A player behind master runs fast (catchup_rate) to catch up; a player slightly ahead runs slow
-                // (slow_rate) to let master catch up smoothly; a player far ahead is frozen until master catches up.
-                // IsCatchingUp must stay false while ahead, otherwise updateMasterState may incorrectly pause the master clock.
-                if (clock.IsCatchingUp)
+                string reason;
+
+                if (clock.Abandoned)
                 {
-                    if (timeDelta <= SYNC_TARGET)
-                        clock.IsCatchingUp = false;
+                    // An abandoned player is excluded from master pacing, so chasing master at catchup_rate just burns
+                    // its (frame-limited) buffer faster than frames arrive and stutters. Run at the natural rate and
+                    // let it play out its own stream behind the cast.
+                    clock.IsCatchingUp = false;
+                    clock.IsSlowingDown = false;
+                    clock.IsHalted = false;
+                    clock.IsRunning = !clock.WaitingOnFrames;
+
+                    reason = clock.WaitingOnFrames ? "abandoned (waiting on frames)" : "abandoned";
                 }
-                else if (clock.IsSlowingDown)
+                else
                 {
-                    // Stop the player clock from slowing down once its lead is back within the sync target.
-                    if (timeDelta >= -SYNC_TARGET)
-                        clock.IsSlowingDown = false;
-                }
-                else if (clock.IsHalted)
-                {
-                    // Stay frozen until the master has caught up to within the sync target (no trailing slow-down).
-                    if (timeDelta >= -SYNC_TARGET)
-                        clock.IsHalted = false;
-                }
-                else if (timeDelta > MAX_SYNC_OFFSET)
-                {
-                    // Behind by more than the maximum allowable sync offset: speed up to catch up.
-                    clock.IsCatchingUp = true;
-                }
-                else if (timeDelta < -MAX_SLOWDOWN_OFFSET)
-                {
-                    // Ahead by too much to ease back smoothly: freeze until master catches up.
-                    clock.IsHalted = true;
-                }
-                else if (timeDelta < -MAX_SYNC_OFFSET)
-                {
-                    // Ahead by a small amount: slow down to let master catch up.
-                    clock.IsSlowingDown = true;
+                    // A player behind master runs fast (catchup_rate) to catch up; a player slightly ahead runs slow
+                    // (slow_rate) to let master catch up smoothly; a player far ahead is frozen until master catches up.
+                    // IsCatchingUp must stay false while ahead, otherwise updateMasterState may incorrectly pause the master clock.
+                    if (clock.IsCatchingUp)
+                    {
+                        if (timeDelta <= SYNC_TARGET)
+                            clock.IsCatchingUp = false;
+                    }
+                    else if (clock.IsSlowingDown)
+                    {
+                        // Stop the player clock from slowing down once its lead is back within the sync target.
+                        if (timeDelta >= -SYNC_TARGET)
+                            clock.IsSlowingDown = false;
+                    }
+                    else if (clock.IsHalted)
+                    {
+                        // Stay frozen until the master has caught up to within the sync target (no trailing slow-down).
+                        if (timeDelta >= -SYNC_TARGET)
+                            clock.IsHalted = false;
+                    }
+                    else if (timeDelta > MAX_SYNC_OFFSET)
+                    {
+                        // Behind by more than the maximum allowable sync offset: speed up to catch up.
+                        clock.IsCatchingUp = true;
+                    }
+                    else if (timeDelta < -MAX_SLOWDOWN_OFFSET)
+                    {
+                        // Ahead by too much to ease back smoothly: freeze until master catches up.
+                        clock.IsHalted = true;
+                    }
+                    else if (timeDelta < -MAX_SYNC_OFFSET)
+                    {
+                        // Ahead by a small amount: slow down to let master catch up.
+                        clock.IsSlowingDown = true;
+                    }
+
+                    // Run whenever frames are available, unless frozen for being too far ahead.
+                    clock.IsRunning = !clock.WaitingOnFrames && !clock.IsHalted;
+
+                    reason = clock.WaitingOnFrames ? "waiting on frames" : clock.IsHalted ? "holding for master" : "in range";
                 }
 
-                // Run whenever frames are available, unless frozen for being too far ahead.
-                clock.IsRunning = !clock.WaitingOnFrames && !clock.IsHalted;
-
-                string reason = clock.WaitingOnFrames ? "waiting on frames" : clock.IsHalted ? "holding for master" : "in range";
                 logClockTransition(clock, wasRunning, wasCatchingUp, wasSlowingDown, wasHalted, timeDelta, reason);
             }
         }

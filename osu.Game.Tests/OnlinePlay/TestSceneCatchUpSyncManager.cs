@@ -187,9 +187,25 @@ namespace osu.Game.Tests.OnlinePlay
             assertAbandoned(() => player1, false);
             assertAbandoned(() => player2, true);
 
-            // Recover to comfortably within the cap: re-included.
-            setLatestFrameTime(() => player2, 100000 - 10000); // 10s behind
+            // Recover to comfortably within (cap - hysteresis): re-included.
+            setLatestFrameTime(() => player2, 100000 - (SpectatorSyncManager.MAX_LIVE_OFFSET - SpectatorSyncManager.ABANDON_HYSTERESIS - 1000));
             assertAbandoned(() => player2, false);
+        }
+
+        [Test]
+        public void TestAbandonedPlayerDoesNotCatchUp()
+        {
+            setLatestFrameTime(() => player1, 100000);
+            setLatestFrameTime(() => player2, 100000 - SpectatorSyncManager.MAX_LIVE_OFFSET - 10000); // abandoned
+            setAllWaiting(false);
+
+            // Master well ahead of player2: a kept player here would catch up (and stutter against its frame
+            // buffer), but an abandoned one must run at the natural rate instead.
+            setMasterTime(SpectatorSyncManager.MAX_SYNC_OFFSET + 1000);
+
+            assertAbandoned(() => player2, true);
+            assertCatchingUp(() => player2, false);
+            assertPlayerClockState(() => player2, true);
         }
 
         private void setWaiting(Func<SpectatorPlayerClock> playerClock, bool waiting)
