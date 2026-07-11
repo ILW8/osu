@@ -146,6 +146,38 @@ namespace osu.Game.Tests.OnlinePlay
             assertPlayerClockState(() => player1, false);
         }
 
+        [Test]
+        public void TestMasterStopsAtCeilingAndStartsBelowIt()
+        {
+            AddStep("start master when ready", () => syncManager.ReadyToStart = () => master.Start());
+
+            setLatestFrameTime(() => player1, 100000);
+            setLatestFrameTime(() => player2, 100000);
+            setAllWaiting(false);
+
+            // ceiling = min(100000, 100000) - LIVE_EDGE_BUFFER = 99800.
+            setMasterTime(99900);
+            assertMasterRunning(false);
+
+            setMasterTime(50000);
+            assertMasterRunning(true);
+        }
+
+        [Test]
+        public void TestPlayerAbandonedPastCapAndReincludedWhenRecovered()
+        {
+            setLatestFrameTime(() => player1, 100000);
+            setLatestFrameTime(() => player2, 100000 - SpectatorSyncManager.MAX_LIVE_OFFSET - 10000); // 40s behind
+            setAllWaiting(false);
+
+            assertAbandoned(() => player1, false);
+            assertAbandoned(() => player2, true);
+
+            // Recover to comfortably within the cap: re-included.
+            setLatestFrameTime(() => player2, 100000 - 10000); // 10s behind
+            assertAbandoned(() => player2, false);
+        }
+
         private void setWaiting(Func<SpectatorPlayerClock> playerClock, bool waiting)
             => AddStep($"set player clock {clocksById[playerClock()]} waiting = {waiting}", () => playerClock().WaitingOnFrames = waiting);
 
@@ -163,6 +195,15 @@ namespace osu.Game.Tests.OnlinePlay
         /// </summary>
         private void setPlayerClockTime(Func<SpectatorPlayerClock> playerClock, double offsetFromMaster)
             => AddStep($"set player clock {clocksById[playerClock()]} = master - {offsetFromMaster}", () => playerClock().Seek(master.CurrentTime - offsetFromMaster));
+
+        private void setLatestFrameTime(Func<SpectatorPlayerClock> playerClock, double time)
+            => AddStep($"set player clock {clocksById[playerClock()]} latest frame = {time}", () => playerClock().LatestFrameTime = time);
+
+        private void assertMasterRunning(bool running)
+            => AddAssert($"master {(running ? "is" : "is not")} running", () => master.IsRunning == running);
+
+        private void assertAbandoned(Func<SpectatorPlayerClock> playerClock, bool abandoned)
+            => AddAssert($"player clock {clocksById[playerClock()]} {(abandoned ? "is" : "is not")} abandoned", () => playerClock().Abandoned == abandoned);
 
         private void assertCatchingUp(Func<SpectatorPlayerClock> playerClock, bool catchingUp) =>
             AddAssert($"player clock {clocksById[playerClock()]} {(catchingUp ? "is" : "is not")} catching up", () => playerClock().IsCatchingUp == catchingUp);

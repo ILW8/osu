@@ -202,22 +202,35 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         }
 
         /// <summary>
-        /// Updates the state of the master clock.
+        /// Updates abandoned state and paces the master clock behind the slowest kept player's live edge (Stop/Start only).
         /// </summary>
         private void updateMasterState()
         {
-            // Clocks are removed as players complete the beatmap.
-            // Once there are no clocks we want to make sure the track plays out to the end.
-            MasterClockState newState = playerClocks.Count == 0 || playerClocks.Any(s => !s.IsCatchingUp) ? MasterClockState.Synchronised : MasterClockState.TooFarAhead;
+            double liveEdge = playerClocks.Count == 0 ? double.NegativeInfinity : playerClocks.Max(c => c.LatestFrameTime);
+
+            // Abandon update (with hysteresis).
+            foreach (var clock in playerClocks)
+            {
+                bool wasAbandoned = clock.Abandoned;
+                clock.Abandoned = UpdateAbandoned(clock.Abandoned, liveEdge, clock.LatestFrameTime);
+
+                if (clock.Abandoned != wasAbandoned)
+                    Logger.Log($"[spectator-sync {stamp}] u{clock.UserId} abandoned {wasAbandoned}->{clock.Abandoned} (edge={clock.LatestFrameTime:F0}ms, {liveEdge - clock.LatestFrameTime:F0}ms behind live)");
+            }
+
+            // Master pacing: ride LIVE_EDGE_BUFFER behind the slowest kept player's live edge.
+            var keptEdges = playerClocks.Where(c => !c.Abandoned).Select(c => c.LatestFrameTime).ToList();
+            MasterClockState newState = ShouldStopMaster(masterClock.CurrentTime, keptEdges) ? MasterClockState.TooFarAhead : MasterClockState.Synchronised;
 
             if (masterState == newState)
                 return;
 
             masterState = newState;
 
+            double ceiling = keptEdges.Count == 0 ? double.NaN : keptEdges.Min() - LIVE_EDGE_BUFFER;
             string snapshot = string.Join(", ", playerClocks.Select(c =>
-                $"u{c.UserId}:{masterClock.CurrentTime - c.CurrentTime:+0;-0}ms{(c.IsCatchingUp ? " catchup" : "")}{(c.IsSlowingDown ? " slow" : "")}{(c.WaitingOnFrames ? " starved" : "")}"));
-            Logger.Log($"[spectator-sync {stamp}] master {masterClock.CurrentTime:F0}ms -> {masterState} [{snapshot}]");
+                $"u{c.UserId}:{masterClock.CurrentTime - c.CurrentTime:+0;-0}ms edge={c.LatestFrameTime:F0}{(c.Abandoned ? " abandoned" : "")}{(c.WaitingOnFrames ? " starved" : "")}"));
+            Logger.Log($"[spectator-sync {stamp}] master {masterClock.CurrentTime:F0}ms -> {masterState} ceiling={ceiling:F0} [{snapshot}]");
 
             switch (masterState)
             {

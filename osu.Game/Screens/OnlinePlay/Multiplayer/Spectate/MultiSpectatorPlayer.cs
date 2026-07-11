@@ -98,6 +98,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 
             // This is required because the frame stable clock is set to WaitingOnFrames = false for one frame.
             spectatorPlayerClock.WaitingOnFrames = DrawableRuleset.FrameStableClock.WaitingOnFrames.Value || Score.Replay.Frames.Count == 0;
+
+            // Live edge for master pacing: the time of the most-recent received frame, or a "maximally behind"
+            // sentinel when no frames have arrived yet.
+            spectatorPlayerClock.LatestFrameTime = Score.Replay.Frames.Count > 0 ? Score.Replay.Frames[^1].Time : double.NegativeInfinity;
         }
 
         protected override GameplayClockContainer CreateGameplayClockContainer(WorkingBeatmap beatmap, double gameplayStart)

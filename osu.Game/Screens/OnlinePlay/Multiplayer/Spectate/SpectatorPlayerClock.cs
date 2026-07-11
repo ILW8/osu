@@ -36,6 +36,19 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         public bool WaitingOnFrames { get; set; } = true;
 
         /// <summary>
+        /// The time of this player's most recently received replay frame (its live edge). A player with no frames
+        /// reports <see cref="double.NegativeInfinity"/> so it reads as maximally behind and is treated as
+        /// starved/abandoned rather than as the live edge.
+        /// </summary>
+        public double LatestFrameTime { get; set; } = double.NegativeInfinity;
+
+        /// <summary>
+        /// Whether this clock has been abandoned by the sync manager because its frame delivery fell too far behind
+        /// the live edge. An abandoned player is excluded from master pacing so it no longer drags the cast.
+        /// </summary>
+        public bool Abandoned { get; set; }
+
+        /// <summary>
         /// Whether this clock is behind the master clock and running at a higher rate to catch up to it.
         /// </summary>
         /// <remarks>
