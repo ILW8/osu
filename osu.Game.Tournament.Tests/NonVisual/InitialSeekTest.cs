@@ -10,22 +10,37 @@ namespace osu.Game.Tournament.Tests.NonVisual
     public class InitialSeekTest
     {
         [Test]
-        public void NoOutliers_returnsMin()
+        public void AllWithinCap_seedsAtMinEdgeMinusBuffer()
         {
-            Assert.That(TournamentSpectatorScreen.ComputeInitialSeekTime(new[] { 1000d, 1100d, 1200d }), Is.EqualTo(1000d));
+            // max 12000; all within the 30000 cap; min edge 10000 - LIVE_EDGE_BUFFER (200) = 9800.
+            Assert.That(TournamentSpectatorScreen.ComputeInitialSeekTime(new[] { 10000d, 12000d, 11000d }), Is.EqualTo(9800d));
         }
 
         [Test]
-        public void LowOutlier_trimmedBeforeMin()
+        public void FarBehindPlayer_droppedBeforeMin()
         {
-            // mean ≈ 325; -5000 is more than 1000 below the mean so it's trimmed; min of the rest is 2000.
-            Assert.That(TournamentSpectatorScreen.ComputeInitialSeekTime(new[] { -5000d, 2000d, 2100d, 2200d }), Is.EqualTo(2000d));
+            // -25000 is 45000 behind the 20000 max edge (> 30000 cap): dropped. min of the rest 20000 - 200 = 19800.
+            Assert.That(TournamentSpectatorScreen.ComputeInitialSeekTime(new[] { -25000d, 20000d, 21000d }), Is.EqualTo(19800d));
+        }
+
+        [Test]
+        public void LatePlayerWithinCap_kept()
+        {
+            // max 30000; 5000 is 25000 behind (< 30000 cap): kept. seed 5000 - 200 = 4800.
+            Assert.That(TournamentSpectatorScreen.ComputeInitialSeekTime(new[] { 5000d, 30000d }), Is.EqualTo(4800d));
         }
 
         [Test]
         public void Empty_returnsZero()
         {
             Assert.That(TournamentSpectatorScreen.ComputeInitialSeekTime(System.Array.Empty<double>()), Is.EqualTo(0d));
+        }
+
+        [Test]
+        public void AllNoFrames_returnsZero()
+        {
+            // All-sentinel input (no frames anywhere): nothing kept, seed 0.
+            Assert.That(TournamentSpectatorScreen.ComputeInitialSeekTime(new[] { double.NegativeInfinity, double.NegativeInfinity }), Is.EqualTo(0d));
         }
     }
 }

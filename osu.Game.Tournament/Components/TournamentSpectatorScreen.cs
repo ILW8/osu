@@ -313,32 +313,39 @@ namespace osu.Game.Tournament.Components
 
         private void performInitialSeek()
         {
-            // Each client may be at a different point in the beatmap; find a common, low starting point
-            // so no client has to stutter to catch up.
-            var minFrameTimes = playerAreas.Values
-                                           .Where(a => a.Score != null)
-                                           .Select(a => a.Score!.Replay.Frames.MinBy(f => f.Time)?.Time ?? 0)
-                                           .ToList();
+            // Seed the master already delayed to the slowest kept player so no client has to stutter to catch up.
+            // Uses each player's live edge (latest received frame); a player with no frames reports the "maximally
+            // behind" sentinel so it's dropped by ComputeInitialSeekTime rather than dragging the seed.
+            var liveEdges = playerAreas.Values
+                                       .Where(a => a.Score != null)
+                                       .Select(a => a.Score!.Replay.Frames.Count > 0 ? a.Score.Replay.Frames[^1].Time : double.NegativeInfinity)
+                                       .ToList();
 
-            double startTime = ComputeInitialSeekTime(minFrameTimes);
+            double startTime = ComputeInitialSeekTime(liveEdges);
             masterClockContainer.Reset(startTime, true);
             Logger.Log($"[TournamentSpectator] initial seek to {startTime}");
         }
 
         /// <summary>
-        /// Computes the initial master-clock seek time: trim low outliers (more than 1000ms below the
-        /// mean) then take the minimum of the rest. Returns 0 for an empty input.
+        /// Computes the initial master-clock seek time from the players' live edges (latest received frame each):
+        /// drop players more than <see cref="SpectatorSyncManager.MAX_LIVE_OFFSET"/> behind the furthest edge, then
+        /// seed at the minimum remaining edge minus <see cref="SpectatorSyncManager.LIVE_EDGE_BUFFER"/> so the master
+        /// starts already delayed to the slowest kept player. Returns 0 when there are no usable edges.
         /// </summary>
-        internal static double ComputeInitialSeekTime(IEnumerable<double> minFrameTimes)
+        internal static double ComputeInitialSeekTime(IEnumerable<double> liveEdges)
         {
-            var times = minFrameTimes.ToList();
+            var edges = liveEdges.ToList();
 
-            if (times.Count == 0)
+            if (edges.Count == 0)
                 return 0;
 
-            double mean = times.Average();
-            times.RemoveAll(t => mean - t > 1000);
-            return times.Min();
+            double liveEdge = edges.Max();
+            var kept = edges.Where(e => liveEdge - e <= SpectatorSyncManager.MAX_LIVE_OFFSET).ToList();
+
+            if (kept.Count == 0)
+                return 0;
+
+            return kept.Min() - SpectatorSyncManager.LIVE_EDGE_BUFFER;
         }
     }
 }
