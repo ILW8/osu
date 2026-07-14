@@ -196,23 +196,6 @@ namespace osu.Game.Tests.Visual.Multiplayer
         }
 
         [Test]
-        public void TestTimeDoesNotProgressWhileAllPlayersPaused()
-        {
-            start(new[] { PLAYER_1_ID, PLAYER_2_ID });
-            loadSpectateScreen();
-
-            sendFrames(PLAYER_1_ID, 40);
-            sendFrames(PLAYER_2_ID, 20);
-
-            waitUntilPaused(PLAYER_2_ID);
-            checkRunningInstant(PLAYER_1_ID);
-            AddAssert("master clock still running", () => this.ChildrenOfType<MasterGameplayClockContainer>().Single().IsRunning);
-
-            waitUntilPaused(PLAYER_1_ID);
-            AddUntilStep("master clock paused", () => !this.ChildrenOfType<MasterGameplayClockContainer>().Single().IsRunning);
-        }
-
-        [Test]
         public void TestPlayersMustStartSimultaneously()
         {
             start(new[] { PLAYER_1_ID, PLAYER_2_ID });
@@ -249,34 +232,34 @@ namespace osu.Game.Tests.Visual.Multiplayer
         }
 
         [Test]
-        public void TestPlayersContinueWhileOthersBuffer()
+        public void TestMasterPacesBehindSlowestPlayer()
         {
             start(new[] { PLAYER_1_ID, PLAYER_2_ID });
             loadSpectateScreen();
 
-            // Send initial frames for both players. A few more for player 1.
-            sendFrames(PLAYER_1_ID, 20);
-            sendFrames(PLAYER_2_ID);
+            // Both players are fed, but player 2's buffer is much shorter than player 1's.
+            sendFrames(PLAYER_1_ID, 40); // frames out to ~3900ms
+            sendFrames(PLAYER_2_ID, 10); // frames out to ~900ms
             checkRunningInstant(PLAYER_1_ID);
             checkRunningInstant(PLAYER_2_ID);
 
-            // Eventually player 2 will pause, player 1 must remain running.
-            waitUntilPaused(PLAYER_2_ID);
+            // The master rides LIVE_EDGE_BUFFER behind the slowest kept player rather than letting player 1 race
+            // ahead, so it stops once it reaches player 2's short buffer. Both players are held together by this
+            // pacing - neither is individually paused, so both still report as running.
+            waitUntilMasterPaused();
             checkRunningInstant(PLAYER_1_ID);
-
-            // Eventually both players will run out of frames and should pause.
-            waitUntilPaused(PLAYER_1_ID);
-            checkPausedInstant(PLAYER_2_ID);
-
-            // Send more frames for the first player only. Player 1 should start playing with player 2 remaining paused.
-            sendFrames(PLAYER_1_ID, 20);
-            checkPausedInstant(PLAYER_2_ID);
-            checkRunningInstant(PLAYER_1_ID);
-
-            // Send more frames for the second player. Both should be playing
-            sendFrames(PLAYER_2_ID, 20);
             checkRunningInstant(PLAYER_2_ID);
+
+            double pausedMasterTime = 0;
+            AddStep("record master time", () => pausedMasterTime = masterClock().CurrentTime);
+            AddWaitStep("wait a while", 10);
+            AddAssert("master time did not advance", () => Math.Abs(masterClock().CurrentTime - pausedMasterTime) < 50);
+
+            // Extending the slow player's buffer lifts the ceiling and the whole cast resumes together.
+            sendFrames(PLAYER_2_ID, 40);
+            waitUntilMasterRunning();
             checkRunningInstant(PLAYER_1_ID);
+            checkRunningInstant(PLAYER_2_ID);
         }
 
         [Test]
@@ -376,30 +359,24 @@ namespace osu.Game.Tests.Visual.Multiplayer
             assertMuted(PLAYER_1_ID, true);
             assertMuted(PLAYER_2_ID, true);
 
-            // Send frames for both players, with more frames for player 2.
-            sendFrames(PLAYER_1_ID, 5);
-            sendFrames(PLAYER_2_ID, 20);
+            // Feed both, but give player 1 only a tiny buffer while player 2 gets a large one, so player 1 soon
+            // falls past the live-offset cap and is abandoned.
+            sendFrames(PLAYER_1_ID, 5); // frames out to ~400ms
+            sendFrames(PLAYER_2_ID, 400); // frames out to ~39900ms
 
             // While both players are running, one of them should be un-muted.
             waitUntilRunning(PLAYER_1_ID);
             assertOnePlayerNotMuted();
 
-            // After player 1 runs out of frames, the un-muted player should always be player 2.
+            // Player 1 runs out of its tiny buffer and is abandoned; the audio source must move to the still-running player 2.
             waitUntilPaused(PLAYER_1_ID);
             waitUntilRunning(PLAYER_2_ID);
             assertMuted(PLAYER_1_ID, true);
             assertMuted(PLAYER_2_ID, false);
 
-            sendFrames(PLAYER_1_ID, 100);
-            waitForCatchup(PLAYER_1_ID);
-            waitUntilPaused(PLAYER_2_ID);
-            assertMuted(PLAYER_1_ID, false);
-            assertMuted(PLAYER_2_ID, true);
-
-            sendFrames(PLAYER_2_ID, 100);
-            waitForCatchup(PLAYER_2_ID);
-            assertMuted(PLAYER_1_ID, false);
-            assertMuted(PLAYER_2_ID, true);
+            // ponytail: only covers the source moving off a dropped player. Under master pacing a well-fed player
+            // never runs out, so the old "source swaps back and forth as players take turns starving" scenario can't
+            // be set up deterministically; add it back if that path ever needs coverage.
         }
 
         [Test]
@@ -624,6 +601,13 @@ namespace osu.Game.Tests.Visual.Multiplayer
 
         private void waitUntilRunning(int userId)
             => AddUntilStep($"{nameof(waitUntilRunning)}({userId})", () => getPlayer(userId).ChildrenOfType<GameplayClockContainer>().First().IsRunning);
+
+        private void waitUntilMasterPaused() => waitUntilMasterRunning(false);
+
+        private void waitUntilMasterRunning(bool running = true)
+            => AddUntilStep($"wait for master {(running ? "running" : "paused")}", () => masterClock().IsRunning == running);
+
+        private MasterGameplayClockContainer masterClock() => this.ChildrenOfType<MasterGameplayClockContainer>().Single();
 
         private void assertNotCatchingUp(int userId)
             => AddAssert($"{nameof(assertNotCatchingUp)}({userId})", () => !getInstance(userId).SpectatorPlayerClock.IsCatchingUp);
