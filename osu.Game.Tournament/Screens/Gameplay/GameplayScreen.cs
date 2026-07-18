@@ -422,50 +422,17 @@ namespace osu.Game.Tournament.Screens.Gameplay
 
         private partial class ChromaArea : CompositeDrawable
         {
-            [Resolved]
-            private LadderInfo ladder { get; set; } = null!;
-
             [BackgroundDependencyLoader]
             private void load()
             {
-                // chroma key area for stable gameplay
+                // chroma key area for stable gameplay. The player grid always fully packs its area
+                // (two teams' worth of tiles), so the chroma covers the whole region.
                 Colour = new Color4(0, 255, 0, 255);
 
-                ladder.PlayersPerTeam.BindValueChanged(performLayout, true);
-            }
-
-            private void performLayout(ValueChangedEvent<int> playerCount)
-            {
-                switch (playerCount.NewValue)
+                InternalChild = new Box
                 {
-                    case 3:
-                        InternalChildren = new Drawable[]
-                        {
-                            new Box
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Width = 0.5f,
-                                Height = 0.5f,
-                                Anchor = Anchor.TopCentre,
-                                Origin = Anchor.TopCentre,
-                            },
-                            new Box
-                            {
-                                RelativeSizeAxes = Axes.Both,
-                                Anchor = Anchor.BottomLeft,
-                                Origin = Anchor.BottomLeft,
-                                Height = 0.5f,
-                            },
-                        };
-                        break;
-
-                    default:
-                        InternalChild = new Box
-                        {
-                            RelativeSizeAxes = Axes.Both,
-                        };
-                        break;
-                }
+                    RelativeSizeAxes = Axes.Both,
+                };
             }
         }
     }

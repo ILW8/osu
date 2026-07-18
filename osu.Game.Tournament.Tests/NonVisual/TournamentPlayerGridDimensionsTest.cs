@@ -17,6 +17,14 @@ namespace osu.Game.Tournament.Tests.NonVisual
         [TestCase(6, 3, 2)]
         [TestCase(7, 4, 2)]
         [TestCase(8, 4, 2)]
+        [TestCase(9, 5, 2)]
+        [TestCase(10, 5, 2)]
+        [TestCase(11, 6, 2)]
+        [TestCase(12, 6, 2)]
+        [TestCase(13, 7, 2)]
+        [TestCase(14, 7, 2)]
+        [TestCase(15, 8, 2)]
+        [TestCase(16, 8, 2)]
         public void DimensionsFor_matchesTable(int visible, int cols, int rows)
         {
             var dims = TournamentPlayerGrid.DimensionsFor(visible);

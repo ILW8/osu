@@ -10,7 +10,7 @@ using osuTK;
 namespace osu.Game.Tournament.Components
 {
     /// <summary>
-    /// A responsive grid of 2–8 tiles used by the tournament spectator overlay.
+    /// A responsive grid of 2–16 tiles used by the tournament spectator overlay.
     /// Tile positions are addressed by a stable slot index; the visible subset is bounded by
     /// <see cref="Capacity"/>. Each tile is wrapped in a masking cell so neighbouring tiles
     /// never bleed across cell boundaries.
@@ -18,7 +18,7 @@ namespace osu.Game.Tournament.Components
     public partial class TournamentPlayerGrid : CompositeDrawable
     {
         public const int MIN_SLOTS = 2;
-        public const int MAX_SLOTS = 8;
+        public const int MAX_SLOTS = 16;
 
         public BindableInt Capacity { get; } = new BindableInt(MIN_SLOTS)
         {
@@ -134,18 +134,9 @@ namespace osu.Game.Tournament.Components
                 case 2:
                     return (2, 1);
 
-                case 3:
-                case 4:
-                    return (2, 2);
-
-                case 5:
-                case 6:
-                    return (3, 2);
-
-                case 7:
-                case 8:
                 default:
-                    return (4, 2);
+                    // Two rows (one per team); columns grow to fit, rounding up for odd counts.
+                    return ((visibleCount + 1) / 2, 2);
             }
         }
     }

@@ -40,8 +40,10 @@ namespace osu.Game.Tournament.Components
         public override bool? ApplyModTrackAdjustments => false;
 
         /// <summary>
-        /// The number of tiles shown in the grid. Defaults to the participant count (clamped to the
-        /// grid's slot range); operator-tunable.
+        /// The number of tiles shown in the grid. Driven by the operator-controlled
+        /// <see cref="LadderInfo.PlayersPerTeam"/> setting (two teams, so twice the per-team count,
+        /// clamped to the grid's slot range) rather than the live MP-room participant count, so the
+        /// chroma layout stays fixed regardless of who is currently connected.
         /// </summary>
         public readonly BindableInt VisibleSlotCount = new BindableInt(TournamentPlayerGrid.MIN_SLOTS)
         {
@@ -85,7 +87,11 @@ namespace osu.Game.Tournament.Components
             // The master clock + grid are built lazily on the first started player (setupGameplayInfrastructure),
             // because the tournament client's global Beatmap.Value is the dummy beatmap — the real working
             // beatmap for the round only arrives via the resolved SpectatorGameplayState.
-            VisibleSlotCount.Value = Math.Clamp(Users.Count, TournamentPlayerGrid.MIN_SLOTS, TournamentPlayerGrid.MAX_SLOTS);
+
+            // A fixed number of tiles (two teams worth of PlayersPerTeam) is shown regardless of how many
+            // users happen to be in the MP room, keeping the overlay/chroma layout stable for streaming.
+            ladder.PlayersPerTeam.BindValueChanged(e =>
+                VisibleSlotCount.Value = Math.Clamp(e.NewValue * 2, TournamentPlayerGrid.MIN_SLOTS, TournamentPlayerGrid.MAX_SLOTS), true);
         }
 
         private void setupGameplayInfrastructure(WorkingBeatmap working)
