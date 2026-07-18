@@ -91,7 +91,10 @@ namespace osu.Game.Tournament.Components
             // A fixed number of tiles (two teams worth of PlayersPerTeam) is shown regardless of how many
             // users happen to be in the MP room, keeping the overlay/chroma layout stable for streaming.
             ladder.PlayersPerTeam.BindValueChanged(e =>
-                VisibleSlotCount.Value = Math.Clamp(e.NewValue * 2, TournamentPlayerGrid.MIN_SLOTS, TournamentPlayerGrid.MAX_SLOTS), true);
+            {
+                VisibleSlotCount.Value = Math.Clamp(e.NewValue * 2, TournamentPlayerGrid.MIN_SLOTS, TournamentPlayerGrid.MAX_SLOTS);
+
+            }, true);
         }
 
         private void setupGameplayInfrastructure(WorkingBeatmap working)
@@ -274,10 +277,10 @@ namespace osu.Game.Tournament.Components
 
         private void snapshotSlotsFromRoom()
         {
-            var roomUsers = multiplayerClient.Room?.Users.Select(u => (u.UserID, u.State))
-                            ?? Enumerable.Empty<(int, MultiplayerUserState)>();
+            var roomUsers = multiplayerClient.Room?.Users.Select(u => (u.UserID, u.State, u.MatchState))
+                            ?? Enumerable.Empty<(int, MultiplayerUserState, MatchUserState?)>();
 
-            foreach ((int userId, int slot) in SnapshotSlots(roomUsers))
+            foreach ((int userId, int slot) in SnapshotSlots(roomUsers, VisibleSlotCount.Value / 2))
                 slots[userId] = slot;
         }
 
@@ -291,24 +294,52 @@ namespace osu.Game.Tournament.Components
         }
 
         /// <summary>
-        /// Projects a room's users onto a stable, gap-free slot map, including only users in an
-        /// active gameplay state (so Idle/Ready/Spectating users — including the tourney client
-        /// itself — don't reserve a tile). Slots are assigned sequentially in input order.
+        /// Projects a room's users onto a stable slot map, including only users in an active
+        /// gameplay state (so Idle/Ready/Spectating users — including the tourney client itself —
+        /// don't reserve a tile). The Red team fills slots [0, N) and the Blue team [N, 2N) in
+        /// input order (<paramref name="playersPerTeam"/> is N), so <see cref="TournamentPlayerGrid"/>
+        /// can render one team per side. Any participant without team state (e.g. a HeadToHead room)
+        /// falls back to filling the lowest still-free slot in input order.
         /// </summary>
-        internal static Dictionary<int, int> SnapshotSlots(IEnumerable<(int userId, MultiplayerUserState state)> roomUsers)
+        internal static Dictionary<int, int> SnapshotSlots(
+            IEnumerable<(int userId, MultiplayerUserState state, MatchUserState? matchState)> roomUsers,
+            int playersPerTeam)
         {
+            var participating = roomUsers.Where(u => IsParticipating(u.state)).ToList();
             var result = new Dictionary<int, int>();
+
+            assignTeamBlock(TeamColour.Red, 0);
+            assignTeamBlock(TeamColour.Blue, playersPerTeam);
+
             int next = 0;
 
-            foreach ((int userId, MultiplayerUserState state) in roomUsers)
+            foreach ((int userId, _, _) in participating)
             {
-                if (!IsParticipating(state))
+                if (result.ContainsKey(userId))
                     continue;
+
+                while (result.ContainsValue(next))
+                    next++;
 
                 result[userId] = next++;
             }
 
             return result;
+
+            void assignTeamBlock(TeamColour colour, int baseSlot)
+            {
+                int offset = 0;
+
+                foreach ((int userId, _, _) in participating.Where(u => (u.matchState as TeamVersusUserState)?.TeamID == (int)colour))
+                {
+                    // Keep each team within its block; a surprise overflow past N spills to the
+                    // sequential tail below rather than clobbering the other team's slots.
+                    if (offset < playersPerTeam)
+                        result[userId] = baseSlot + offset;
+
+                    offset++;
+                }
+            }
         }
 
         internal static bool IsParticipating(MultiplayerUserState state)

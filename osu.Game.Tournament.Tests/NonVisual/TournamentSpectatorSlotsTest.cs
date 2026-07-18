@@ -3,7 +3,9 @@
 
 using NUnit.Framework;
 using osu.Game.Online.Multiplayer;
+using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Tournament.Components;
+using osu.Game.Tournament.Models;
 
 namespace osu.Game.Tournament.Tests.NonVisual
 {
@@ -13,14 +15,14 @@ namespace osu.Game.Tournament.Tests.NonVisual
         [Test]
         public void Snapshot_skipsNonParticipating_andAssignsSequentially()
         {
-            var slots = TournamentSpectatorScreen.SnapshotSlots(new[]
+            var slots = TournamentSpectatorScreen.SnapshotSlots(new (int, MultiplayerUserState, MatchUserState?)[]
             {
-                (10, MultiplayerUserState.Spectating), // the tourney client itself — skipped
-                (11, MultiplayerUserState.Playing), // slot 0
-                (12, MultiplayerUserState.Idle), // skipped
-                (13, MultiplayerUserState.Loaded), // slot 1
-                (14, MultiplayerUserState.WaitingForLoad), // slot 2
-            });
+                (10, MultiplayerUserState.Spectating, null), // the tourney client itself — skipped
+                (11, MultiplayerUserState.Playing, null), // slot 0
+                (12, MultiplayerUserState.Idle, null), // skipped
+                (13, MultiplayerUserState.Loaded, null), // slot 1
+                (14, MultiplayerUserState.WaitingForLoad, null), // slot 2
+            }, playersPerTeam: 4);
 
             Assert.That(slots.Count, Is.EqualTo(3));
             Assert.That(slots[11], Is.EqualTo(0));
@@ -28,6 +30,20 @@ namespace osu.Game.Tournament.Tests.NonVisual
             Assert.That(slots[14], Is.EqualTo(2));
             Assert.That(slots.ContainsKey(10), Is.False);
             Assert.That(slots.ContainsKey(12), Is.False);
+        }
+
+        [Test]
+        public void TeamState_reservesLeftForRed_rightForBlue()
+        {
+            // blue listed first with no room-name hint, the red player should still take the left slot
+            var slots = TournamentSpectatorScreen.SnapshotSlots(new (int, MultiplayerUserState, MatchUserState?)[]
+            {
+                (2, MultiplayerUserState.Playing, new TeamVersusUserState { TeamID = (int)TeamColour.Blue }),
+                (1, MultiplayerUserState.Playing, new TeamVersusUserState { TeamID = (int)TeamColour.Red }),
+            }, playersPerTeam: 1);
+
+            Assert.That(slots[1], Is.EqualTo(0)); // red: left
+            Assert.That(slots[2], Is.EqualTo(1)); // blue: right
         }
 
         [Test]

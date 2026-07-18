@@ -36,7 +36,7 @@ namespace osu.Game.Tournament.Models
         public Bindable<int> PlayersPerTeam = new BindableInt(4)
         {
             MinValue = 1,
-            MaxValue = 8,
+            MaxValue = 4,
         };
 
         public Bindable<bool> AutoProgressScreens = new BindableBool(true);
