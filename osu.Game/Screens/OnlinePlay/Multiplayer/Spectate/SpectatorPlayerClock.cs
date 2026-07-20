@@ -4,7 +4,6 @@
 using System;
 using osu.Framework.Logging;
 using osu.Framework.Timing;
-using osu.Game.Screens.Play;
 
 namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
 {
@@ -16,14 +15,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// <summary>
         /// The catch up rate.
         /// </summary>
-        private const double catchup_rate = 2;
+        public const double CATCHUP_RATE = 2;
 
         /// <summary>
-        /// Essentially the opposite of <see cref="catchup_rate"/>
+        /// Essentially the opposite of <see cref="CATCHUP_RATE"/>
         /// </summary>
         private const double slow_rate = 0.5;
 
-        private readonly GameplayClockContainer masterClock;
+        private readonly IFrameBasedClock masterClock;
 
         /// <summary>The user this clock is spectating (logging only).</summary>
         public readonly int UserId;
@@ -87,7 +86,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         private double lastConsumedMasterTime;
 
-        public SpectatorPlayerClock(GameplayClockContainer masterClock, int userId = 0)
+        public SpectatorPlayerClock(IFrameBasedClock masterClock, int userId = 0)
         {
             this.masterClock = masterClock;
             UserId = userId;
@@ -117,9 +116,11 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         {
         }
 
+        private double catchUpMultiplier => IsCatchingUp ? CATCHUP_RATE : IsSlowingDown ? slow_rate : 1;
+
         public double Rate
         {
-            get => IsCatchingUp ? catchup_rate : IsSlowingDown ? slow_rate : 1;
+            get => masterClock.Rate * catchUpMultiplier;
             set => throw new NotImplementedException();
         }
 
@@ -142,7 +143,7 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                     elapsedSource = Math.Clamp(masterClock.CurrentTime - CurrentTime, 0, 16);
                 }
 
-                double elapsed = elapsedSource * Rate;
+                double elapsed = elapsedSource * catchUpMultiplier;
 
                 CurrentTime += elapsed;
                 ElapsedFrameTime = elapsed;
