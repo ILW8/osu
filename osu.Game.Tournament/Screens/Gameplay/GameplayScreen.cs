@@ -195,10 +195,13 @@ namespace osu.Game.Tournament.Screens.Gameplay
                 {
                     if (warmup.Value || CurrentMatch.Value == null) return;
 
-                    if (ipc.Score1.Value > ipc.Score2.Value)
-                        CurrentMatch.Value.Team1Score.Value++;
-                    else
-                        CurrentMatch.Value.Team2Score.Value++;
+                    if (lastState != TourneyState.Ranking)
+                    {
+                        if (ipc.Score1.Value > ipc.Score2.Value)
+                            CurrentMatch.Value.Team1Score.Value++;
+                        else
+                            CurrentMatch.Value.Team2Score.Value++;
+                    }
                 }
 
                 switch (State.Value)

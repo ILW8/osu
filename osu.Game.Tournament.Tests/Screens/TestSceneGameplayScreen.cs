@@ -34,6 +34,31 @@ namespace osu.Game.Tournament.Tests.Screens
         }
 
         [Test]
+        public void TestMatchScoreIncrementsOnceOnMapCompletion()
+        {
+            AddStep("set state to idle", () => IPCInfo.State.Value = TourneyState.Idle);
+
+            createScreen();
+
+            toggleWarmup();
+
+            AddStep("team 1 wins the map", () =>
+            {
+                IPCInfo.Score1.Value = 500000;
+                IPCInfo.Score2.Value = 400000;
+            });
+
+            AddStep("begin gameplay", () => IPCInfo.State.Value = TourneyState.Playing);
+            AddStep("finish map", () => IPCInfo.State.Value = TourneyState.Ranking);
+            AddAssert("team 1 awarded one point", () => Ladder.CurrentMatch.Value!.Team1Score.Value, () => Is.EqualTo(1));
+
+            AddStep("re-show screen", () => this.ChildrenOfType<GameplayScreen>().Single().Show());
+            AddAssert("team 1 still has one point", () => Ladder.CurrentMatch.Value!.Team1Score.Value, () => Is.EqualTo(1));
+
+            AddStep("reset match score", () => Ladder.CurrentMatch.Value!.Team1Score.Value = 0);
+        }
+
+        [Test]
         public void TestStartupState([Values] TourneyState state)
         {
             AddStep("set state", () => IPCInfo.State.Value = state);
