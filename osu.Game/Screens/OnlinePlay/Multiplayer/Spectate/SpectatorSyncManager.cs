@@ -102,11 +102,27 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// Removes an <see cref="SpectatorPlayerClock"/>, stopping it from being managed by this <see cref="SpectatorSyncManager"/>.
         /// </summary>
         /// <param name="clock">The <see cref="SpectatorPlayerClock"/> to remove.</param>
-        public void RemoveManagedClock(SpectatorPlayerClock clock)
+        /// <param name="stopPlayback">
+        /// Whether to also stop the clock. Removal only ends this manager's pacing of the clock; a player who passed
+        /// still has map left to play back, because the cast rides behind the live edge and so the server-side pass
+        /// always arrives while the tile is short of the last object. Stopping it there strands gameplay before the
+        /// score completes, which is what gates the results screen. Pass false to let it play out at the master rate.
+        /// </param>
+        public void RemoveManagedClock(SpectatorPlayerClock clock, bool stopPlayback = true)
         {
             playerClocks.Remove(clock);
             Logger.Log($"Removing managed clock from {nameof(SpectatorSyncManager)} ({playerClocks.Count} remain)");
-            clock.IsRunning = false;
+
+            if (stopPlayback)
+                clock.IsRunning = false;
+            else
+            {
+                // Nothing paces this clock any more, so any latched pacing state would stay latched forever — an
+                // IsHalted clock in particular would never be released and would freeze exactly like a stopped one.
+                // Safe to force running: a pass marks all frames received first, so playback can drain to the end.
+                clock.IsCatchingUp = clock.IsSlowingDown = clock.IsHalted = false;
+                clock.IsRunning = true;
+            }
         }
 
         protected override void Update()

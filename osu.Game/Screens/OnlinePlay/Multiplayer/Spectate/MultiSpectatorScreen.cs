@@ -295,7 +295,10 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         protected override void PassGameplay(int userId) => Schedule(() =>
         {
             var instance = instances.Single(i => i.UserId == userId);
-            syncManager.RemoveManagedClock(instance.SpectatorPlayerClock);
+
+            // Left running: the tile is still short of the map's last object at this point, so stopping it here would
+            // leave the score incomplete and the results screen unreachable.
+            syncManager.RemoveManagedClock(instance.SpectatorPlayerClock, stopPlayback: false);
         });
 
         protected override void QuitGameplay(int userId) => Schedule(() =>

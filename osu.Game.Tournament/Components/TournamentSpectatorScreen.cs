@@ -183,7 +183,7 @@ namespace osu.Game.Tournament.Components
                 teamByUser[userId] = team;
         }
 
-        protected override void PassGameplay(int userId) => Schedule(() => removeClock(userId));
+        protected override void PassGameplay(int userId) => Schedule(() => removeClock(userId, stopPlayback: false));
 
         protected override void FailGameplay(int userId) => Schedule(() => removeClock(userId));
 
@@ -193,10 +193,14 @@ namespace osu.Game.Tournament.Components
             removeClock(userId);
         });
 
-        private void removeClock(int userId)
+        // stopPlayback is false for a pass: the cast rides behind the live edge, so the server-side pass arrives while
+        // the tile is still short of the beatmap's last object, and freezing it there leaves the score incomplete and
+        // the results screen unreachable. A fail or quit keeps freezing — playing those tiles on would drain the rest
+        // of the map as misses.
+        private void removeClock(int userId, bool stopPlayback = true)
         {
             if (playerAreas.TryGetValue(userId, out var area))
-                syncManager.RemoveManagedClock(area.SpectatorPlayerClock);
+                syncManager.RemoveManagedClock(area.SpectatorPlayerClock, stopPlayback);
         }
 
         protected override void Update()
