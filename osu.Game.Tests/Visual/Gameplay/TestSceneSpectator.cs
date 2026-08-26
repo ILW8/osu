@@ -13,6 +13,7 @@ using osu.Game.Database;
 using osu.Game.Localisation;
 using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Spectator;
+using osu.Game.Replays;
 using osu.Game.Rulesets.Osu;
 using osu.Game.Rulesets.Osu.Replays;
 using osu.Game.Rulesets.UI;
@@ -328,6 +329,31 @@ namespace osu.Game.Tests.Visual.Gameplay
         }
 
         [Test]
+        public void TestPassedStateBeforeAllFramesReceived()
+        {
+            loadSpectatingScreen();
+
+            start();
+            sendFrames();
+            waitForPlayerCurrent();
+
+            // Passed can arrive while the user's final frames are still in transit or lost
+            AddStep("send passed", () => spectatorClient.SendEndPlay(streamingUser.Id, SpectatedUserState.Passed));
+
+            AddUntilStep("state is passed", () => spectatorClient.WatchedUserStates[streamingUser.Id].State == SpectatedUserState.Passed);
+            AddAssert("all frames not yet marked received", () => !replay.HasReceivedAllFrames);
+
+            // replay frames arriving after the passed state not discarded
+            sendFrames();
+            AddUntilStep("trailing frames consumed",
+                () => currentFrameStableTime > 1000 && !replay.HasReceivedAllFrames);
+
+            // marked complete after exceeding grace period
+            AddUntilStep("all frames marked received", () => replay.HasReceivedAllFrames);
+            AddUntilStep("playback continues past final frame", () => currentFrameStableTime > 2000);
+        }
+
+        [Test]
         public void TestQuitState()
         {
             loadSpectatingScreen();
@@ -396,6 +422,8 @@ namespace osu.Game.Tests.Visual.Gameplay
 
         private double currentFrameStableTime
             => player.ChildrenOfType<FrameStabilityContainer>().First().CurrentTime;
+
+        private Replay replay => player.ChildrenOfType<DrawableRuleset>().First().ReplayScore.Replay;
 
         private void waitForPlayerLoader() => AddUntilStep("wait for loading", () => this.ChildrenOfType<SpectatorPlayerLoader>().SingleOrDefault()?.IsLoaded == true);
 

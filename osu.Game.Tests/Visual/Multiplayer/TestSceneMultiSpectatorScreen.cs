@@ -18,6 +18,9 @@ using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Online.Multiplayer;
 using osu.Game.Online.Multiplayer.MatchTypes.TeamVersus;
 using osu.Game.Online.Rooms;
+using osu.Game.Online.Spectator;
+using osu.Game.Rulesets.Objects;
+using osu.Game.Rulesets.Objects.Types;
 using osu.Game.Rulesets.Osu.Mods;
 using osu.Game.Rulesets.UI;
 using osu.Game.Scoring;
@@ -65,6 +68,9 @@ namespace osu.Game.Tests.Visual.Multiplayer
         public override void SetUpSteps()
         {
             base.SetUpSteps();
+
+            // some tests modify the working beatmap
+            AddStep("refetch beatmap", () => beatmapManager.GetWorkingBeatmap(importedBeatmap, refetch: true));
 
             AddStep("clear playing users", () => playingUsers.Clear());
 
@@ -508,6 +514,40 @@ namespace osu.Game.Tests.Visual.Multiplayer
 
             sendFrames(userIds, 1000);
             AddUntilStep("player has F rank", () => this.ChildrenOfType<MultiSpectatorPlayer>().All(msp => msp.GameplayState.ScoreProcessor.Rank.Value == ScoreRank.F));
+        }
+
+        [Test]
+        public void TestPassedUserDrainFrames()
+        {
+            int hitObjectCount = 0;
+
+            start(PLAYER_1_ID);
+
+            // trim the beatmap to let results screen show quickly
+            loadSpectateScreen(applyToBeatmap: b =>
+            {
+                List<HitObject> hitObjects = ((Beatmap)b.Beatmap).HitObjects;
+
+                hitObjects.RemoveAll(h => h.StartTime > 3000 || h is IHasDuration);
+                hitObjectCount = hitObjects.Count;
+            });
+
+            sendFrames(PLAYER_1_ID, 20);
+            waitUntilRunning(PLAYER_1_ID);
+
+            AddStep("send passed", () => SpectatorClient.SendEndPlay(PLAYER_1_ID, SpectatedUserState.Passed));
+            AddUntilStep("remaining frames are consumed", () => getInstance(PLAYER_1_ID).SpectatorPlayerClock.CurrentTime > 1500);
+
+            AddStep("send trailing frames", () =>
+            {
+                SpectatorClient.SendFramesFromUser(PLAYER_1_ID, 10);
+
+                // last bundle's header has to include statistics for every object for the score to complete
+                SpectatorClient.SendFramesFromUser(PLAYER_1_ID, 10, initialResultCount: hitObjectCount);
+            });
+
+            AddUntilStep("score completed", () => getPlayer(PLAYER_1_ID).GameplayState.ScoreProcessor.HasCompleted.Value);
+            AddUntilStep("results screen shown", () => this.ChildrenOfType<MultiSpectatorResultsScreen>().SingleOrDefault()?.IsLoaded == true);
         }
 
         private void testLeadIn(Action<WorkingBeatmap>? applyToBeatmap = null)
