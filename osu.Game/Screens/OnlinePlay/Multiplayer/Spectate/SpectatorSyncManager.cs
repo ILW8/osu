@@ -47,11 +47,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// </summary>
         private readonly List<SpectatorPlayerClock> playerClocks = new List<SpectatorPlayerClock>();
 
-        /// <summary>
-        /// Clocks that are no longer syncing but still playing out their remaining replay frames.
-        /// </summary>
-        private readonly List<SpectatorPlayerClock> drainingClocks = new List<SpectatorPlayerClock>();
-
         private MasterClockState masterState = MasterClockState.Synchronised;
 
         private bool hasStarted;
@@ -78,25 +73,14 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
         /// Removes an <see cref="SpectatorPlayerClock"/>, stopping it from being managed by this <see cref="SpectatorSyncManager"/>.
         /// </summary>
         /// <param name="clock">The <see cref="SpectatorPlayerClock"/> to remove.</param>
-        /// <param name="drain">Whether to let the clock drain remaining frames before stopping it.</param>
+        /// <param name="drain">Whether to let the clock drain remaining frames.</param>
         public void RemoveManagedClock(SpectatorPlayerClock clock, bool drain = false)
         {
             playerClocks.Remove(clock);
             Logger.Log($"Removing managed clock from {nameof(SpectatorSyncManager)} (drain={drain}, {playerClocks.Count} remain)");
 
-            if (drain)
-            {
-                if (!drainingClocks.Contains(clock))
-                    drainingClocks.Add(clock);
-
-                // "no longer managed" is a bit of a misnomer, but we're not syncing this clock against other
-                // spectator clocks anymore after this point. Just let the clock run when it has frames available.
-                clock.IsCatchingUp = false;
-                return;
-            }
-
-            drainingClocks.Remove(clock);
-            clock.IsRunning = false;
+            clock.IsCatchingUp = false;
+            clock.IsRunning = drain;
         }
 
         protected override void Update()
@@ -110,9 +94,6 @@ namespace osu.Game.Screens.OnlinePlay.Multiplayer.Spectate
                     clock.IsRunning = false;
                 return;
             }
-
-            foreach (var clock in drainingClocks)
-                clock.IsRunning = !clock.WaitingOnFrames;
 
             updatePlayerCatchup();
             updateMasterState();

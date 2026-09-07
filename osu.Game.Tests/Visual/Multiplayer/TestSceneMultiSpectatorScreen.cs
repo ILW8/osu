@@ -533,18 +533,12 @@ namespace osu.Game.Tests.Visual.Multiplayer
             });
 
             sendFrames(PLAYER_1_ID, 20);
+            AddStep("send last frames", () => SpectatorClient.SendFramesFromUser(PLAYER_1_ID, 20, initialResultCount: hitObjectCount));
             waitUntilRunning(PLAYER_1_ID);
 
+            // simulate that a user state changes to Passed while spectator hasn't reached the last hitobject yet
             AddStep("send passed", () => SpectatorClient.SendEndPlay(PLAYER_1_ID, SpectatedUserState.Passed));
-            AddUntilStep("remaining frames are consumed", () => getInstance(PLAYER_1_ID).SpectatorPlayerClock.CurrentTime > 1500);
-
-            AddStep("send trailing frames", () =>
-            {
-                SpectatorClient.SendFramesFromUser(PLAYER_1_ID, 10);
-
-                // last bundle's header has to include statistics for every object for the score to complete
-                SpectatorClient.SendFramesFromUser(PLAYER_1_ID, 10, initialResultCount: hitObjectCount);
-            });
+            AddAssert("score not completed yet", () => !getPlayer(PLAYER_1_ID).GameplayState.ScoreProcessor.HasCompleted.Value);
 
             AddUntilStep("score completed", () => getPlayer(PLAYER_1_ID).GameplayState.ScoreProcessor.HasCompleted.Value);
             AddUntilStep("results screen shown", () => this.ChildrenOfType<MultiSpectatorResultsScreen>().SingleOrDefault()?.IsLoaded == true);

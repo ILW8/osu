@@ -141,8 +141,7 @@ namespace osu.Game.Screens.Spectate
                     break;
 
                 case SpectatedUserState.Passed:
-                    // Don't mark received all frames for passed users. State can flip to Passed before all replay
-                    // frames are received by the server/sent to the spectator.
+                    markReceivedAllFrames(userId);
                     PassGameplay(userId);
                     break;
 
