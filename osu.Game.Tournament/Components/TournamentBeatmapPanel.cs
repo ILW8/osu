@@ -20,6 +20,9 @@ namespace osu.Game.Tournament.Components
 {
     public partial class TournamentBeatmapPanel : CompositeDrawable
     {
+        [Resolved]
+        private LadderInfo ladderInfo { get; set; } = null!;
+
         public readonly IBeatmapInfo? Beatmap;
 
         private readonly string mod;
@@ -39,12 +42,17 @@ namespace osu.Game.Tournament.Components
             Height = HEIGHT;
         }
 
-        [BackgroundDependencyLoader]
-        private void load(LadderInfo ladder)
+        protected override void LoadComplete()
         {
-            currentMatch.BindValueChanged(matchChanged);
-            currentMatch.BindTo(ladder.CurrentMatch);
+            base.LoadComplete();
 
+            currentMatch.BindValueChanged(matchChanged);
+            currentMatch.BindTo(ladderInfo.CurrentMatch);
+        }
+
+        [BackgroundDependencyLoader]
+        private void load()
+        {
             Masking = true;
 
             AddRangeInternal(new Drawable[]
@@ -136,11 +144,11 @@ namespace osu.Game.Tournament.Components
             if (match.NewValue != null)
                 match.NewValue.PicksBans.CollectionChanged += picksBansOnCollectionChanged;
 
-            Scheduler.AddOnce(updateState);
+            updateState();
         }
 
         private void picksBansOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-            => Scheduler.AddOnce(updateState);
+            => updateState();
 
         private BeatmapChoice? choice;
 
